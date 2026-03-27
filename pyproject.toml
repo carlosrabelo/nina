@@ -15,6 +15,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "telethon>=1.36",
     "python-telegram-bot>=21.0",
+    "litellm>=1.40",
 ]
 
 [project.optional-dependencies]
@@ -27,7 +28,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["nina", "gmail", "auth", "errors", "calendar_client", "telegram_client", "telegram_bot"]
+py-modules = ["nina", "gmail", "auth", "errors", "calendar_client", "telegram_client", "telegram_bot", "llm", "digest", "demo_digest"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

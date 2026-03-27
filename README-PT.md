@@ -10,6 +10,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Lista próximos eventos da Agenda, com filtro por ID de calendário
 - Lê e envia mensagens no Telegram agindo como sua conta pessoal (Telethon)
 - Recebe comandos via Bot do Telegram em modo batch — sem loop em execução permanente
+- Consulta qualquer provedor de LLM (Groq, OpenAI, Anthropic, Ollama) por meio de uma interface única LiteLLM — troca de provedor com uma linha no `.env`
 - Renovação de tokens Google feita automaticamente; reautenticação apenas quando necessário
 - Todos os segredos ficam locais: tokens, arquivos de sessão e credenciais são ignorados pelo git
 
@@ -21,6 +22,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - [Uso — Google](#uso--google)
 - [Uso — Cliente Telegram Pessoal](#uso--cliente-telegram-pessoal)
 - [Uso — Bot do Telegram](#uso--bot-do-telegram)
+- [Uso — LLM](#uso--llm)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Desenvolvimento](#desenvolvimento)
 - [Licença](#licença)
@@ -52,6 +54,12 @@ cp .env.example .env
 | `TELEGRAM_API_HASH` | — | API hash do MTProto do Telegram (my.telegram.org) |
 | `TELEGRAM_BOT_TOKEN` | — | Token do bot fornecido pelo @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Seu chat ID pessoal no Telegram (o bot só responde a este ID) |
+| `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | String do modelo LiteLLM: `<provedor>/<modelo>` |
+| `GROQ_API_KEY` | — | Chave de API do Groq (obrigatória ao usar Groq) |
+| `OPENAI_API_KEY` | — | Chave de API da OpenAI (obrigatória ao usar OpenAI) |
+| `ANTHROPIC_API_KEY` | — | Chave de API da Anthropic (obrigatória ao usar Anthropic) |
+| `LLM_TEMPERATURE` | `0.3` | Temperatura de amostragem |
+| `LLM_MAX_TOKENS` | `1024` | Número máximo de tokens na resposta |
 
 ## Uso — Google
 
@@ -168,6 +176,40 @@ Para que a Nina verifique comandos a cada minuto, adicione ao crontab (`crontab 
 * * * * * cd /caminho/para/nina && make tg-bot >> /tmp/nina-bot.log 2>&1
 ```
 
+## Uso — LLM
+
+A Nina usa o [LiteLLM](https://github.com/BerriAI/litellm) como interface unificada para qualquer provedor de LLM. Trocar do Groq para OpenAI ou Anthropic é uma mudança de uma linha no `.env` — sem alterações no código.
+
+### Configurar
+
+Adicione ao `.env`:
+
+```
+LLM_MODEL=groq/llama-3.3-70b-versatile
+GROQ_API_KEY=gsk_...
+```
+
+Para usar outro provedor:
+
+```
+LLM_MODEL=openai/gpt-4o-mini
+OPENAI_API_KEY=sk_...
+
+# ou Anthropic
+LLM_MODEL=anthropic/claude-haiku-4-5-20251001
+ANTHROPIC_API_KEY=sk-ant-...
+
+# ou Ollama local (sem chave)
+LLM_MODEL=ollama/llama3.2
+```
+
+### Verificar conectividade
+
+```bash
+make llm-ping
+#   ✓  groq/llama-3.3-70b-versatile  →  OK
+```
+
 ## Estrutura do Projeto
 
 ```
@@ -176,8 +218,9 @@ gmail.py             # GmailClient + GmailMultiClient (N contas)
 calendar_client.py   # CalendarClient (Google Agenda)
 telegram_client.py   # TgClient — cliente Telethon pessoal (ler/enviar como você)
 telegram_bot.py      # Processador batch do Bot do Telegram (receber comandos)
+llm.py               # LLMClient — wrapper LiteLLM (Groq, OpenAI, Anthropic, Ollama)
 auth.py              # Fluxo OAuth Google, cache de tokens, descoberta automática
-errors.py            # NinaError, AuthError, GmailError, CalendarError, TelegramError
+errors.py            # NinaError, AuthError, GmailError, CalendarError, TelegramError, LLMError
 make/                # setup.sh, test.sh, lint.sh
 credentials/         # credentials.json do Google Cloud Console (ignorado pelo git)
 tokens/              # Tokens OAuth, sessão Telegram, offset do bot (todos ignorados)

@@ -10,6 +10,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - List upcoming Calendar events, filter by calendar ID
 - Read and send Telegram messages acting as your personal account (Telethon)
 - Receive commands via a Telegram Bot in batch mode — no persistent loop required
+- Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface — switch providers with one `.env` change
 - Token refresh handled automatically for Google; re-auth only when truly needed
 - All secrets stay local: tokens, session files, and credentials are git-ignored
 
@@ -21,6 +22,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - [Usage — Google](#usage--google)
 - [Usage — Telegram User Client](#usage--telegram-user-client)
 - [Usage — Telegram Bot](#usage--telegram-bot)
+- [Usage — LLM](#usage--llm)
 - [Project Layout](#project-layout)
 - [Development](#development)
 - [License](#license)
@@ -52,6 +54,12 @@ cp .env.example .env
 | `TELEGRAM_API_HASH` | — | Telegram MTProto API hash from my.telegram.org |
 | `TELEGRAM_BOT_TOKEN` | — | Bot token from @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Your personal Telegram chat ID (bot only responds to this) |
+| `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | LiteLLM model string: `<provider>/<model>` |
+| `GROQ_API_KEY` | — | Groq API key (required when using Groq) |
+| `OPENAI_API_KEY` | — | OpenAI API key (required when using OpenAI) |
+| `ANTHROPIC_API_KEY` | — | Anthropic API key (required when using Anthropic) |
+| `LLM_TEMPERATURE` | `0.3` | Sampling temperature |
+| `LLM_MAX_TOKENS` | `1024` | Maximum tokens in the response |
 
 ## Usage — Google
 
@@ -168,6 +176,40 @@ To have Nina check for commands every minute, add to crontab (`crontab -e`):
 * * * * * cd /path/to/nina && make tg-bot >> /tmp/nina-bot.log 2>&1
 ```
 
+## Usage — LLM
+
+Nina uses [LiteLLM](https://github.com/BerriAI/litellm) as a unified interface to any LLM provider. Switching from Groq to OpenAI or Anthropic is a one-line `.env` change — no code changes needed.
+
+### Configure
+
+Add to `.env`:
+
+```
+LLM_MODEL=groq/llama-3.3-70b-versatile
+GROQ_API_KEY=gsk_...
+```
+
+To use a different provider:
+
+```
+LLM_MODEL=openai/gpt-4o-mini
+OPENAI_API_KEY=sk_...
+
+# or Anthropic
+LLM_MODEL=anthropic/claude-haiku-4-5-20251001
+ANTHROPIC_API_KEY=sk-ant-...
+
+# or local Ollama (no key needed)
+LLM_MODEL=ollama/llama3.2
+```
+
+### Verify connectivity
+
+```bash
+make llm-ping
+#   ✓  groq/llama-3.3-70b-versatile  →  OK
+```
+
 ## Project Layout
 
 ```
@@ -176,8 +218,9 @@ gmail.py             # GmailClient + GmailMultiClient (N accounts)
 calendar_client.py   # CalendarClient (Google Calendar)
 telegram_client.py   # TgClient — Telethon user client (read/send as you)
 telegram_bot.py      # Telegram Bot batch processor (receive commands)
+llm.py               # LLMClient — LiteLLM wrapper (Groq, OpenAI, Anthropic, Ollama)
 auth.py              # Google OAuth flow, token caching, auto-discovery
-errors.py            # NinaError, AuthError, GmailError, CalendarError, TelegramError
+errors.py            # NinaError, AuthError, GmailError, CalendarError, TelegramError, LLMError
 make/                # setup.sh, test.sh, lint.sh
 credentials/         # credentials.json from Google Cloud Console (git-ignored)
 tokens/              # OAuth tokens, Telegram session, bot offset (all git-ignored)

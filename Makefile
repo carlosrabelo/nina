@@ -16,6 +16,7 @@ _cal      := $(if $(CAL),--calendar $(CAL),)
 .PHONY: gmail-latest gmail-unread gmail-search
 .PHONY: cal-calendars cal-events
 .PHONY: tg-bot tg-bot-setup tg-auth tg-status tg-dialogs tg-messages tg-send
+.PHONY: llm-ping llm-demo
 
 help:
 	@echo "Usage: make <target> [ACCOUNT=email] [LIMIT=n]"
@@ -51,6 +52,10 @@ help:
 	@echo "  tg-dialogs      List recent chats/groups/channels"
 	@echo "  tg-messages     Show messages from a chat  (CHAT= required)"
 	@echo "  tg-send         Send a message  (CHAT= and TEXT= required)"
+	@echo ""
+	@echo "LLM"
+	@echo "  llm-ping        Verify LLM connectivity and auth"
+	@echo "  llm-demo        Run digest demo with simulated emails and events"
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 
@@ -125,3 +130,11 @@ tg-messages:
 
 tg-send:
 	$(_py) tg-send $(CHAT) "$(TEXT)"
+
+# ── LLM ──────────────────────────────────────────────────────────────────────
+
+llm-ping:
+	$(_py) llm-ping
+
+llm-demo:
+	.venv/bin/python demo_digest.py

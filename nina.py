@@ -15,8 +15,9 @@ from dotenv import load_dotenv
 
 from auth import discover_accounts, is_authenticated, revoke, run_oauth_flow
 from calendar_client import CalendarClient
-from errors import AuthError, CalendarError, ConfigError, GmailError, TelegramError
+from errors import AuthError, CalendarError, ConfigError, GmailError, LLMError, TelegramError
 from gmail import GmailMultiClient
+from llm import LLMClient
 from telegram_client import TgClient
 
 
@@ -183,6 +184,17 @@ def cmd_search(args: argparse.Namespace) -> None:
         print()
 
 
+def cmd_llm_ping(args: argparse.Namespace) -> None:  # noqa: ARG001
+    """Verify LLM connectivity and authentication."""
+    try:
+        client = LLMClient.from_env()
+        reply = client.ping()
+        print(f"  ✓  {client.model}  →  {reply}")
+    except LLMError as e:
+        print(f"  ✗  {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def cmd_tg_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Process pending Telegram bot commands (batch mode — fetches and exits)."""
     from telegram_bot import run_batch_from_env
@@ -324,6 +336,10 @@ def main() -> None:
     p_search.add_argument("--account", help="Filter to a specific account")
     p_search.add_argument("--limit", type=int, default=20)
     p_search.set_defaults(func=cmd_search)
+
+    # llm-ping
+    p_llm_ping = sub.add_parser("llm-ping", help="Verify LLM connectivity and auth")
+    p_llm_ping.set_defaults(func=cmd_llm_ping)
 
     # tg-bot
     p_tg_bot = sub.add_parser("tg-bot", help="Process pending Telegram bot commands (batch mode)")

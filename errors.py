@@ -36,3 +36,11 @@ class TelegramError(NinaError):
 
 class ConfigError(NinaError):
     """Raised when required configuration is missing or invalid."""
+
+
+class LLMError(NinaError):
+    """Raised when an LLM request fails."""
+
+    def __init__(self, model: str, message: str) -> None:
+        self.model = model
+        super().__init__(f"LLM error ({model}): {message}")
