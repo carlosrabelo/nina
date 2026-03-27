@@ -2,7 +2,7 @@
 """Google Calendar client supporting multiple accounts."""
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from googleapiclient.discovery import build
@@ -81,6 +81,49 @@ class CalendarClient:
             raise CalendarError(self.account, str(e)) from e
 
         return [self._parse(item) for item in result.get("items", [])]
+
+    def list_next_days(self, days: int = 3) -> list[Event]:
+        """Return all events across every calendar within the next *days* days.
+
+        Queries each calendar individually, deduplicates by event id, and
+        returns the combined list sorted by start time.
+        """
+        now = datetime.now(timezone.utc)
+        time_min = now.isoformat()
+        time_max = (now + timedelta(days=days)).isoformat()
+
+        try:
+            calendars = self.list_calendars()
+        except CalendarError:
+            calendars = []
+
+        seen: set[str] = set()
+        events: list[Event] = []
+
+        for cal in calendars:
+            try:
+                result = (
+                    self._svc.events()
+                    .list(
+                        calendarId=cal.id,
+                        timeMin=time_min,
+                        timeMax=time_max,
+                        singleEvents=True,
+                        orderBy="startTime",
+                    )
+                    .execute()
+                )
+            except HttpError:
+                continue
+
+            for item in result.get("items", []):
+                eid = item["id"]
+                if eid not in seen:
+                    seen.add(eid)
+                    events.append(self._parse(item))
+
+        events.sort(key=lambda e: e.start)
+        return events
 
     def _parse(self, raw: dict) -> Event:  # type: ignore[type-arg]
         start = raw.get("start", {})
