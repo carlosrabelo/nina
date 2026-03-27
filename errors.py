@@ -22,5 +22,13 @@ class GmailError(NinaError):
         super().__init__(f"gmail error for {account}: {message}")
 
 
+class CalendarError(NinaError):
+    """Raised when a Google Calendar API call fails."""
+
+    def __init__(self, account: str, message: str) -> None:
+        self.account = account
+        super().__init__(f"calendar error for {account}: {message}")
+
+
 class ConfigError(NinaError):
     """Raised when required configuration is missing or invalid."""

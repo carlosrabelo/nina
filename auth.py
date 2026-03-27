@@ -14,6 +14,7 @@ from errors import AuthError
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/calendar.readonly",
 ]
 
 
@@ -71,6 +72,17 @@ def get_credentials(account: str, tokens_dir: Path) -> Credentials:
         raise AuthError(account, "not authenticated. Run: ./nina.py auth")
 
     creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)
+
+    # If the token predates a scope addition, force re-auth.
+    # Read scopes from the raw JSON because creds.scopes is None after loading from file.
+    token_data = json.loads(token_file.read_text(encoding="utf-8"))
+    raw_scopes = token_data.get("scopes", "")
+    saved_scopes = set(raw_scopes.split() if isinstance(raw_scopes, str) else raw_scopes)
+    if saved_scopes and not set(SCOPES).issubset(saved_scopes):
+        raise AuthError(
+            account,
+            "token is missing required scopes — run: ./nina.py auth  (to re-authenticate)",
+        )
 
     if not creds.valid:
         if creds.expired and creds.refresh_token:

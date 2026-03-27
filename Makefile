@@ -1,29 +1,53 @@
 MAKEFLAGS += --no-print-directory
 
-PY_FILES := $(wildcard *.py)
+PY_FILES  := $(wildcard *.py)
+ACCOUNT   ?=
+LIMIT     ?=
+CAL       ?=
 
-.PHONY: setup test lint fmt typecheck clean auth status latest help
+_py       := .venv/bin/python nina.py
+_account  := $(if $(ACCOUNT),--account $(ACCOUNT),)
+_limit    := $(if $(LIMIT),--limit $(LIMIT),)
+_cal      := $(if $(CAL),--calendar $(CAL),)
+
+.PHONY: help
+.PHONY: setup test lint fmt typecheck clean
+.PHONY: auth status
+.PHONY: gmail-latest gmail-unread gmail-search
+.PHONY: cal-calendars cal-events
 
 help:
-	@echo "Usage: make <target>"
+	@echo "Usage: make <target> [ACCOUNT=email] [LIMIT=n]"
 	@echo ""
 	@echo "Setup"
-	@echo "  setup        Create .venv and install dependencies"
+	@echo "  setup           Create .venv and install dependencies"
 	@echo ""
 	@echo "Development"
-	@echo "  test         Run tests"
-	@echo "  lint         Lint with ruff"
-	@echo "  fmt          Format code with ruff"
-	@echo "  typecheck    Type-check with mypy"
-	@echo "  clean        Remove build artifacts and __pycache__"
+	@echo "  test            Run all tests"
+	@echo "  lint            Lint with ruff"
+	@echo "  fmt             Format code with ruff"
+	@echo "  typecheck       Type-check with mypy"
+	@echo "  clean           Remove build artifacts and __pycache__"
 	@echo ""
-	@echo "Gmail"
-	@echo "  auth         Add an account via Google OAuth (opens browser)"
-	@echo "  status       Show auth status for all accounts"
-	@echo "  latest       Show headers of the most recent emails"
+	@echo "Accounts"
+	@echo "  auth            Add an account via Google OAuth (opens browser)"
+	@echo "  status          Show auth status for all accounts"
+	@echo ""
+	@echo "Gmail                                  [ACCOUNT=] [LIMIT=]"
+	@echo "  gmail-latest    Headers of the most recent emails"
+	@echo "  gmail-unread    List unread messages"
+	@echo "  gmail-search    Search messages  (QUERY= required)"
+	@echo ""
+	@echo "Calendar                               [ACCOUNT=] [LIMIT=] [CAL=]"
+	@echo "  cal-calendars   List all calendars in the account"
+	@echo "  cal-events      List upcoming events  (CAL= calendar id, default: primary)"
+
+# ── Setup ────────────────────────────────────────────────────────────────────
 
 setup:
 	./make/setup.sh
+
+# ── Development ──────────────────────────────────────────────────────────────
 
 test:
 	./make/test.sh
@@ -42,11 +66,29 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
+# ── Accounts ─────────────────────────────────────────────────────────────────
+
 auth:
-	.venv/bin/python nina.py auth
+	$(_py) auth
 
 status:
-	.venv/bin/python nina.py status
+	$(_py) status
 
-latest:
-	.venv/bin/python nina.py latest $(if $(ACCOUNT),--account $(ACCOUNT),)
+# ── Gmail ────────────────────────────────────────────────────────────────────
+
+gmail-latest:
+	$(_py) latest $(_account) $(_limit)
+
+gmail-unread:
+	$(_py) unread $(_account) $(_limit)
+
+gmail-search:
+	$(_py) search "$(QUERY)" $(_account) $(_limit)
+
+# ── Calendar ─────────────────────────────────────────────────────────────────
+
+cal-calendars:
+	$(_py) calendars $(_account)
+
+cal-events:
+	$(_py) events $(_account) $(_limit) $(_cal)

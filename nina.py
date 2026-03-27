@@ -14,7 +14,8 @@ import argparse
 from dotenv import load_dotenv
 
 from auth import discover_accounts, is_authenticated, revoke, run_oauth_flow
-from errors import AuthError, ConfigError, GmailError
+from calendar_client import CalendarClient
+from errors import AuthError, CalendarError, ConfigError, GmailError
 from gmail import GmailMultiClient
 
 
@@ -62,6 +63,59 @@ def cmd_status(args: argparse.Namespace) -> None:  # noqa: ARG001
 def cmd_revoke(args: argparse.Namespace) -> None:
     """Remove stored token for an account."""
     revoke(args.account, _tokens_dir())
+
+
+def cmd_calendars(args: argparse.Namespace) -> None:
+    """List all calendars in one or all accounts."""
+    tokens_dir = _tokens_dir()
+    accounts = [args.account] if args.account else discover_accounts(tokens_dir)
+
+    if not accounts:
+        print("No authenticated accounts found. Run: ./nina.py auth")
+        sys.exit(1)
+
+    for account in accounts:
+        try:
+            calendars = CalendarClient(account, tokens_dir).list_calendars()
+        except (AuthError, CalendarError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            continue
+
+        print(f"── {account} {'─' * (50 - len(account))}")
+        for cal in calendars:
+            marker = " (primary)" if cal.primary else ""
+            print(f"  [{cal.access_role}]  {cal.name}{marker}")
+            print(f"           id: {cal.id}")
+        print()
+
+
+def cmd_events(args: argparse.Namespace) -> None:
+    """List upcoming Calendar events for one or all accounts."""
+    tokens_dir = _tokens_dir()
+    accounts = [args.account] if args.account else discover_accounts(tokens_dir)
+
+    if not accounts:
+        print("No authenticated accounts found. Run: ./nina.py auth")
+        sys.exit(1)
+
+    for account in accounts:
+        try:
+            events = CalendarClient(account, tokens_dir).list_upcoming(
+                args.limit, args.calendar
+            )
+        except (AuthError, CalendarError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            continue
+
+        print(f"── {account} {'─' * (50 - len(account))}")
+        if not events:
+            print("  (no upcoming events)")
+        for ev in events:
+            print(f"  {ev.start}")
+            print(f"  {ev.title}")
+            if ev.location:
+                print(f"  Local   : {ev.location}")
+            print()
 
 
 def cmd_latest(args: argparse.Namespace) -> None:
@@ -147,6 +201,18 @@ def main() -> None:
     p_revoke = sub.add_parser("revoke", help="Remove stored token for an account")
     p_revoke.add_argument("account", help="Email address to revoke")
     p_revoke.set_defaults(func=cmd_revoke)
+
+    # calendars
+    p_calendars = sub.add_parser("calendars", help="List all calendars in the account")
+    p_calendars.add_argument("--account", help="Filter to a specific account")
+    p_calendars.set_defaults(func=cmd_calendars)
+
+    # events
+    p_events = sub.add_parser("events", help="List upcoming Calendar events")
+    p_events.add_argument("--account", help="Filter to a specific account")
+    p_events.add_argument("--calendar", default="primary", help="Calendar ID (default: primary)")
+    p_events.add_argument("--limit", type=int, default=10)
+    p_events.set_defaults(func=cmd_events)
 
     # latest
     p_latest = sub.add_parser("latest", help="Show headers of the most recent emails")

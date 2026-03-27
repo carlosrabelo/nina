@@ -24,7 +24,7 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = ["nina", "gmail", "auth", "errors"]
+py-modules = ["nina", "gmail", "auth", "errors", "calendar_client"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
