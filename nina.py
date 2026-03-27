@@ -13,12 +13,12 @@ import argparse
 
 from dotenv import load_dotenv
 
-from auth import discover_accounts, is_authenticated, revoke, run_oauth_flow
-from calendar_client import CalendarClient
-from errors import AuthError, CalendarError, ConfigError, GmailError, LLMError, TelegramError
-from gmail import GmailMultiClient
-from llm import LLMClient
-from telegram_client import TgClient
+from nina.google.auth import discover_accounts, is_authenticated, revoke, run_oauth_flow
+from nina.google.calendar.client import CalendarClient
+from nina.errors import AuthError, CalendarError, ConfigError, GmailError, LLMError, TelegramError
+from nina.google.gmail.client import GmailMultiClient
+from nina.llm.client import LLMClient
+from nina.telegram.client import TgClient
 
 
 def _tokens_dir() -> Path:
@@ -184,6 +184,18 @@ def cmd_search(args: argparse.Namespace) -> None:
         print()
 
 
+def cmd_scheduler(args: argparse.Namespace) -> None:  # noqa: ARG001
+    """Start Nina's internal scheduler (runs until Ctrl+C or SIGTERM)."""
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
+
+    from nina.scheduler.runner import Scheduler
+    sched = Scheduler()
+    # Jobs will be registered here as they are implemented.
+    print(f"Starting Nina scheduler — {sched.job_count} job(s) registered.")
+    sched.run_forever()
+
+
 def cmd_llm_ping(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Verify LLM connectivity and authentication."""
     try:
@@ -197,7 +209,7 @@ def cmd_llm_ping(args: argparse.Namespace) -> None:  # noqa: ARG001
 
 def cmd_tg_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Process pending Telegram bot commands (batch mode — fetches and exits)."""
-    from telegram_bot import run_batch_from_env
+    from nina.telegram.bot import run_batch_from_env
     try:
         count = run_batch_from_env()
         print(f"Processed {count} command(s).")
@@ -207,8 +219,8 @@ def cmd_tg_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
 
 
 def cmd_tg_bot_setup(args: argparse.Namespace) -> None:  # noqa: ARG001
-    """Discover who messaged the bot and print their chat IDs (to find TELEGRAM_OWNER_ID)."""
-    from telegram_bot import setup_from_env
+    """Discover who messaged the bot and print their chat IDs."""
+    from nina.telegram.bot import setup_from_env
     try:
         setup_from_env()
     except TelegramError as e:
@@ -293,83 +305,70 @@ def main() -> None:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # auth — no --account, you pick in the browser
     p_auth = sub.add_parser("auth", help="Add an account via Google OAuth (opens browser)")
     p_auth.set_defaults(func=cmd_auth)
 
-    # status
     p_status = sub.add_parser("status", help="Show auth status for all accounts")
     p_status.set_defaults(func=cmd_status)
 
-    # revoke
     p_revoke = sub.add_parser("revoke", help="Remove stored token for an account")
     p_revoke.add_argument("account", help="Email address to revoke")
     p_revoke.set_defaults(func=cmd_revoke)
 
-    # calendars
     p_calendars = sub.add_parser("calendars", help="List all calendars in the account")
     p_calendars.add_argument("--account", help="Filter to a specific account")
     p_calendars.set_defaults(func=cmd_calendars)
 
-    # events
     p_events = sub.add_parser("events", help="List upcoming Calendar events")
     p_events.add_argument("--account", help="Filter to a specific account")
     p_events.add_argument("--calendar", default="primary", help="Calendar ID (default: primary)")
     p_events.add_argument("--limit", type=int, default=10)
     p_events.set_defaults(func=cmd_events)
 
-    # latest
     p_latest = sub.add_parser("latest", help="Show headers of the most recent emails")
     p_latest.add_argument("--account", help="Filter to a specific account")
     p_latest.add_argument("--limit", type=int, default=10)
     p_latest.set_defaults(func=cmd_latest)
 
-    # unread
     p_unread = sub.add_parser("unread", help="List unread messages")
     p_unread.add_argument("--account", help="Filter to a specific account")
     p_unread.add_argument("--limit", type=int, default=20)
     p_unread.set_defaults(func=cmd_unread)
 
-    # search
     p_search = sub.add_parser("search", help="Search messages (Gmail query syntax)")
     p_search.add_argument("query")
     p_search.add_argument("--account", help="Filter to a specific account")
     p_search.add_argument("--limit", type=int, default=20)
     p_search.set_defaults(func=cmd_search)
 
-    # llm-ping
+    p_scheduler = sub.add_parser("scheduler", help="Start Nina's internal scheduler (daemon)")
+    p_scheduler.set_defaults(func=cmd_scheduler)
+
     p_llm_ping = sub.add_parser("llm-ping", help="Verify LLM connectivity and auth")
     p_llm_ping.set_defaults(func=cmd_llm_ping)
 
-    # tg-bot
     p_tg_bot = sub.add_parser("tg-bot", help="Process pending Telegram bot commands (batch mode)")
     p_tg_bot.set_defaults(func=cmd_tg_bot)
 
-    # tg-bot-setup
-    p_tg_setup = sub.add_parser("tg-bot-setup", help="Find your TELEGRAM_OWNER_ID (run after sending /start to the bot)")
+    p_tg_setup = sub.add_parser("tg-bot-setup", help="Find your TELEGRAM_OWNER_ID")
     p_tg_setup.set_defaults(func=cmd_tg_bot_setup)
 
-    # tg-auth
-    p_tg_auth = sub.add_parser("tg-auth", help="Authenticate with Telegram (opens phone verification)")
-    p_tg_auth.add_argument("--phone", help="Phone number with country code (e.g. +5511...)")
+    p_tg_auth = sub.add_parser("tg-auth", help="Authenticate with Telegram")
+    p_tg_auth.add_argument("--phone", help="Phone number with country code")
     p_tg_auth.set_defaults(func=cmd_tg_auth)
 
-    # tg-status
     p_tg_status = sub.add_parser("tg-status", help="Show Telegram authentication status")
     p_tg_status.set_defaults(func=cmd_tg_status)
 
-    # tg-dialogs
     p_tg_dialogs = sub.add_parser("tg-dialogs", help="List recent Telegram chats/groups/channels")
     p_tg_dialogs.add_argument("--limit", type=int, default=20)
     p_tg_dialogs.set_defaults(func=cmd_tg_dialogs)
 
-    # tg-messages
     p_tg_messages = sub.add_parser("tg-messages", help="Show messages from a Telegram chat")
     p_tg_messages.add_argument("chat", help="Chat id, username, or phone number")
     p_tg_messages.add_argument("--limit", type=int, default=20)
     p_tg_messages.set_defaults(func=cmd_tg_messages)
 
-    # tg-send
     p_tg_send = sub.add_parser("tg-send", help="Send a message to a Telegram chat")
     p_tg_send.add_argument("chat", help="Chat id, username, or phone number")
     p_tg_send.add_argument("text", help="Message text")

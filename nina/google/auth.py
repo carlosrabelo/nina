@@ -1,4 +1,4 @@
-# auth.py
+# nina/google/auth.py
 """Google OAuth flow management — one token file per account."""
 
 import json
@@ -9,7 +9,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from errors import AuthError
+from nina.errors import AuthError
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",

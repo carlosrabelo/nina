@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from auth import _safe_name, discover_accounts, is_authenticated, revoke
+from nina.google.auth import _safe_name, discover_accounts, is_authenticated, revoke
 
 
 class TestSafeName:

@@ -1,13 +1,5 @@
-# telegram_bot.py
-"""Telegram Bot — batch mode command processor.
-
-Design: no persistent loop.
-Each invocation fetches whatever commands are pending in the bot's queue,
-processes them, saves the offset (so they are not processed again), and exits.
-
-Run manually:  ./nina.py tg-bot
-Run via cron:  * * * * * /path/to/nina/make/tg-bot.sh
-"""
+# nina/telegram/bot.py
+"""Telegram Bot — batch mode command processor."""
 
 import asyncio
 import os
@@ -17,18 +9,17 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from auth import discover_accounts
-from calendar_client import CalendarClient
-from errors import CalendarError, ConfigError, GmailError, TelegramError
-from gmail import GmailMultiClient
-from telegram_client import TgClient
+from nina.google.auth import discover_accounts
+from nina.google.calendar.client import CalendarClient
+from nina.errors import CalendarError, ConfigError, GmailError, TelegramError
+from nina.google.gmail.client import GmailMultiClient
+from nina.telegram.client import TgClient
 
 _MAX_MSG = 4000  # Telegram hard limit is 4096 chars; stay under to be safe
 
 
 # ---------------------------------------------------------------------------
 # Offset persistence
-# Tracks the last processed update_id so re-runs never repeat commands.
 # ---------------------------------------------------------------------------
 
 def _offset_file(tokens_dir: Path) -> Path:
@@ -170,11 +161,7 @@ async def handle_dialogs(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
 # ---------------------------------------------------------------------------
 
 async def run_batch(token: str, owner_id: int, tokens_dir: Path) -> int:
-    """Fetch pending bot updates, process each one, persist offset, return count.
-
-    Security: updates not originating from *owner_id* are silently skipped.
-    This prevents anyone else from querying Nina even if they find the bot.
-    """
+    """Fetch pending bot updates, process each one, persist offset, return count."""
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("help", handle_help))
@@ -220,14 +207,7 @@ async def _fetch_senders(token: str) -> list[dict]:  # type: ignore[type-arg]
 
 
 def setup_from_env(env_file: Path | None = None) -> None:
-    """Discover who has messaged the bot and print their chat IDs.
-
-    Use this once to find your TELEGRAM_OWNER_ID:
-      1. Set TELEGRAM_BOT_TOKEN in .env
-      2. Send any message to your bot in Telegram
-      3. Run: make tg-bot-setup
-      4. Copy your chat ID to TELEGRAM_OWNER_ID in .env
-    """
+    """Discover who has messaged the bot and print their chat IDs."""
     load_dotenv(env_file)
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     if not token:
@@ -253,18 +233,7 @@ def setup_from_env(env_file: Path | None = None) -> None:
 
 
 def run_batch_from_env(env_file: Path | None = None) -> int:
-    """Load configuration from .env and run the batch processor.
-
-    Required .env variables::
-
-        TELEGRAM_BOT_TOKEN=123456:ABC...   # from BotFather
-        TELEGRAM_OWNER_ID=987654321        # your personal chat ID
-
-    Returns the number of commands processed.
-
-    Raises:
-        TelegramError: If required config is missing or invalid.
-    """
+    """Load configuration from .env and run the batch processor."""
     load_dotenv(env_file)
 
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")

@@ -1,4 +1,4 @@
-# telegram_client.py
+# nina/telegram/client.py
 """Telegram client using Telethon (MTProto — acts as a real user account)."""
 
 import os
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from telethon.sync import TelegramClient as TelethonClient
 from telethon.tl.types import Channel, Chat, User
 
-from errors import TelegramError
+from nina.errors import TelegramError
 
 
 @dataclass
@@ -156,17 +156,7 @@ class TgClient:
 
     @classmethod
     def from_env(cls, env_file: Path | None = None) -> "TgClient":
-        """Create from environment variables (loads .env automatically).
-
-        Required variables::
-
-            TELEGRAM_API_ID=12345
-            TELEGRAM_API_HASH=abc123...
-
-        Optional::
-
-            TOKENS_DIR=tokens    (session stored as tokens/telegram.session)
-        """
+        """Create from environment variables (loads .env automatically)."""
         load_dotenv(env_file)
 
         api_id_raw = os.environ.get("TELEGRAM_API_ID", "")

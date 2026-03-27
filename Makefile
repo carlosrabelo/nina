@@ -17,6 +17,7 @@ _cal      := $(if $(CAL),--calendar $(CAL),)
 .PHONY: cal-calendars cal-events
 .PHONY: tg-bot tg-bot-setup tg-auth tg-status tg-dialogs tg-messages tg-send
 .PHONY: llm-ping llm-demo
+.PHONY: scheduler
 
 help:
 	@echo "Usage: make <target> [ACCOUNT=email] [LIMIT=n]"
@@ -52,6 +53,9 @@ help:
 	@echo "  tg-dialogs      List recent chats/groups/channels"
 	@echo "  tg-messages     Show messages from a chat  (CHAT= required)"
 	@echo "  tg-send         Send a message  (CHAT= and TEXT= required)"
+	@echo ""
+	@echo "Scheduler"
+	@echo "  scheduler       Start Nina's internal scheduler (daemon)"
 	@echo ""
 	@echo "LLM"
 	@echo "  llm-ping        Verify LLM connectivity and auth"
@@ -130,6 +134,11 @@ tg-messages:
 
 tg-send:
 	$(_py) tg-send $(CHAT) "$(TEXT)"
+
+# ── Scheduler ────────────────────────────────────────────────────────────────
+
+scheduler:
+	$(_py) scheduler
 
 # ── LLM ──────────────────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-# calendar_client.py
+# nina/google/calendar/client.py
 """Google Calendar client supporting multiple accounts."""
 
 from dataclasses import dataclass
@@ -8,8 +8,8 @@ from pathlib import Path
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from auth import get_credentials
-from errors import CalendarError
+from nina.google.auth import get_credentials
+from nina.errors import CalendarError
 
 
 @dataclass

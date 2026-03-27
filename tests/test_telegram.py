@@ -7,18 +7,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from telegram_client import Dialog, TgClient, TgMessage, _entity_name, _fmt_date
+from nina.telegram.client import Dialog, TgClient, TgMessage, _entity_name, _fmt_date
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 class TestFmtDate:
     def test_formats_datetime(self) -> None:
         dt = datetime(2026, 3, 27, 14, 30, tzinfo=timezone.utc)
         result = _fmt_date(dt)
-        # Date is always stable; time shifts with local timezone — just check format.
         assert len(result) == 16  # "YYYY-MM-DD HH:MM"
         assert result[4] == "-" and result[7] == "-" and result[10] == " "
 
@@ -26,25 +21,21 @@ class TestFmtDate:
         assert _fmt_date(None) == ""
 
 
-# ---------------------------------------------------------------------------
-# TgClient.from_env
-# ---------------------------------------------------------------------------
-
 class TestTgClientFromEnv:
     def test_raises_when_api_id_missing(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.delenv("TELEGRAM_API_ID", raising=False)
         monkeypatch.delenv("TELEGRAM_API_HASH", raising=False)
-        from errors import TelegramError
-        with patch("telegram_client.load_dotenv"), \
+        from nina.errors import TelegramError
+        with patch("nina.telegram.client.load_dotenv"), \
              pytest.raises(TelegramError, match="TELEGRAM_API_ID"):
             TgClient.from_env()
 
     def test_raises_when_api_id_not_a_number(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         monkeypatch.setenv("TELEGRAM_API_ID", "notanumber")
         monkeypatch.setenv("TELEGRAM_API_HASH", "abc")
-        from errors import TelegramError
-        with patch("telegram_client.load_dotenv"), \
-             patch("telegram_client.TelethonClient"), \
+        from nina.errors import TelegramError
+        with patch("nina.telegram.client.load_dotenv"), \
+             patch("nina.telegram.client.TelethonClient"), \
              pytest.raises(TelegramError, match="must be a number"):
             TgClient.from_env()
 
@@ -52,8 +43,8 @@ class TestTgClientFromEnv:
         monkeypatch.setenv("TELEGRAM_API_ID", "12345")
         monkeypatch.setenv("TELEGRAM_API_HASH", "abc123")
         monkeypatch.setenv("TOKENS_DIR", str(tmp_path))
-        with patch("telegram_client.load_dotenv"), \
-             patch("telegram_client.TelethonClient") as MockTelethon:
+        with patch("nina.telegram.client.load_dotenv"), \
+             patch("nina.telegram.client.TelethonClient") as MockTelethon:
             MockTelethon.return_value = MagicMock()
             client = TgClient.from_env()
             assert client is not None
@@ -63,13 +54,9 @@ class TestTgClientFromEnv:
             assert call_args[0][2] == "abc123"
 
 
-# ---------------------------------------------------------------------------
-# TgClient operations (mocked Telethon)
-# ---------------------------------------------------------------------------
-
 @pytest.fixture()
 def tg_client(tmp_path: Path) -> TgClient:
-    with patch("telegram_client.TelethonClient") as MockTelethon:
+    with patch("nina.telegram.client.TelethonClient") as MockTelethon:
         mock_inner = MagicMock()
         MockTelethon.return_value = mock_inner
         client = TgClient(12345, "abc", tmp_path / "telegram")

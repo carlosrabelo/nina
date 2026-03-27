@@ -1,4 +1,4 @@
-# gmail.py
+# nina/google/gmail/client.py
 """Gmail API client supporting multiple accounts."""
 
 import os
@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from auth import discover_accounts, get_credentials
-from errors import ConfigError, GmailError
+from nina.google.auth import discover_accounts, get_credentials
+from nina.errors import ConfigError, GmailError
 
 
 @dataclass
@@ -48,13 +48,7 @@ class GmailClient:
         return self._search("is:unread", max_results)
 
     def search(self, query: str, max_results: int = 20) -> list[Message]:
-        """Search messages using Gmail query syntax.
-
-        Examples::
-
-            client.search("subject:urgent")
-            client.search("from:boss@company.com is:unread")
-        """
+        """Search messages using Gmail query syntax."""
         return self._search(query, max_results)
 
     def get_message(self, message_id: str) -> Message:
@@ -141,15 +135,7 @@ class GmailMultiClient:
 
     @classmethod
     def from_env(cls, env_file: Path | None = None) -> "GmailMultiClient":
-        """Create from environment / token discovery.
-
-        Account list is resolved in this order:
-          1. ``GMAIL_ACCOUNTS`` env var (explicit override, comma-separated)
-          2. Auto-discovery: all token files found in ``TOKENS_DIR``
-
-        This means you never *have* to set ``GMAIL_ACCOUNTS`` — just run
-        ``./nina.py auth`` once per account and Nina finds them automatically.
-        """
+        """Create from environment / token discovery."""
         load_dotenv(env_file)
         tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
         accounts = discover_accounts(tokens_dir)

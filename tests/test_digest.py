@@ -1,17 +1,15 @@
 # tests/test_digest.py
-"""Unit tests for digest.py — LLM calls are mocked."""
+"""Unit tests for digest — LLM calls are mocked."""
 
 from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
-from calendar_client import Event
-from digest import DigestResult, daily_brief, summarise_emails, summarise_events
-from gmail import Message
-from llm import LLMClient
+from nina.google.calendar.client import Event
+from nina.llm.digest import DigestResult, daily_brief, summarise_emails, summarise_events
+from nina.google.gmail.client import Message
+from nina.llm.client import LLMClient
 
-
-# ── Fixtures ──────────────────────────────────────────────────────────────────
 
 def _client(response: str = "resposta simulada") -> MagicMock:
     client = create_autospec(LLMClient, instance=True)
@@ -26,13 +24,8 @@ def _email(
     is_read: bool = False,
 ) -> Message:
     return Message(
-        id="x",
-        account="voce@gmail.com",
-        subject=subject,
-        sender=sender,
-        date="27/03 09:00",
-        snippet=snippet,
-        is_read=is_read,
+        id="x", account="voce@gmail.com", subject=subject,
+        sender=sender, date="27/03 09:00", snippet=snippet, is_read=is_read,
     )
 
 
@@ -42,17 +35,10 @@ def _event(
     location: str = "",
 ) -> Event:
     return Event(
-        id="e1",
-        account="voce@gmail.com",
-        title=title,
-        start=start,
-        end="27/03 11:00",
-        location=location,
-        calendar="primary",
+        id="e1", account="voce@gmail.com", title=title,
+        start=start, end="27/03 11:00", location=location, calendar="primary",
     )
 
-
-# ── summarise_emails ──────────────────────────────────────────────────────────
 
 def test_summarise_emails_returns_llm_response():
     client = _client("• Email urgente do chefe")
@@ -89,8 +75,6 @@ def test_summarise_emails_empty_list():
     assert "nenhum email" in prompt
 
 
-# ── summarise_events ──────────────────────────────────────────────────────────
-
 def test_summarise_events_returns_llm_response():
     client = _client("• Reunião às 10h")
     result = summarise_events([_event()], client)
@@ -119,8 +103,6 @@ def test_summarise_events_empty_list():
     assert "nenhum evento" in prompt
 
 
-# ── daily_brief ───────────────────────────────────────────────────────────────
-
 def test_daily_brief_returns_digest_result():
     client = _client("resumo")
     result = daily_brief([_email()], [_event()], client)
@@ -128,21 +110,14 @@ def test_daily_brief_returns_digest_result():
 
 
 def test_daily_brief_calls_llm_three_times():
-    """emails summary + events summary + combined brief = 3 calls."""
     client = _client("ok")
     daily_brief([_email()], [_event()], client)
     assert client.complete.call_count == 3
 
 
 def test_daily_brief_combined_contains_both_sections():
-    """The combined prompt should reference both emails and events data."""
     client = _client("ok")
-    daily_brief(
-        [_email(subject="Urgente")],
-        [_event(title="Dentista")],
-        client,
-    )
-    # Find the combined call (the third one, which has both sections)
+    daily_brief([_email(subject="Urgente")], [_event(title="Dentista")], client)
     combined_prompt = client.complete.call_args_list[2].args[0]
     assert "Urgente" in combined_prompt
     assert "Dentista" in combined_prompt

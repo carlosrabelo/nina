@@ -1,28 +1,26 @@
 # tests/test_llm.py
-"""Unit tests for llm.py — all LLM calls are mocked."""
+"""Unit tests for llm client — all LLM calls are mocked."""
 
 import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from errors import LLMError
-from llm import LLMClient, Message
+from nina.errors import LLMError
+from nina.llm.client import LLMClient, Message
+
+_LLM_KEYS = {"LLM_MODEL", "LLM_TEMPERATURE", "LLM_MAX_TOKENS", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
 
 
-# ---------------------------------------------------------------------------
-# Message dataclass
-# ---------------------------------------------------------------------------
+def _clean_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if k not in _LLM_KEYS}
+
 
 def test_message_fields():
     m = Message(role="user", content="hello")
     assert m.role == "user"
     assert m.content == "hello"
 
-
-# ---------------------------------------------------------------------------
-# LLMClient.chat
-# ---------------------------------------------------------------------------
 
 def _mock_response(text: str) -> MagicMock:
     choice = MagicMock()
@@ -60,10 +58,6 @@ def test_chat_raises_llm_error_on_exception():
     assert "network error" in str(exc_info.value)
 
 
-# ---------------------------------------------------------------------------
-# LLMClient.complete
-# ---------------------------------------------------------------------------
-
 def test_complete_single_turn():
     client = LLMClient(model="groq/llama-3.3-70b-versatile")
     with patch("litellm.completion", return_value=_mock_response("pong")) as mock_call:
@@ -85,26 +79,11 @@ def test_complete_with_system():
     assert payload[1]["role"] == "user"
 
 
-# ---------------------------------------------------------------------------
-# LLMClient.ping
-# ---------------------------------------------------------------------------
-
 def test_ping_returns_response():
     client = LLMClient(model="groq/llama-3.3-70b-versatile")
     with patch("litellm.completion", return_value=_mock_response("OK")):
         result = client.ping()
     assert result == "OK"
-
-
-# ---------------------------------------------------------------------------
-# LLMClient.from_env
-# ---------------------------------------------------------------------------
-
-_LLM_KEYS = {"LLM_MODEL", "LLM_TEMPERATURE", "LLM_MAX_TOKENS", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
-
-
-def _clean_env() -> dict[str, str]:
-    return {k: v for k, v in os.environ.items() if k not in _LLM_KEYS}
 
 
 def test_from_env_groq(tmp_path):
@@ -137,9 +116,7 @@ def test_from_env_custom_params(tmp_path):
 def test_from_env_missing_api_key_raises(tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("LLM_MODEL=groq/llama-3.3-70b-versatile\n")
-    llm_keys = {"LLM_MODEL", "LLM_TEMPERATURE", "LLM_MAX_TOKENS", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
-    clean_env = {k: v for k, v in os.environ.items() if k not in llm_keys}
-    with patch.dict(os.environ, clean_env, clear=True):
+    with patch.dict(os.environ, _clean_env(), clear=True):
         with pytest.raises(LLMError) as exc_info:
             LLMClient.from_env(env_file)
     assert "GROQ_API_KEY" in str(exc_info.value)
@@ -152,20 +129,15 @@ def test_from_env_invalid_temperature_raises(tmp_path):
         "GROQ_API_KEY=gsk_test\n"
         "LLM_TEMPERATURE=not_a_float\n"
     )
-    llm_keys = {"LLM_MODEL", "LLM_TEMPERATURE", "LLM_MAX_TOKENS", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
-    clean_env = {k: v for k, v in os.environ.items() if k not in llm_keys}
-    with patch.dict(os.environ, clean_env, clear=True):
+    with patch.dict(os.environ, _clean_env(), clear=True):
         with pytest.raises(LLMError) as exc_info:
             LLMClient.from_env(env_file)
     assert "invalid config value" in str(exc_info.value)
 
 
 def test_from_env_ollama_no_key_required(tmp_path):
-    """Ollama is local — no API key check should fire."""
     env_file = tmp_path / ".env"
     env_file.write_text("LLM_MODEL=ollama/llama3.2\n")
-    llm_keys = {"LLM_MODEL", "LLM_TEMPERATURE", "LLM_MAX_TOKENS", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
-    clean_env = {k: v for k, v in os.environ.items() if k not in llm_keys}
-    with patch.dict(os.environ, clean_env, clear=True):
+    with patch.dict(os.environ, _clean_env(), clear=True):
         client = LLMClient.from_env(env_file)
     assert client.model == "ollama/llama3.2"

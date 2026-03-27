@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Daily digest demo — uses real Gmail/Calendar data when available.
-
-Falls back to simulated data if no Google account is authenticated,
-so the LLM integration can be demonstrated without credentials.
-
-Usage:
-    make llm-demo
-"""
+"""Daily digest demo — uses real Gmail/Calendar data when available."""
 
 import os
 import sys
@@ -18,12 +11,12 @@ if _venv_python.exists() and Path(sys.executable).resolve() != _venv_python.reso
 
 from dotenv import load_dotenv
 
-from auth import discover_accounts
-from calendar_client import CalendarClient, Event
-from digest import daily_brief
-from errors import AuthError, CalendarError, ConfigError, GmailError, LLMError
-from gmail import GmailMultiClient, Message
-from llm import LLMClient
+from nina.google.auth import discover_accounts
+from nina.google.calendar.client import CalendarClient, Event
+from nina.llm.digest import daily_brief
+from nina.errors import AuthError, CalendarError, ConfigError, GmailError, LLMError
+from nina.google.gmail.client import GmailMultiClient, Message
+from nina.llm.client import LLMClient
 
 load_dotenv()
 
@@ -86,14 +79,12 @@ _FAKE_EVENTS: list[Event] = [
 # ── Data loaders ──────────────────────────────────────────────────────────────
 
 def _load_emails() -> tuple[list[Message], str]:
-    """Return (messages, source_label). Falls back to simulated data on error."""
     try:
         nina = GmailMultiClient.from_env()
         messages: list[Message] = []
         for account in nina.accounts:
             messages.extend(nina.client(account).list_unread(max_results=10))
             messages.extend(nina.client(account).list_latest(max_results=5))
-        # deduplicate by id
         seen: set[str] = set()
         unique = [m for m in messages if not (m.id in seen or seen.add(m.id))]  # type: ignore[func-returns-value]
         return unique, "Gmail (real)"
@@ -103,11 +94,6 @@ def _load_emails() -> tuple[list[Message], str]:
 
 
 def _load_events() -> tuple[list[Event], str]:
-    """Return (events, source_label). Falls back to simulated data on error.
-
-    Fetches all calendars for each account and returns only events
-    starting within the next 3 days.
-    """
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     accounts = discover_accounts(tokens_dir)
     if not accounts:

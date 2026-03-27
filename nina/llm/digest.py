@@ -1,15 +1,11 @@
-# digest.py
-"""LLM-powered digest — summarises emails and calendar events.
-
-Accepts the same data structures produced by GmailClient and CalendarClient
-so the real integration is a drop-in replacement for the simulated data.
-"""
+# nina/llm/digest.py
+"""LLM-powered digest — summarises emails and calendar events."""
 
 from dataclasses import dataclass
 
-from calendar_client import Event
-from gmail import Message
-from llm import LLMClient
+from nina.google.calendar.client import Event
+from nina.google.gmail.client import Message
+from nina.llm.client import LLMClient
 
 _SYSTEM = (
     "Você é a Nina, uma assistente pessoal concisa e direta. "

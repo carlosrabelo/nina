@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from calendar_client import CalendarClient, Event
+from nina.google.calendar.client import CalendarClient, Event
 
 
 def _make_raw_event(
@@ -30,8 +30,8 @@ def _make_raw_event(
 
 @pytest.fixture()
 def client(tmp_path: Path) -> CalendarClient:
-    with patch("calendar_client.get_credentials") as mock_creds, \
-         patch("calendar_client.build") as mock_build:
+    with patch("nina.google.calendar.client.get_credentials") as mock_creds, \
+         patch("nina.google.calendar.client.build") as mock_build:
         mock_creds.return_value = MagicMock()
         mock_build.return_value = MagicMock()
         return CalendarClient("user@gmail.com", tmp_path / "tokens")
@@ -74,17 +74,14 @@ class TestCalendarClientParse:
 
 class TestListNextDays:
     def _setup_client(self, tmp_path: Path, calendars: list, events_by_cal: dict) -> CalendarClient:  # type: ignore[type-arg]
-        """Build a CalendarClient with mocked API responses."""
-        with patch("calendar_client.get_credentials") as mock_creds, \
-             patch("calendar_client.build") as mock_build:
+        with patch("nina.google.calendar.client.get_credentials") as mock_creds, \
+             patch("nina.google.calendar.client.build") as mock_build:
             mock_creds.return_value = MagicMock()
             svc = MagicMock()
             mock_build.return_value = svc
 
-            # list_calendars uses calendarList().list().execute()
             svc.calendarList().list().execute.return_value = {"items": calendars}
 
-            # events().list(...).execute() varies by calendarId
             def events_list(**kwargs):  # type: ignore[no-untyped-def]
                 cal_id = kwargs.get("calendarId", "primary")
                 mock = MagicMock()
@@ -133,8 +130,8 @@ class TestListNextDays:
             {"id": "ok", "summary": "OK", "primary": False, "accessRole": "owner"},
             {"id": "bad", "summary": "Bad", "primary": False, "accessRole": "owner"},
         ]
-        with patch("calendar_client.get_credentials"), \
-             patch("calendar_client.build") as mock_build:
+        with patch("nina.google.calendar.client.get_credentials"), \
+             patch("nina.google.calendar.client.build") as mock_build:
             svc = MagicMock()
             mock_build.return_value = svc
             svc.calendarList().list().execute.return_value = {"items": calendars}
