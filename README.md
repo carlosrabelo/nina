@@ -11,6 +11,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - Read and send Telegram messages acting as your personal account (Telethon)
 - Receive commands via a Telegram Bot in batch mode — no persistent loop required
 - Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface — switch providers with one `.env` change
+- Internal scheduler (APScheduler) to run jobs on a defined schedule — no external cron required
 - Token refresh handled automatically for Google; re-auth only when truly needed
 - All secrets stay local: tokens, session files, and credentials are git-ignored
 
@@ -23,6 +24,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - [Usage — Telegram User Client](#usage--telegram-user-client)
 - [Usage — Telegram Bot](#usage--telegram-bot)
 - [Usage — LLM](#usage--llm)
+- [Usage — Scheduler](#usage--scheduler)
 - [Project Layout](#project-layout)
 - [Development](#development)
 - [License](#license)
@@ -210,21 +212,44 @@ make llm-ping
 #   ✓  groq/llama-3.3-70b-versatile  →  OK
 ```
 
+## Usage — Scheduler
+
+Nina's internal scheduler keeps the process running and triggers jobs on a defined schedule — no external cron required.
+
+```bash
+make scheduler
+# 2026-03-27 07:00:00  INFO  scheduler started — 0 job(s) registered
+# Nina scheduler running — press Ctrl+C to stop
+```
+
+Jobs are registered in `nina/scheduler/jobs/` and added in `nina.py`. The scheduler handles `SIGINT` and `SIGTERM` for graceful shutdown.
+
 ## Project Layout
 
 ```
-nina.py              # CLI entry point
-gmail.py             # GmailClient + GmailMultiClient (N accounts)
-calendar_client.py   # CalendarClient (Google Calendar)
-telegram_client.py   # TgClient — Telethon user client (read/send as you)
-telegram_bot.py      # Telegram Bot batch processor (receive commands)
-llm.py               # LLMClient — LiteLLM wrapper (Groq, OpenAI, Anthropic, Ollama)
-auth.py              # Google OAuth flow, token caching, auto-discovery
-errors.py            # NinaError, AuthError, GmailError, CalendarError, TelegramError, LLMError
-make/                # setup.sh, test.sh, lint.sh
-credentials/         # credentials.json from Google Cloud Console (git-ignored)
-tokens/              # OAuth tokens, Telegram session, bot offset (all git-ignored)
-tests/               # pytest test suite
+nina.py                      # CLI entry point
+demo_digest.py               # LLM digest demo with real/simulated data
+nina/
+    errors.py                # shared exceptions (AuthError, GmailError, …)
+    google/
+        auth.py              # Google OAuth flow, token caching, auto-discovery
+        gmail/
+            client.py        # GmailClient + GmailMultiClient
+        calendar/
+            client.py        # CalendarClient (list_upcoming, list_next_days)
+    telegram/
+        client.py            # TgClient — Telethon user client (read/send as you)
+        bot.py               # Telegram Bot batch processor (receive commands)
+    llm/
+        client.py            # LLMClient — LiteLLM wrapper (Groq, OpenAI, Anthropic, Ollama)
+        digest.py            # LLM-powered daily brief
+    scheduler/
+        runner.py            # APScheduler-based daemon runner
+        jobs/                # scheduled job implementations (added incrementally)
+make/                        # setup.sh, test.sh, lint.sh
+credentials/                 # credentials.json from Google Cloud Console (git-ignored)
+tokens/                      # OAuth tokens, Telegram session, bot offset (all git-ignored)
+tests/                       # pytest test suite
 ```
 
 ## Development
@@ -235,6 +260,7 @@ make test       # Run all tests
 make lint       # Lint with ruff
 make fmt        # Format code with ruff
 make typecheck  # Type-check with mypy
+make scheduler  # Start Nina's internal scheduler (daemon)
 ```
 
 ## License

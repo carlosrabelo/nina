@@ -11,6 +11,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Lê e envia mensagens no Telegram agindo como sua conta pessoal (Telethon)
 - Recebe comandos via Bot do Telegram em modo batch — sem loop em execução permanente
 - Consulta qualquer provedor de LLM (Groq, OpenAI, Anthropic, Ollama) por meio de uma interface única LiteLLM — troca de provedor com uma linha no `.env`
+- Agendador interno (APScheduler) para executar tarefas em horários definidos — sem cron externo necessário
 - Renovação de tokens Google feita automaticamente; reautenticação apenas quando necessário
 - Todos os segredos ficam locais: tokens, arquivos de sessão e credenciais são ignorados pelo git
 
@@ -23,6 +24,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - [Uso — Cliente Telegram Pessoal](#uso--cliente-telegram-pessoal)
 - [Uso — Bot do Telegram](#uso--bot-do-telegram)
 - [Uso — LLM](#uso--llm)
+- [Uso — Agendador](#uso--agendador)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Desenvolvimento](#desenvolvimento)
 - [Licença](#licença)
@@ -210,21 +212,44 @@ make llm-ping
 #   ✓  groq/llama-3.3-70b-versatile  →  OK
 ```
 
+## Uso — Agendador
+
+O agendador interno da Nina mantém o processo em execução e dispara tarefas em horários definidos — sem cron externo necessário.
+
+```bash
+make scheduler
+# 2026-03-27 07:00:00  INFO  scheduler started — 0 job(s) registered
+# Nina scheduler running — press Ctrl+C to stop
+```
+
+As tarefas são registradas em `nina/scheduler/jobs/` e adicionadas em `nina.py`. O agendador trata `SIGINT` e `SIGTERM` para encerramento gracioso.
+
 ## Estrutura do Projeto
 
 ```
-nina.py              # Ponto de entrada CLI
-gmail.py             # GmailClient + GmailMultiClient (N contas)
-calendar_client.py   # CalendarClient (Google Agenda)
-telegram_client.py   # TgClient — cliente Telethon pessoal (ler/enviar como você)
-telegram_bot.py      # Processador batch do Bot do Telegram (receber comandos)
-llm.py               # LLMClient — wrapper LiteLLM (Groq, OpenAI, Anthropic, Ollama)
-auth.py              # Fluxo OAuth Google, cache de tokens, descoberta automática
-errors.py            # NinaError, AuthError, GmailError, CalendarError, TelegramError, LLMError
-make/                # setup.sh, test.sh, lint.sh
-credentials/         # credentials.json do Google Cloud Console (ignorado pelo git)
-tokens/              # Tokens OAuth, sessão Telegram, offset do bot (todos ignorados)
-tests/               # Suite de testes pytest
+nina.py                      # Ponto de entrada CLI
+demo_digest.py               # Demo do resumo LLM com dados reais/simulados
+nina/
+    errors.py                # Exceções compartilhadas (AuthError, GmailError, …)
+    google/
+        auth.py              # Fluxo OAuth Google, cache de tokens, descoberta automática
+        gmail/
+            client.py        # GmailClient + GmailMultiClient
+        calendar/
+            client.py        # CalendarClient (list_upcoming, list_next_days)
+    telegram/
+        client.py            # TgClient — cliente Telethon pessoal (ler/enviar como você)
+        bot.py               # Processador batch do Bot do Telegram (receber comandos)
+    llm/
+        client.py            # LLMClient — wrapper LiteLLM (Groq, OpenAI, Anthropic, Ollama)
+        digest.py            # Resumo diário gerado por LLM
+    scheduler/
+        runner.py            # Daemon baseado em APScheduler
+        jobs/                # Implementações de tarefas agendadas (adicionadas incrementalmente)
+make/                        # setup.sh, test.sh, lint.sh
+credentials/                 # credentials.json do Google Cloud Console (ignorado pelo git)
+tokens/                      # Tokens OAuth, sessão Telegram, offset do bot (todos ignorados)
+tests/                       # Suite de testes pytest
 ```
 
 ## Desenvolvimento
@@ -235,6 +260,7 @@ make test       # Executa todos os testes
 make lint       # Lint com ruff
 make fmt        # Formata o código com ruff
 make typecheck  # Verificação de tipos com mypy
+make scheduler  # Inicia o agendador interno da Nina (daemon)
 ```
 
 ## Licença
