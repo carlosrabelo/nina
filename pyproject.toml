@@ -13,23 +13,27 @@ dependencies = [
     "google-auth-httplib2>=0.2",
     "google-api-python-client>=2.127",
     "python-dotenv>=1.0",
+    "telethon>=1.36",
+    "python-telegram-bot>=21.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
     "ruff>=0.4",
     "mypy>=1.10",
 ]
 
 [tool.setuptools]
-py-modules = ["nina", "gmail", "auth", "errors", "calendar_client"]
+py-modules = ["nina", "gmail", "auth", "errors", "calendar_client", "telegram_client", "telegram_bot"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-v --tb=short"
+asyncio_mode = "auto"
 
 [tool.ruff]
 src = ["."]

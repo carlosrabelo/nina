@@ -1,20 +1,36 @@
 # nina
 
-Assistente pessoal via CLI para gerenciar múltiplas contas Gmail, com recursos de Agenda e vida diária planejados.
+Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — projetado para crescer incrementalmente.
 
 ## Destaques
 
 - Autentica qualquer número de contas Gmail via Google OAuth — sem necessidade de listar emails manualmente
-- Descobre automaticamente as contas autenticadas a partir dos tokens salvos na inicialização
-- Lista mensagens não lidas ou pesquisa em todas as contas simultaneamente
-- Exibe os cabeçalhos dos emails mais recentes por conta
-- Renovação de tokens feita automaticamente — reautenticação apenas quando realmente necessário
-- Gerenciamento de contas: adicionar, revogar e verificar status por conta
+- Descobre automaticamente as contas autenticadas pelos tokens salvos na inicialização
+- Lista mensagens não lidas, pesquisa e exibe cabeçalhos recentes em todas as contas Gmail
+- Lista próximos eventos da Agenda, com filtro por ID de calendário
+- Lê e envia mensagens no Telegram agindo como sua conta pessoal (Telethon)
+- Recebe comandos via Bot do Telegram em modo batch — sem loop em execução permanente
+- Renovação de tokens Google feita automaticamente; reautenticação apenas quando necessário
+- Todos os segredos ficam locais: tokens, arquivos de sessão e credenciais são ignorados pelo git
+
+## Sumário
+
+- [Pré-requisitos](#pré-requisitos)
+- [Instalação](#instalação)
+- [Configuração](#configuração)
+- [Uso — Google](#uso--google)
+- [Uso — Cliente Telegram Pessoal](#uso--cliente-telegram-pessoal)
+- [Uso — Bot do Telegram](#uso--bot-do-telegram)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [Desenvolvimento](#desenvolvimento)
+- [Licença](#licença)
 
 ## Pré-requisitos
 
 - **Python 3.12+**
-- **Projeto no Google Cloud** com a Gmail API habilitada e um cliente OAuth 2.0 Desktop — [console.cloud.google.com](https://console.cloud.google.com)
+- **Projeto no Google Cloud** com as APIs Gmail e Google Agenda habilitadas e um cliente OAuth 2.0 Desktop — [console.cloud.google.com](https://console.cloud.google.com)
+- **Credenciais da API do Telegram** (`api_id` / `api_hash`) em [my.telegram.org](https://my.telegram.org) → API Development Tools
+- **Token de Bot do Telegram** do [@BotFather](https://t.me/BotFather) (necessário apenas para receber comandos via bot)
 
 ## Instalação
 
@@ -22,29 +38,34 @@ Assistente pessoal via CLI para gerenciar múltiplas contas Gmail, com recursos 
 git clone https://github.com/carlosrabelo/nina.git
 cd nina
 make setup
-```
-
-Copie o template de configuração e defina o caminho das credenciais:
-
-```bash
 cp .env.example .env
-# Edite o .env: defina GOOGLE_CREDENTIALS_FILE com o caminho do seu credentials.json
+# Edite o .env — preencha as credenciais de cada serviço que quiser usar
 ```
 
-## Uso
+## Configuração
 
-### Autenticar uma conta
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | Credenciais OAuth baixadas do Google Cloud Console |
+| `TOKENS_DIR` | `tokens` | Diretório para todos os tokens e arquivos de sessão (ignorado pelo git) |
+| `TELEGRAM_API_ID` | — | API id do MTProto do Telegram (my.telegram.org) |
+| `TELEGRAM_API_HASH` | — | API hash do MTProto do Telegram (my.telegram.org) |
+| `TELEGRAM_BOT_TOKEN` | — | Token do bot fornecido pelo @BotFather |
+| `TELEGRAM_OWNER_ID` | — | Seu chat ID pessoal no Telegram (o bot só responde a este ID) |
 
-Execute uma vez por conta — abre o navegador para você escolher a conta Google:
+## Uso — Google
+
+### Autenticar uma conta Google
+
+Execute uma vez por conta — abre o navegador para você escolher a conta:
 
 ```bash
 make auth
-# ou: ./nina.py auth
 ```
 
-Repita para cada conta que deseja gerenciar com a Nina.
+Repita para cada conta. A Nina descobre automaticamente todas as contas autenticadas.
 
-### Verificar status de autenticação
+### Verificar status
 
 ```bash
 make status
@@ -52,55 +73,115 @@ make status
 # ✓  trabalho@gmail.com
 ```
 
-### Exibir cabeçalhos dos emails recentes
+### Gmail
 
 ```bash
-make latest
-# ── voce@gmail.com ───────────────────────────────────
-#  ● Sex, 27 Mar 2026 10:32:00 -0300
-#    From    : alguem@example.com
-#    Subject : Reunião amanhã
-
-make latest ACCOUNT=trabalho@gmail.com
+make gmail-latest                               # cabeçalhos recentes, todas as contas
+make gmail-latest ACCOUNT=voce@gmail.com       # conta específica
+make gmail-unread LIMIT=5                       # mensagens não lidas
+make gmail-search QUERY="subject:fatura is:unread"
+make gmail-search QUERY="from:chefe" ACCOUNT=trabalho@gmail.com
 ```
 
-### Pesquisar mensagens
+### Agenda
 
 ```bash
-./nina.py search "subject:fatura is:unread"
-./nina.py search "from:chefe@empresa.com" --account trabalho@gmail.com
+make cal-calendars                              # lista todos os calendários com seus IDs
+make cal-events                                 # próximos eventos (calendário principal)
+make cal-events LIMIT=5
+make cal-events CAL=abc123@group.calendar.google.com   # calendário específico
+make cal-events ACCOUNT=trabalho@gmail.com CAL=abc123@group.calendar.google.com
 ```
 
-### Revogar uma conta
+### Revogar uma conta Google
 
 ```bash
 ./nina.py revoke voce@gmail.com
 ```
 
-## Configuração
+## Uso — Cliente Telegram Pessoal
 
-Crie o `.env` a partir do template:
+O cliente pessoal permite que a Nina leia e envie mensagens **como você** — agindo na sua conta Telegram pessoal.
+
+### Autenticar
 
 ```bash
-cp .env.example .env
+make tg-auth
+# Número de telefone (com código do país): +5511...
+# Código de verificação do Telegram: 12345
 ```
 
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | Caminho para as credenciais OAuth baixadas do Google Cloud Console |
-| `TOKENS_DIR` | `tokens` | Diretório onde os tokens por conta são armazenados após a autenticação |
+A sessão é salva em `tokens/telegram.session` — não precisa reautenticar na próxima vez.
+
+### Verificar status
+
+```bash
+make tg-status
+# ✓  Seu Nome (+5511...)
+```
+
+### Ler e enviar mensagens
+
+```bash
+make tg-dialogs                          # lista chats recentes
+make tg-dialogs LIMIT=10
+make tg-messages CHAT=@username          # mensagens de um chat
+make tg-messages CHAT=+5511...           # por número de telefone
+make tg-send CHAT=@username TEXT="Oi!"   # enviar uma mensagem
+```
+
+## Uso — Bot do Telegram
+
+O bot permite que **você envie comandos para a Nina** pelo Telegram. Funciona em modo batch: cada execução busca os comandos pendentes, processa e encerra — sem processo em segundo plano.
+
+### Configuração inicial (uma vez)
+
+1. Converse com o [@BotFather](https://t.me/BotFather) → `/newbot` → copie o token para `TELEGRAM_BOT_TOKEN` no `.env`
+2. Execute `make tg-bot` uma vez
+3. Abra o Telegram e envie `/start` para o seu novo bot
+4. Execute `make tg-bot` novamente — o bot responderá com seu chat ID
+5. Copie esse número para `TELEGRAM_OWNER_ID` no `.env`
+
+### Executar
+
+```bash
+make tg-bot
+# Processed 1 command(s).
+```
+
+### Comandos disponíveis no bot
+
+| Comando | Descrição |
+|---|---|
+| `/start` | Mensagem de boas-vindas e seu chat ID |
+| `/help` | Lista todos os comandos |
+| `/unread` | Emails não lidos em todas as contas Gmail |
+| `/latest` | Cabeçalhos dos emails mais recentes |
+| `/events` | Próximos eventos da Agenda |
+| `/dialogs` | Chats recentes do Telegram |
+
+### Automatizar com cron (opcional)
+
+Para que a Nina verifique comandos a cada minuto, adicione ao crontab (`crontab -e`):
+
+```
+* * * * * cd /caminho/para/nina && make tg-bot >> /tmp/nina-bot.log 2>&1
+```
 
 ## Estrutura do Projeto
 
 ```
-nina.py          # Ponto de entrada CLI
-gmail.py         # GmailClient (conta única) + GmailMultiClient (N contas)
-auth.py          # Fluxo OAuth, cache de tokens, descoberta automática
-errors.py        # NinaError, AuthError, GmailError, ConfigError
-make/            # setup.sh, test.sh, lint.sh, auth.sh
-credentials/     # credentials.json do Google Cloud Console (ignorado pelo git)
-tokens/          # tokens OAuth por conta (ignorados pelo git)
-tests/           # suite de testes pytest
+nina.py              # Ponto de entrada CLI
+gmail.py             # GmailClient + GmailMultiClient (N contas)
+calendar_client.py   # CalendarClient (Google Agenda)
+telegram_client.py   # TgClient — cliente Telethon pessoal (ler/enviar como você)
+telegram_bot.py      # Processador batch do Bot do Telegram (receber comandos)
+auth.py              # Fluxo OAuth Google, cache de tokens, descoberta automática
+errors.py            # NinaError, AuthError, GmailError, CalendarError, TelegramError
+make/                # setup.sh, test.sh, lint.sh
+credentials/         # credentials.json do Google Cloud Console (ignorado pelo git)
+tokens/              # Tokens OAuth, sessão Telegram, offset do bot (todos ignorados)
+tests/               # Suite de testes pytest
 ```
 
 ## Desenvolvimento

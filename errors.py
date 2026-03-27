@@ -30,5 +30,9 @@ class CalendarError(NinaError):
         super().__init__(f"calendar error for {account}: {message}")
 
 
+class TelegramError(NinaError):
+    """Raised when a Telegram operation fails."""
+
+
 class ConfigError(NinaError):
     """Raised when required configuration is missing or invalid."""

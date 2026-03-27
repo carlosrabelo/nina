@@ -15,6 +15,7 @@ _cal      := $(if $(CAL),--calendar $(CAL),)
 .PHONY: auth status
 .PHONY: gmail-latest gmail-unread gmail-search
 .PHONY: cal-calendars cal-events
+.PHONY: tg-bot tg-bot-setup tg-auth tg-status tg-dialogs tg-messages tg-send
 
 help:
 	@echo "Usage: make <target> [ACCOUNT=email] [LIMIT=n]"
@@ -41,6 +42,15 @@ help:
 	@echo "Calendar                               [ACCOUNT=] [LIMIT=] [CAL=]"
 	@echo "  cal-calendars   List all calendars in the account"
 	@echo "  cal-events      List upcoming events  (CAL= calendar id, default: primary)"
+	@echo ""
+	@echo "Telegram                               [LIMIT=]"
+	@echo "  tg-bot          Process pending bot commands (batch mode)"
+	@echo "  tg-bot-setup    Find your TELEGRAM_OWNER_ID (first-time setup)"
+	@echo "  tg-auth         Authenticate with Telegram (phone verification)"
+	@echo "  tg-status       Show Telegram authentication status"
+	@echo "  tg-dialogs      List recent chats/groups/channels"
+	@echo "  tg-messages     Show messages from a chat  (CHAT= required)"
+	@echo "  tg-send         Send a message  (CHAT= and TEXT= required)"
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 
@@ -92,3 +102,26 @@ cal-calendars:
 
 cal-events:
 	$(_py) events $(_account) $(_limit) $(_cal)
+
+# ── Telegram ─────────────────────────────────────────────────────────────────
+
+tg-bot:
+	$(_py) tg-bot
+
+tg-bot-setup:
+	$(_py) tg-bot-setup
+
+tg-auth:
+	$(_py) tg-auth $(if $(PHONE),--phone $(PHONE),)
+
+tg-status:
+	$(_py) tg-status
+
+tg-dialogs:
+	$(_py) tg-dialogs $(_limit)
+
+tg-messages:
+	$(_py) tg-messages $(CHAT) $(_limit)
+
+tg-send:
+	$(_py) tg-send $(CHAT) "$(TEXT)"

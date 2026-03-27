@@ -5,6 +5,8 @@
 .env
 tokens/
 credentials/
+*.session
+*.session-journal
 !credentials/.gitkeep
 
 # Python
