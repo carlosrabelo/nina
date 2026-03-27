@@ -1,0 +1,34 @@
+# AI Tools
+.claude/
+
+# Secrets
+.env
+tokens/
+credentials/
+!credentials/.gitkeep
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Tests
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
