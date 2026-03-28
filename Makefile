@@ -1,72 +1,65 @@
 MAKEFLAGS += --no-print-directory
 
-PY_FILES  := $(wildcard *.py)
 ACCOUNT   ?=
 LIMIT     ?=
 CAL       ?=
 
-_py       := .venv/bin/python nina.py
+_py       := .venv/bin/python -m nina
+_play     := .venv/bin/python -m nina_play
 _account  := $(if $(ACCOUNT),--account $(ACCOUNT),)
 _limit    := $(if $(LIMIT),--limit $(LIMIT),)
 _cal      := $(if $(CAL),--calendar $(CAL),)
 
 .PHONY: help
 .PHONY: setup test lint fmt typecheck clean
-.PHONY: auth status
-.PHONY: gmail-latest gmail-unread gmail-search
-.PHONY: cal-calendars cal-events
-.PHONY: tg-bot tg-bot-setup tg-auth tg-status tg-dialogs tg-messages tg-send
-.PHONY: llm-ping llm-demo
-.PHONY: scheduler
+.PHONY: auth-google auth-telegram status-google status-telegram console daemon dev
+.PHONY: play-gmail-latest play-gmail-unread play-gmail-search
+.PHONY: play-cal-calendars play-cal-events
+.PHONY: play-tg-bot play-tg-bot-setup play-tg-dialogs play-tg-messages play-tg-send
+.PHONY: play-llm-ping play-llm-demo
 
 help:
 	@echo "Usage: make <target> [ACCOUNT=email] [LIMIT=n]"
 	@echo ""
 	@echo "Setup"
-	@echo "  setup           Create .venv and install dependencies"
+	@echo "  setup                Create .venv and install dependencies"
 	@echo ""
 	@echo "Development"
-	@echo "  test            Run all tests"
-	@echo "  lint            Lint with ruff"
-	@echo "  fmt             Format code with ruff"
-	@echo "  typecheck       Type-check with mypy"
-	@echo "  clean           Remove build artifacts and __pycache__"
+	@echo "  test                 Run all tests"
+	@echo "  lint                 Lint with ruff"
+	@echo "  fmt                  Format code with ruff"
+	@echo "  typecheck            Type-check with mypy"
+	@echo "  clean                Remove build artifacts and __pycache__"
 	@echo ""
-	@echo "Accounts"
-	@echo "  auth            Add an account via Google OAuth (opens browser)"
-	@echo "  status          Show auth status for all accounts"
+	@echo "Nina"
+	@echo "  auth google          Add a Google account via OAuth (opens browser)"
+	@echo "  auth telegram        Authenticate with Telegram (phone verification)"
+	@echo "  status google        Show Google auth status for all accounts"
+	@echo "  status telegram      Show Telegram authentication status"
+	@echo "  console              Open interactive console (requires daemon)"
+	@echo "  daemon               Start Nina in daemon mode (scheduler + HTTP)"
+	@echo "  dev                  Launch daemon + console in a tmux session"
 	@echo ""
-	@echo "Gmail                                  [ACCOUNT=] [LIMIT=]"
-	@echo "  gmail-latest    Headers of the most recent emails"
-	@echo "  gmail-unread    List unread messages"
-	@echo "  gmail-search    Search messages  (QUERY= required)"
-	@echo ""
-	@echo "Calendar                               [ACCOUNT=] [LIMIT=] [CAL=]"
-	@echo "  cal-calendars   List all calendars in the account"
-	@echo "  cal-events      List upcoming events  (CAL= calendar id, default: primary)"
-	@echo ""
-	@echo "Telegram                               [LIMIT=]"
-	@echo "  tg-bot          Process pending bot commands (batch mode)"
-	@echo "  tg-bot-setup    Find your TELEGRAM_OWNER_ID (first-time setup)"
-	@echo "  tg-auth         Authenticate with Telegram (phone verification)"
-	@echo "  tg-status       Show Telegram authentication status"
-	@echo "  tg-dialogs      List recent chats/groups/channels"
-	@echo "  tg-messages     Show messages from a chat  (CHAT= required)"
-	@echo "  tg-send         Send a message  (CHAT= and TEXT= required)"
-	@echo ""
-	@echo "Scheduler"
-	@echo "  scheduler       Start Nina's internal scheduler (daemon)"
-	@echo ""
-	@echo "LLM"
-	@echo "  llm-ping        Verify LLM connectivity and auth"
-	@echo "  llm-demo        Run digest demo with simulated emails and events"
+	@echo "Nina Play — exploration                [ACCOUNT=] [LIMIT=] [CAL=]"
+	@echo "  play-gmail-latest    Headers of the most recent emails"
+	@echo "  play-gmail-unread    List unread messages"
+	@echo "  play-gmail-search    Search messages  (QUERY= required)"
+	@echo "  play-cal-calendars   List all calendars in the account"
+	@echo "  play-cal-events      List upcoming events  (CAL= calendar id)"
+	@echo "  play-tg-bot          Process pending bot commands (batch mode)"
+	@echo "  play-tg-bot-setup    Find your TELEGRAM_OWNER_ID (first-time setup)"
+	@echo "  play-tg-dialogs      List recent chats/groups/channels"
+	@echo "  play-tg-messages     Show messages from a chat  (CHAT= required)"
+	@echo "  play-tg-send         Send a message  (CHAT= and TEXT= required)"
+	@echo "  play-llm-ping        Verify LLM connectivity and auth"
+	@echo "  play-llm-demo        Run digest demo with real/simulated data"
 
-# ── Setup ────────────────────────────────────────────────────────────────────
+# ── Setup ─────────────────────────────────────────────────────────────────────
 
 setup:
 	./make/setup.sh
 
-# ── Development ──────────────────────────────────────────────────────────────
+# ── Development ───────────────────────────────────────────────────────────────
 
 test:
 	./make/test.sh
@@ -75,75 +68,88 @@ lint:
 	./make/lint.sh
 
 fmt:
-	.venv/bin/ruff format $(PY_FILES) tests/
+	.venv/bin/ruff format nina/ nina_play/ tests/
 
 typecheck:
-	.venv/bin/mypy $(PY_FILES)
+	.venv/bin/mypy nina/ nina_play/
 
 clean:
 	rm -rf dist/ build/ *.egg-info
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
-# ── Accounts ─────────────────────────────────────────────────────────────────
+# ── Nina ──────────────────────────────────────────────────────────────────────
 
-auth:
-	$(_py) auth
+auth-google:
+	$(_py) auth google
 
-status:
-	$(_py) status
+auth-telegram:
+	$(_py) auth telegram $(if $(PHONE),--phone $(PHONE),)
 
-# ── Gmail ────────────────────────────────────────────────────────────────────
+status-google:
+	$(_py) status google
 
-gmail-latest:
-	$(_py) latest $(_account) $(_limit)
+status-telegram:
+	$(_py) status telegram
 
-gmail-unread:
-	$(_py) unread $(_account) $(_limit)
+console:
+	$(_py) console
 
-gmail-search:
-	$(_py) search "$(QUERY)" $(_account) $(_limit)
+daemon:
+	$(_py) daemon
 
-# ── Calendar ─────────────────────────────────────────────────────────────────
+dev:
+	@if tmux has-session -t nina 2>/dev/null; then \
+		tmux attach-session -t nina; \
+	else \
+		tmux new-session -d -s nina -x 220 -y 50; \
+		tmux send-keys -t nina:0.0 "cd $(CURDIR) && make daemon" Enter; \
+		tmux split-window -h -t nina:0.0; \
+		tmux send-keys -t nina:0.1 "cd $(CURDIR) && sleep 2 && make console" Enter; \
+		tmux select-pane -t nina:0.1; \
+		tmux attach-session -t nina; \
+	fi
 
-cal-calendars:
-	$(_py) calendars $(_account)
+# ── Nina Play — Gmail ─────────────────────────────────────────────────────────
 
-cal-events:
-	$(_py) events $(_account) $(_limit) $(_cal)
+play-gmail-latest:
+	$(_play) latest $(_account) $(_limit)
 
-# ── Telegram ─────────────────────────────────────────────────────────────────
+play-gmail-unread:
+	$(_play) unread $(_account) $(_limit)
 
-tg-bot:
-	$(_py) tg-bot
+play-gmail-search:
+	$(_play) search "$(QUERY)" $(_account) $(_limit)
 
-tg-bot-setup:
-	$(_py) tg-bot-setup
+# ── Nina Play — Calendar ──────────────────────────────────────────────────────
 
-tg-auth:
-	$(_py) tg-auth $(if $(PHONE),--phone $(PHONE),)
+play-cal-calendars:
+	$(_play) calendars $(_account)
 
-tg-status:
-	$(_py) tg-status
+play-cal-events:
+	$(_play) events $(_account) $(_limit) $(_cal)
 
-tg-dialogs:
-	$(_py) tg-dialogs $(_limit)
+# ── Nina Play — Telegram ──────────────────────────────────────────────────────
 
-tg-messages:
-	$(_py) tg-messages $(CHAT) $(_limit)
+play-tg-bot:
+	$(_play) tg-bot
 
-tg-send:
-	$(_py) tg-send $(CHAT) "$(TEXT)"
+play-tg-bot-setup:
+	$(_play) tg-bot-setup
 
-# ── Scheduler ────────────────────────────────────────────────────────────────
+play-tg-dialogs:
+	$(_play) tg-dialogs $(_limit)
 
-scheduler:
-	$(_py) scheduler
+play-tg-messages:
+	$(_play) tg-messages $(CHAT) $(_limit)
 
-# ── LLM ──────────────────────────────────────────────────────────────────────
+play-tg-send:
+	$(_play) tg-send $(CHAT) "$(TEXT)"
 
-llm-ping:
-	$(_py) llm-ping
+# ── Nina Play — LLM ───────────────────────────────────────────────────────────
 
-llm-demo:
-	.venv/bin/python demo_digest.py
+play-llm-ping:
+	$(_play) llm-ping
+
+play-llm-demo:
+	.venv/bin/python -m nina.demos.digest

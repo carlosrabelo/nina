@@ -24,7 +24,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - [Usage — Telegram User Client](#usage--telegram-user-client)
 - [Usage — Telegram Bot](#usage--telegram-bot)
 - [Usage — LLM](#usage--llm)
-- [Usage — Scheduler](#usage--scheduler)
+- [Usage — Daemon](#usage--daemon)
 - [Project Layout](#project-layout)
 - [Development](#development)
 - [License](#license)
@@ -212,17 +212,17 @@ make llm-ping
 #   ✓  groq/llama-3.3-70b-versatile  →  OK
 ```
 
-## Usage — Scheduler
+## Usage — Daemon
 
-Nina's internal scheduler keeps the process running and triggers jobs on a defined schedule — no external cron required.
+Run Nina in daemon mode — keeps the process alive and triggers scheduled jobs. No external cron required.
 
 ```bash
-make scheduler
+make daemon
 # 2026-03-27 07:00:00  INFO  scheduler started — 0 job(s) registered
-# Nina scheduler running — press Ctrl+C to stop
+# Nina daemon running — press Ctrl+C to stop
 ```
 
-Jobs are registered in `nina/scheduler/jobs/` and added in `nina.py`. The scheduler handles `SIGINT` and `SIGTERM` for graceful shutdown.
+Jobs are registered in `nina/scheduler/jobs/` and wired in `nina/cli.py`. The daemon handles `SIGINT` and `SIGTERM` for graceful shutdown.
 
 ## Project Layout
 
@@ -260,7 +260,7 @@ make test       # Run all tests
 make lint       # Lint with ruff
 make fmt        # Format code with ruff
 make typecheck  # Type-check with mypy
-make scheduler  # Start Nina's internal scheduler (daemon)
+make daemon     # Start Nina in daemon mode
 ```
 
 ## License

@@ -1,22 +1,17 @@
-#!/usr/bin/env python3
 """Daily digest demo — uses real Gmail/Calendar data when available."""
 
 import os
 import sys
 from pathlib import Path
 
-_venv_python = Path(__file__).resolve().parent / ".venv" / "bin" / "python"
-if _venv_python.exists() and Path(sys.executable).resolve() != _venv_python.resolve():
-    os.execv(str(_venv_python), [str(_venv_python)] + sys.argv)
-
 from dotenv import load_dotenv
 
+from nina.errors import AuthError, CalendarError, ConfigError, GmailError, LLMError
 from nina.google.auth import discover_accounts
 from nina.google.calendar.client import CalendarClient, Event
-from nina.llm.digest import daily_brief
-from nina.errors import AuthError, CalendarError, ConfigError, GmailError, LLMError
 from nina.google.gmail.client import GmailMultiClient, Message
 from nina.llm.client import LLMClient
+from nina.llm.digest import daily_brief
 
 load_dotenv()
 

@@ -1,21 +1,15 @@
-#!/usr/bin/env python3
-"""Nina — personal assistant CLI."""
+"""Nina Play — experimental commands and exploration."""
 
+import argparse
 import os
 import sys
 from pathlib import Path
 
-_venv_python = Path(__file__).resolve().parent / ".venv" / "bin" / "python"
-if _venv_python.exists() and Path(sys.executable).resolve() != _venv_python.resolve():
-    os.execv(str(_venv_python), [str(_venv_python)] + sys.argv)
-
-import argparse
-
 from dotenv import load_dotenv
 
-from nina.google.auth import discover_accounts, is_authenticated, revoke, run_oauth_flow
-from nina.google.calendar.client import CalendarClient
 from nina.errors import AuthError, CalendarError, ConfigError, GmailError, LLMError, TelegramError
+from nina.google.auth import discover_accounts
+from nina.google.calendar.client import CalendarClient
 from nina.google.gmail.client import GmailMultiClient
 from nina.llm.client import LLMClient
 from nina.telegram.client import TgClient
@@ -26,46 +20,7 @@ def _tokens_dir() -> Path:
     return Path(os.environ.get("TOKENS_DIR", "tokens"))
 
 
-def _credentials_file() -> Path:
-    load_dotenv()
-    return Path(
-        os.environ.get(
-            "GOOGLE_CREDENTIALS_FILE", "credentials/credentials.json"
-        )
-    )
-
-
-def cmd_auth(args: argparse.Namespace) -> None:  # noqa: ARG001
-    """Open browser OAuth flow and save the token (repeat for each account)."""
-    print("Opening browser for Google authentication...")
-    print("Select the account you want to add to Nina.\n")
-    try:
-        email = run_oauth_flow(_credentials_file(), _tokens_dir())
-        print(f"\nDone — {email} is now authenticated.")
-    except AuthError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-def cmd_status(args: argparse.Namespace) -> None:  # noqa: ARG001
-    """Show authentication status for all discovered accounts."""
-    tokens_dir = _tokens_dir()
-    accounts = discover_accounts(tokens_dir)
-
-    if not accounts:
-        print("No authenticated accounts found. Run: ./nina.py auth")
-        return
-
-    for account in accounts:
-        ok = is_authenticated(account, tokens_dir)
-        mark = "✓" if ok else "✗ (expired)"
-        print(f"  {mark}  {account}")
-
-
-def cmd_revoke(args: argparse.Namespace) -> None:
-    """Remove stored token for an account."""
-    revoke(args.account, _tokens_dir())
-
+# ── Calendar ──────────────────────────────────────────────────────────────────
 
 def cmd_calendars(args: argparse.Namespace) -> None:
     """List all calendars in one or all accounts."""
@@ -73,7 +28,7 @@ def cmd_calendars(args: argparse.Namespace) -> None:
     accounts = [args.account] if args.account else discover_accounts(tokens_dir)
 
     if not accounts:
-        print("No authenticated accounts found. Run: ./nina.py auth")
+        print("No authenticated accounts found. Run: nina auth")
         sys.exit(1)
 
     for account in accounts:
@@ -97,7 +52,7 @@ def cmd_events(args: argparse.Namespace) -> None:
     accounts = [args.account] if args.account else discover_accounts(tokens_dir)
 
     if not accounts:
-        print("No authenticated accounts found. Run: ./nina.py auth")
+        print("No authenticated accounts found. Run: nina auth")
         sys.exit(1)
 
     for account in accounts:
@@ -120,13 +75,15 @@ def cmd_events(args: argparse.Namespace) -> None:
             print()
 
 
+# ── Gmail ─────────────────────────────────────────────────────────────────────
+
 def cmd_latest(args: argparse.Namespace) -> None:
     """Show headers of the most recent emails from one or all accounts."""
     try:
-        nina = GmailMultiClient.from_env()
-        accounts = [args.account] if args.account else nina.accounts
+        client = GmailMultiClient.from_env()
+        accounts = [args.account] if args.account else client.accounts
         for account in accounts:
-            messages = nina.client(account).list_latest(max_results=args.limit)
+            messages = client.client(account).list_latest(max_results=args.limit)
             print(f"── {account} {'─' * (50 - len(account))}")
             if not messages:
                 print("  (no messages)")
@@ -144,8 +101,8 @@ def cmd_latest(args: argparse.Namespace) -> None:
 def cmd_unread(args: argparse.Namespace) -> None:
     """List unread messages."""
     try:
-        nina = GmailMultiClient.from_env()
-        messages = nina.list_unread(account=args.account, max_results=args.limit)
+        client = GmailMultiClient.from_env()
+        messages = client.list_unread(account=args.account, max_results=args.limit)
     except (ConfigError, AuthError, GmailError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -165,8 +122,8 @@ def cmd_unread(args: argparse.Namespace) -> None:
 def cmd_search(args: argparse.Namespace) -> None:
     """Search messages with Gmail query syntax."""
     try:
-        nina = GmailMultiClient.from_env()
-        messages = nina.search(args.query, account=args.account, max_results=args.limit)
+        client = GmailMultiClient.from_env()
+        messages = client.search(args.query, account=args.account, max_results=args.limit)
     except (ConfigError, AuthError, GmailError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -184,17 +141,7 @@ def cmd_search(args: argparse.Namespace) -> None:
         print()
 
 
-def cmd_scheduler(args: argparse.Namespace) -> None:  # noqa: ARG001
-    """Start Nina's internal scheduler (runs until Ctrl+C or SIGTERM)."""
-    import logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
-
-    from nina.scheduler.runner import Scheduler
-    sched = Scheduler()
-    # Jobs will be registered here as they are implemented.
-    print(f"Starting Nina scheduler — {sched.job_count} job(s) registered.")
-    sched.run_forever()
-
+# ── LLM ───────────────────────────────────────────────────────────────────────
 
 def cmd_llm_ping(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Verify LLM connectivity and authentication."""
@@ -206,6 +153,8 @@ def cmd_llm_ping(args: argparse.Namespace) -> None:  # noqa: ARG001
         print(f"  ✗  {e}", file=sys.stderr)
         sys.exit(1)
 
+
+# ── Telegram ──────────────────────────────────────────────────────────────────
 
 def cmd_tg_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Process pending Telegram bot commands (batch mode — fetches and exits)."""
@@ -226,30 +175,6 @@ def cmd_tg_bot_setup(args: argparse.Namespace) -> None:  # noqa: ARG001
     except TelegramError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-
-
-def cmd_tg_auth(args: argparse.Namespace) -> None:
-    """Authenticate with Telegram (interactive: sends code to your phone)."""
-    with TgClient.from_env() as tg:
-        if tg.is_authorized():
-            print(f"Already authenticated as: {tg.me()}")
-            return
-        phone = args.phone or input("Phone number (with country code, e.g. +5511...): ").strip()
-        tg.authorize(phone)
-        print(f"\nAuthenticated as: {tg.me()}")
-        print("Session saved — no need to re-auth next time.")
-
-
-def cmd_tg_status(args: argparse.Namespace) -> None:  # noqa: ARG001
-    """Show Telegram authentication status."""
-    try:
-        with TgClient.from_env() as tg:
-            if tg.is_authorized():
-                print(f"  ✓  {tg.me()}")
-            else:
-                print("  ✗  not authenticated — run: make tg-auth")
-    except TelegramError as e:
-        print(f"  ✗  {e}", file=sys.stderr)
 
 
 def cmd_tg_dialogs(args: argparse.Namespace) -> None:
@@ -298,23 +223,16 @@ def cmd_tg_send(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+# ── Parser ────────────────────────────────────────────────────────────────────
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="nina",
-        description="Nina — personal assistant CLI",
+        prog="nina-play",
+        description="Nina Play — experimental commands and exploration",
     )
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command")
 
-    p_auth = sub.add_parser("auth", help="Add an account via Google OAuth (opens browser)")
-    p_auth.set_defaults(func=cmd_auth)
-
-    p_status = sub.add_parser("status", help="Show auth status for all accounts")
-    p_status.set_defaults(func=cmd_status)
-
-    p_revoke = sub.add_parser("revoke", help="Remove stored token for an account")
-    p_revoke.add_argument("account", help="Email address to revoke")
-    p_revoke.set_defaults(func=cmd_revoke)
-
+    # Calendar
     p_calendars = sub.add_parser("calendars", help="List all calendars in the account")
     p_calendars.add_argument("--account", help="Filter to a specific account")
     p_calendars.set_defaults(func=cmd_calendars)
@@ -325,6 +243,7 @@ def main() -> None:
     p_events.add_argument("--limit", type=int, default=10)
     p_events.set_defaults(func=cmd_events)
 
+    # Gmail
     p_latest = sub.add_parser("latest", help="Show headers of the most recent emails")
     p_latest.add_argument("--account", help="Filter to a specific account")
     p_latest.add_argument("--limit", type=int, default=10)
@@ -341,24 +260,16 @@ def main() -> None:
     p_search.add_argument("--limit", type=int, default=20)
     p_search.set_defaults(func=cmd_search)
 
-    p_scheduler = sub.add_parser("scheduler", help="Start Nina's internal scheduler (daemon)")
-    p_scheduler.set_defaults(func=cmd_scheduler)
-
+    # LLM
     p_llm_ping = sub.add_parser("llm-ping", help="Verify LLM connectivity and auth")
     p_llm_ping.set_defaults(func=cmd_llm_ping)
 
+    # Telegram
     p_tg_bot = sub.add_parser("tg-bot", help="Process pending Telegram bot commands (batch mode)")
     p_tg_bot.set_defaults(func=cmd_tg_bot)
 
     p_tg_setup = sub.add_parser("tg-bot-setup", help="Find your TELEGRAM_OWNER_ID")
     p_tg_setup.set_defaults(func=cmd_tg_bot_setup)
-
-    p_tg_auth = sub.add_parser("tg-auth", help="Authenticate with Telegram")
-    p_tg_auth.add_argument("--phone", help="Phone number with country code")
-    p_tg_auth.set_defaults(func=cmd_tg_auth)
-
-    p_tg_status = sub.add_parser("tg-status", help="Show Telegram authentication status")
-    p_tg_status.set_defaults(func=cmd_tg_status)
 
     p_tg_dialogs = sub.add_parser("tg-dialogs", help="List recent Telegram chats/groups/channels")
     p_tg_dialogs.add_argument("--limit", type=int, default=20)
@@ -375,8 +286,7 @@ def main() -> None:
     p_tg_send.set_defaults(func=cmd_tg_send)
 
     args = parser.parse_args()
+    if args.command is None:
+        parser.print_help()
+        return
     args.func(args)
-
-
-if __name__ == "__main__":
-    main()

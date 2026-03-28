@@ -17,6 +17,8 @@ dependencies = [
     "python-telegram-bot>=21.0",
     "litellm>=1.40",
     "apscheduler>=3.10",
+    "fastapi>=0.111",
+    "uvicorn>=0.29",
 ]
 
 [project.optional-dependencies]
@@ -28,9 +30,13 @@ dev = [
     "mypy>=1.10",
 ]
 
+[project.scripts]
+nina      = "nina.cli:main"
+nina-play = "nina_play.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["nina*"]
+include = ["nina*", "nina_play*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
