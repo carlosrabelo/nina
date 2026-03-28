@@ -81,8 +81,9 @@ def _execute_notification_intent(action: str, minutes: int | None, days: int | N
     print(f"  {t('notify.usage', lang)}")
 
 
-def _execute_memo_intent(action: str, subject: str, lang: str) -> None:
+def _execute_memo_intent(action: str, subject: str, lang: str, due_date: str = "") -> None:
     from nina.store.db import open_db
+    from nina.store.models import Memo
     from nina.store.repos import memo as memo_repo
     conn = open_db(_data_dir())
     if action == "list":
@@ -93,6 +94,13 @@ def _execute_memo_intent(action: str, subject: str, lang: str) -> None:
         for m in memos:
             due = t("memo.due", lang, date=m.due_date) if m.due_date else ""
             print(f"  [{m.id[:8]}] {m.text}{due}")
+        return
+    if action == "remind":
+        memo_repo.add(conn, Memo(text=subject, due_date=due_date or None))
+        if due_date:
+            print(f"  {t('memo.remind_set', lang, date=due_date, subject=subject)}")
+        else:
+            print(f"  {t('memo.saved', lang)}")
         return
     matches = [m for m in memo_repo.list_open(conn) if subject.lower() in m.text.lower()]
     if not matches:
@@ -507,8 +515,9 @@ class NinaConsole(cmd.Cmd):
         from nina.profile.interpreter import has_context as profile_has
         from nina.workdays.interpreter import has_context as schedule_has
 
+        from nina.memo.interpreter import has_reminder_context
         candidates: set[str] = set()
-        if "memo" in line.lower():
+        if "memo" in line.lower() or has_reminder_context(line, lang):
             candidates.add("memo")
         if cal_has(line, lang):
             candidates.add("calendar")
@@ -560,9 +569,10 @@ class NinaConsole(cmd.Cmd):
 
         if "memo" in candidates:
             from nina.memo.interpreter import interpret as memo_interpret
-            memo_intent = memo_interpret(line, llm)
+            _now = datetime.now(ZoneInfo(load_workdays(_data_dir()).timezone))
+            memo_intent = memo_interpret(line, llm, lang=lang, now=_now)
             if memo_intent.action != "none":
-                _execute_memo_intent(memo_intent.action, memo_intent.subject, lang)
+                _execute_memo_intent(memo_intent.action, memo_intent.subject, lang, memo_intent.due_date)
                 return
 
         if "calendar" in candidates:
@@ -579,7 +589,7 @@ class NinaConsole(cmd.Cmd):
             if blocking_intents:
                 presence = load_presence(_data_dir())
                 profile = load_profile(_data_dir())
-                cal_accounts = profile.for_presence(presence.status).calendar
+                cal_accounts = profile.best_calendar_accounts(line, presence.status)
                 if not cal_accounts:
                     print(f"  {t('blocking.no_account', lang)}")
                     return

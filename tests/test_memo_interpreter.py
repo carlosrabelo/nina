@@ -71,6 +71,25 @@ class TestTryAction:
         assert try_action('feche o memo ""', "pt") is None
 
 
+class TestHasReminderContext:
+    def test_me_lembre_pt(self) -> None:
+        from nina.memo.interpreter import has_reminder_context
+        assert has_reminder_context("me lembre na segunda às 10h", "pt")
+
+    def test_me_avisa_pt(self) -> None:
+        from nina.memo.interpreter import has_reminder_context
+        assert has_reminder_context("me avisa amanhã de manhã", "pt")
+
+    def test_remind_me_en(self) -> None:
+        from nina.memo.interpreter import has_reminder_context
+        assert has_reminder_context("remind me on monday at 10am", "en")
+
+    def test_no_reminder_keyword(self) -> None:
+        from nina.memo.interpreter import has_reminder_context
+        assert not has_reminder_context("feche o memo compras", "pt")
+        assert not has_reminder_context("bloqueia 15h para reunião", "pt")
+
+
 class TestInterpret:
     def test_llm_close_intent(self) -> None:
         llm = MagicMock()
@@ -87,9 +106,28 @@ class TestInterpret:
 
     def test_llm_list_intent(self) -> None:
         llm = MagicMock()
-        llm.complete.return_value = '{"action": "list", "subject": ""}'
+        llm.complete.return_value = '{"action": "list", "subject": "", "due_date": null}'
         intent = interpret("pode me mostrar os memos?", llm)
         assert intent.action == "list"
+
+    def test_llm_remind_intent(self) -> None:
+        from datetime import datetime
+        llm = MagicMock()
+        llm.complete.return_value = '{"action": "remind", "subject": "formatar máquina Rafael", "due_date": "2026-03-30 10:00"}'
+        now = datetime(2026, 3, 28, 14, 0)
+        intent = interpret("me lembre na segunda às 10h que preciso formatar a máquina do Rafael", llm, lang="pt", now=now)
+        assert intent.action == "remind"
+        assert intent.due_date == "2026-03-30 10:00"
+        assert "Rafael" in intent.subject
+
+    def test_llm_remind_passes_now_in_prompt(self) -> None:
+        from datetime import datetime
+        llm = MagicMock()
+        llm.complete.return_value = '{"action": "remind", "subject": "x", "due_date": "2026-03-30 10:00"}'
+        now = datetime(2026, 3, 28, 14, 0)
+        interpret("me lembre segunda às 10h de x", llm, lang="pt", now=now)
+        call_text = llm.complete.call_args[0][0]
+        assert "2026-03-28" in call_text  # now injected into prompt
 
     def test_llm_none_when_not_memo(self) -> None:
         llm = MagicMock()

@@ -162,6 +162,7 @@ STRINGS: dict[str, str] = {
 
     # ── memo ──────────────────────────────────────────────────────────────────
     "memo.saved":       "✓ Memo salvo.",
+    "memo.remind_set":  "✓ Lembrete para {date} — {subject}",
     "memo.done":        "✓ Memo marcado como concluído.",
     "memo.dismissed":   "✓ Memo descartado.",
     "memo.not_found":   "Memo não encontrado.",

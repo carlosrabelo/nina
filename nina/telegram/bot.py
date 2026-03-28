@@ -578,8 +578,11 @@ def _execute_calendar_intent_text(action: str, lang: str, tokens_dir: Path, data
 # Memo action from natural language (no LLM)
 # ---------------------------------------------------------------------------
 
-def _execute_memo_intent_text(action: str, subject: str, lang: str, data_dir: Path) -> str:
+def _execute_memo_intent_text(
+    action: str, subject: str, lang: str, data_dir: Path, due_date: str = ""
+) -> str:
     from nina.store.db import open_db
+    from nina.store.models import Memo
     from nina.store.repos import memo as memo_repo
     conn = open_db(data_dir)
     if action == "list":
@@ -591,6 +594,11 @@ def _execute_memo_intent_text(action: str, subject: str, lang: str, data_dir: Pa
             due = t("memo.due", lang, date=m.due_date) if m.due_date else ""
             lines.append(f"[{m.id[:8]}] {m.text}{due}")
         return "\n".join(lines)
+    if action == "remind":
+        memo_repo.add(conn, Memo(text=subject, due_date=due_date or None))
+        if due_date:
+            return t("memo.remind_set", lang, date=due_date, subject=subject)
+        return t("memo.saved", lang)
     matches = [m for m in memo_repo.list_open(conn) if subject.lower() in m.text.lower()]
     if not matches:
         return t("memo.not_found", lang)
@@ -652,6 +660,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     # Keyword gates — determine candidates without calling LLM
     from nina.google.calendar.blocking import has_time_signal
     from nina.google.calendar.interpreter import has_context as cal_has
+    from nina.memo.interpreter import has_reminder_context
     from nina.notifications.interpreter import has_context as notif_has
     from nina.obsidian.interpreter import has_context as obsidian_has
     from nina.presence.interpreter import has_context as presence_has
@@ -659,7 +668,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     from nina.workdays.interpreter import has_context as schedule_has
 
     candidates: set[str] = set()
-    if "memo" in text.lower():
+    if "memo" in text.lower() or has_reminder_context(text, lang):
         candidates.add("memo")
     if cal_has(text, lang):
         candidates.add("calendar")
@@ -709,11 +718,15 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     from zoneinfo import ZoneInfo
 
     if "memo" in candidates:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
         from nina.memo.interpreter import interpret as memo_interpret
-        memo_intent = memo_interpret(text, llm)
+        from nina.workdays.store import load as load_workdays
+        _tz = ZoneInfo(load_workdays(data_dir).timezone)
+        memo_intent = memo_interpret(text, llm, lang=lang, now=datetime.now(_tz))
         if memo_intent.action != "none":
             await update.message.reply_text(
-                _execute_memo_intent_text(memo_intent.action, memo_intent.subject, lang, data_dir)
+                _execute_memo_intent_text(memo_intent.action, memo_intent.subject, lang, data_dir, memo_intent.due_date)
             )
             return
 
@@ -733,7 +746,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         if blocking_intents:
             presence = load_presence(data_dir)
             profile = load_profile(data_dir)
-            cal_accounts = profile.for_presence(presence.status).calendar
+            cal_accounts = profile.best_calendar_accounts(text, presence.status)
             if not cal_accounts:
                 await update.message.reply_text(t("blocking.no_account", lang))
                 return
