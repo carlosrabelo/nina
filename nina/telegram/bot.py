@@ -404,12 +404,15 @@ async def handle_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
     except CalendarError as e:
         await update.message.reply_text(f"✗ {e}")
         return
+    _WEEKDAY_PT = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+    _WEEKDAY_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     time_fmt = "%H:%M"
+    _wd = result.start.weekday()
+    _day_abbr = (_WEEKDAY_PT[_wd] if lang == "pt" else _WEEKDAY_EN[_wd])
+    date_label = f"{_day_abbr}, {result.start.strftime('%d/%m')}"
     msg = t("schedule.created", lang, title=result.event_title,
-            start=result.start.strftime(time_fmt), end=result.end.strftime(time_fmt),
-            account=cal_accounts[0])
-    if result.link:
-        msg += f"\n{result.link}"
+            date=date_label, start=result.start.strftime(time_fmt),
+            end=result.end.strftime(time_fmt), account=cal_accounts[0])
     if result.conflicts:
         msg += f"\n{t('schedule.conflict', lang, titles=', '.join(result.conflicts))}"
     await update.message.reply_text(msg)
@@ -750,6 +753,8 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
             if not cal_accounts:
                 await update.message.reply_text(t("blocking.no_account", lang))
                 return
+            _WEEKDAY_PT = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+            _WEEKDAY_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             time_fmt = "%H:%M"
             for blocking_intent in blocking_intents:
                 try:
@@ -762,13 +767,15 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
                 except CalendarError as e:
                     await update.message.reply_text(f"✗ {e}")
                     continue
+                wd = result.start.weekday()
+                day_abbr = (_WEEKDAY_PT[wd] if lang == "pt" else _WEEKDAY_EN[wd])
+                date_label = f"{day_abbr}, {result.start.strftime('%d/%m')}"
                 reply = t("blocking.created", lang,
                           title=result.event_title,
+                          date=date_label,
                           start=result.start.strftime(time_fmt),
                           end=result.end.strftime(time_fmt),
                           account=cal_accounts[0])
-                if result.link:
-                    reply += f"\n{result.link}"
                 if result.conflicts:
                     reply += "\n" + t("blocking.conflict", lang, titles=", ".join(result.conflicts))
                 await update.message.reply_text(reply)

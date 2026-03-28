@@ -361,11 +361,16 @@ class NinaConsole(cmd.Cmd):
             else:
                 print(f"  ✗  {data['detail']}")
             return
+        _WEEKDAY_PT = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+        _WEEKDAY_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        from datetime import datetime as _dt
+        _start_dt = _dt.fromisoformat(data["start"])
+        _wd = _start_dt.weekday()
+        _day_abbr = (_WEEKDAY_PT[_wd] if lang == "pt" else _WEEKDAY_EN[_wd])
+        date_label = f"{_day_abbr}, {_start_dt.strftime('%d/%m')}"
         start = data["start"][11:16]
         end = data["end"][11:16]
-        print(f"  {t('schedule.created', lang, title=data['event_title'], start=start, end=end, account=data['account'])}")
-        if data.get("link"):
-            print(f"  {data['link']}")
+        print(f"  {t('schedule.created', lang, title=data['event_title'], date=date_label, start=start, end=end, account=data['account'])}")
         if data.get("conflicts"):
             print(f"  {t('schedule.conflict', lang, titles=', '.join(data['conflicts']))}")
 
@@ -593,6 +598,8 @@ class NinaConsole(cmd.Cmd):
                 if not cal_accounts:
                     print(f"  {t('blocking.no_account', lang)}")
                     return
+                _WEEKDAY_PT = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+                _WEEKDAY_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
                 time_fmt = "%H:%M"
                 for blocking_intent in blocking_intents:
                     try:
@@ -605,9 +612,10 @@ class NinaConsole(cmd.Cmd):
                     except CalendarError as e:
                         print(f"  ✗  {e}")
                         continue
-                    print(f"  {t('blocking.created', lang, title=result.event_title, start=result.start.strftime(time_fmt), end=result.end.strftime(time_fmt), account=cal_accounts[0])}")
-                    if result.link:
-                        print(f"  {result.link}")
+                    wd = result.start.weekday()
+                    day_abbr = (_WEEKDAY_PT[wd] if lang == "pt" else _WEEKDAY_EN[wd])
+                    date_label = f"{day_abbr}, {result.start.strftime('%d/%m')}"
+                    print(f"  {t('blocking.created', lang, title=result.event_title, date=date_label, start=result.start.strftime(time_fmt), end=result.end.strftime(time_fmt), account=cal_accounts[0])}")
                     if result.conflicts:
                         print(f"  {t('blocking.conflict', lang, titles=', '.join(result.conflicts))}")
                 return

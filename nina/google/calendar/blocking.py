@@ -37,13 +37,15 @@ from nina.llm.client import LLMClient
 
 _SYSTEM_PROMPT = """You are an assistant that interprets calendar blocking requests from natural language.
 
-The current time will be provided as the first line of the user message in the format: [now: HH:MM]
+The current date and time will be provided as the first line of the user message in the format:
+[now: YYYY-MM-DD HH:MM weekday]
 
 Analyze the user's message and return a JSON array of events. Each event is an object with:
 - "action": "block_calendar" if it describes blocking time in the calendar
 - "title": descriptive event title summarizing what is happening (in the same language as the input)
 - "duration_minutes": duration as an integer number of minutes (default 60 if not mentioned)
 - "start_time": start time as "HH:MM" (24h). If no start time is given, use the current [now] time. If a relative offset is given (e.g. "daqui 15 minutos"), add it to [now].
+- "date": the event date as "YYYY-MM-DD". Use [now] date for today/agora/current. For relative days ("segunda", "monday", "amanhã", "tomorrow") calculate the correct future date from [now].
 
 Rules:
 - A single message may contain MULTIPLE events — return one object per event
@@ -52,25 +54,26 @@ Rules:
 - "meia hora" / "30 minutos" / "half an hour" = 30 minutes
 - "duas horas" / "2 horas" / "two hours" = 120 minutes
 - Always return start_time as "HH:MM" in 24-hour format
+- "segunda"/"segunda-feira"/"monday" = next Monday from [now] date
+- "terça"/"tuesday" = next Tuesday, etc.
+- "amanhã"/"tomorrow" = [now] date + 1 day
+- "hoje"/"today" = [now] date
 - Extract the most meaningful title from the context (who, what activity)
 
 Return ONLY valid JSON (an array), no explanation, no markdown.
 
-Examples (assuming now is 13:15):
+Examples (assuming now is 2026-03-28 13:15 saturday):
 "estou atendendo a professora Sandra Mariotto, devo levar uma hora"
--> [{"action": "block_calendar", "title": "Atendimento Sandra Mariotto", "duration_minutes": 60, "start_time": "13:15"}]
+-> [{"action": "block_calendar", "title": "Atendimento Sandra Mariotto", "duration_minutes": 60, "start_time": "13:15", "date": "2026-03-28"}]
 
-"estou em reunião agora por 30 minutos e às 16:00 atendo a professora Vera Lucia por uma hora"
--> [
-     {"action": "block_calendar", "title": "Reunião", "duration_minutes": 30, "start_time": "13:15"},
-     {"action": "block_calendar", "title": "Atendimento Vera Lucia", "duration_minutes": 60, "start_time": "16:00"}
-   ]
+"agende na segunda feira as 14:00 reunião com Rafael"
+-> [{"action": "block_calendar", "title": "Reunião com Rafael", "duration_minutes": 60, "start_time": "14:00", "date": "2026-03-30"}]
+
+"amanhã às 10:00 consulta médica 30 minutos"
+-> [{"action": "block_calendar", "title": "Consulta médica", "duration_minutes": 30, "start_time": "10:00", "date": "2026-03-29"}]
 
 "daqui 15 minutos começo uma consultoria de 2 horas"
--> [{"action": "block_calendar", "title": "Consultoria", "duration_minutes": 120, "start_time": "13:30"}]
-
-"bloqueie minha agenda pela próxima hora"
--> [{"action": "block_calendar", "title": "Bloqueado", "duration_minutes": 60, "start_time": "13:15"}]
+-> [{"action": "block_calendar", "title": "Consultoria", "duration_minutes": 120, "start_time": "13:30", "date": "2026-03-28"}]
 
 "Qual é o tempo hoje?"
 -> []
@@ -83,6 +86,7 @@ class BlockingIntent:
     title: str = ""
     duration_minutes: int = 60
     start_time: str = ""         # HH:MM (24h); empty = use now in execute()
+    date: str = ""               # YYYY-MM-DD; empty = use today in execute()
 
 
 @dataclass
@@ -100,7 +104,8 @@ def interpret(text: str, llm: LLMClient, now: datetime | None = None) -> list[Bl
         return []
     if now is None:
         now = datetime.now()
-    stamped = f"[now: {now.strftime('%H:%M')}]\n{text}"
+    weekday = now.strftime("%A").lower()
+    stamped = f"[now: {now.strftime('%Y-%m-%d %H:%M')} {weekday}]\n{text}"
     try:
         raw = llm.complete(stamped, system=_SYSTEM_PROMPT)
         raw = re.sub(r"```(?:json)?\s*|\s*```", "", raw).strip()
@@ -122,6 +127,7 @@ def interpret(text: str, llm: LLMClient, now: datetime | None = None) -> list[Bl
             sh, sm = (int(x) for x in start_time_str.split(":"))
             if not (0 <= sh <= 23 and 0 <= sm <= 59):
                 continue
+            date_str = str(item.get("date", now.strftime("%Y-%m-%d")))
         except (ValueError, TypeError, AttributeError):
             continue
         results.append(BlockingIntent(
@@ -129,6 +135,7 @@ def interpret(text: str, llm: LLMClient, now: datetime | None = None) -> list[Bl
             title=title,
             duration_minutes=duration,
             start_time=f"{sh:02d}:{sm:02d}",
+            date=date_str,
         ))
 
     return results
@@ -150,7 +157,12 @@ def execute(
 
     if intent.start_time:
         sh, sm = (int(x) for x in intent.start_time.split(":"))
-        raw_start = now.replace(hour=sh, minute=sm, second=0, microsecond=0)
+        base = now
+        if intent.date:
+            from datetime import date as date_cls
+            y, mo, d = (int(x) for x in intent.date.split("-"))
+            base = now.replace(year=y, month=mo, day=d)
+        raw_start = base.replace(hour=sh, minute=sm, second=0, microsecond=0)
     else:
         raw_start = now
 

@@ -81,7 +81,7 @@ STRINGS: dict[str, str] = {
 
     # ── calendar blocking ─────────────────────────────────────────────────────
     "calendar.no_events":  "No upcoming events found.",
-    "blocking.created":    "✓ {title}\n{start} → {end}\nAccount: {account}",
+    "blocking.created":    "✓ {title}\n{date} · {start} → {end}\nAccount: {account}",
     "blocking.conflict":   "⚠️ Conflict: {titles}",
     "blocking.no_account": "No calendar account configured for current presence. Set it with /profile.",
 
@@ -118,7 +118,7 @@ STRINGS: dict[str, str] = {
     "help.exit":              "  exit / quit   Exit the console",
 
     # ── schedule command ──────────────────────────────────────────────────────
-    "schedule.created":  "✓ {title}\n{start} → {end}\nAccount: {account}",
+    "schedule.created":  "✓ {title}\n{date} · {start} → {end}\nAccount: {account}",
     "schedule.conflict": "⚠️ Conflict: {titles}",
     "schedule.no_account": "No calendar account configured for current presence. Set it with /profile.",
     "schedule.parse_error": (
