@@ -4,27 +4,25 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 
 ## Highlights
 
-- Authenticate any number of Gmail accounts via Google OAuth — no manual email list required
-- Auto-discovers authenticated accounts from saved tokens on startup
-- List unread messages, search, and show recent email headers across all Gmail accounts
-- List upcoming Calendar events, filter by calendar ID
-- Read and send Telegram messages acting as your personal account (Telethon)
-- Receive commands via a Telegram Bot in batch mode — no persistent loop required
-- Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface — switch providers with one `.env` change
-- Internal scheduler (APScheduler) to run jobs on a defined schedule — no external cron required
-- Token refresh handled automatically for Google; re-auth only when truly needed
+- Track your **presence** (home / office / out / dnd) and let Nina adapt to your context
+- **Profile** maps each presence status to the right Google accounts (Gmail + Calendar)
+- **Interactive console** with natural language: type freely and the LLM interprets your intent
+- **Calendar blocking** via free text ("I'm in a meeting for 1h") or direct command (`schedule`)
+- **Calendar notifications** via Telegram — reminders, new events, changes, cancellations
+- Bilingual interface (English / Portuguese) — switch with `lang en` or `/lang en`
+- Authenticate any number of Google accounts via OAuth — auto-discovered from saved tokens
+- Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface
+- Internal scheduler (APScheduler) — no external cron required
 - All secrets stay local: tokens, session files, and credentials are git-ignored
+
+→ **[Command Reference (GUIDE.md)](GUIDE.md)**
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Usage — Google](#usage--google)
-- [Usage — Telegram User Client](#usage--telegram-user-client)
-- [Usage — Telegram Bot](#usage--telegram-bot)
-- [Usage — LLM](#usage--llm)
-- [Usage — Daemon](#usage--daemon)
+- [Getting Started](#getting-started)
 - [Project Layout](#project-layout)
 - [Development](#development)
 - [License](#license)
@@ -33,8 +31,8 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 
 - **Python 3.12+**
 - **Google Cloud project** with Gmail API and Google Calendar API enabled, and an OAuth 2.0 Desktop client — [console.cloud.google.com](https://console.cloud.google.com)
-- **Telegram API credentials** (`api_id` / `api_hash`) from [my.telegram.org](https://my.telegram.org) → API Development Tools
-- **Telegram Bot token** from [@BotFather](https://t.me/BotFather) (only needed to receive commands via bot)
+- **Telegram Bot token** from [@BotFather](https://t.me/BotFather) (needed for the bot interface)
+- An **LLM API key** (Groq, OpenAI, Anthropic) or a local Ollama instance — needed for free-text commands
 
 ## Installation
 
@@ -52,8 +50,6 @@ cp .env.example .env
 |---|---|---|
 | `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | OAuth client credentials downloaded from Google Cloud Console |
 | `TOKENS_DIR` | `tokens` | Directory for all token and session files (git-ignored) |
-| `TELEGRAM_API_ID` | — | Telegram MTProto API id from my.telegram.org |
-| `TELEGRAM_API_HASH` | — | Telegram MTProto API hash from my.telegram.org |
 | `TELEGRAM_BOT_TOKEN` | — | Bot token from @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Your personal Telegram chat ID (bot only responds to this) |
 | `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | LiteLLM model string: `<provider>/<model>` |
@@ -63,126 +59,18 @@ cp .env.example .env
 | `LLM_TEMPERATURE` | `0.3` | Sampling temperature |
 | `LLM_MAX_TOKENS` | `1024` | Maximum tokens in the response |
 
-## Usage — Google
+## Getting Started
 
-### Authenticate a Google account
-
-Run once per account — opens the browser, you pick the Google account:
+### 1. Authenticate Google accounts
 
 ```bash
-make auth
+make auth-google   # opens browser — repeat for each account
+make status-google # ✓ you@gmail.com  ✓ work@gmail.com
 ```
 
-Repeat for each account. Nina discovers all authenticated accounts automatically.
+The OAuth scope includes Google Calendar read/write — required for calendar blocking and notifications.
 
-### Check status
-
-```bash
-make status
-# ✓  you@gmail.com
-# ✓  work@gmail.com
-```
-
-### Gmail
-
-```bash
-make gmail-latest                               # recent email headers, all accounts
-make gmail-latest ACCOUNT=you@gmail.com        # single account
-make gmail-unread LIMIT=5                       # unread messages
-make gmail-search QUERY="subject:invoice is:unread"
-make gmail-search QUERY="from:boss" ACCOUNT=work@gmail.com
-```
-
-### Calendar
-
-```bash
-make cal-calendars                              # list all calendars with their IDs
-make cal-events                                 # upcoming events (primary calendar)
-make cal-events LIMIT=5
-make cal-events CAL=abc123@group.calendar.google.com   # specific calendar
-make cal-events ACCOUNT=work@gmail.com CAL=abc123@group.calendar.google.com
-```
-
-### Revoke a Google account
-
-```bash
-./nina.py revoke you@gmail.com
-```
-
-## Usage — Telegram User Client
-
-The user client lets Nina read and send messages **as you** — acting on your personal Telegram account.
-
-### Authenticate
-
-```bash
-make tg-auth
-# Phone number (with country code): +5511...
-# Telegram verification code: 12345
-```
-
-The session is saved to `tokens/telegram.session` — no re-auth needed next time.
-
-### Check status
-
-```bash
-make tg-status
-# ✓  Your Name (+5511...)
-```
-
-### Read and send
-
-```bash
-make tg-dialogs                          # list recent chats
-make tg-dialogs LIMIT=10
-make tg-messages CHAT=@username          # messages from a chat
-make tg-messages CHAT=+5511...           # by phone number
-make tg-send CHAT=@username TEXT="Oi!"   # send a message
-```
-
-## Usage — Telegram Bot
-
-The bot lets **you send commands to Nina** via Telegram. It uses batch mode: each invocation fetches pending commands, processes them, and exits — no background process required.
-
-### Setup (one time)
-
-1. Talk to [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token to `TELEGRAM_BOT_TOKEN` in `.env`
-2. Run `make tg-bot` once
-3. Open Telegram and send `/start` to your new bot
-4. Run `make tg-bot` again — the bot replies with your chat ID
-5. Copy that number to `TELEGRAM_OWNER_ID` in `.env`
-
-### Run
-
-```bash
-make tg-bot
-# Processed 1 command(s).
-```
-
-### Available bot commands
-
-| Command | Description |
-|---|---|
-| `/start` | Welcome message and your chat ID |
-| `/help` | List all commands |
-| `/unread` | Unread emails across all Gmail accounts |
-| `/latest` | Recent email headers |
-| `/events` | Upcoming Calendar events |
-| `/dialogs` | Recent Telegram chats |
-
-### Automate with cron (optional)
-
-To have Nina check for commands every minute, add to crontab (`crontab -e`):
-
-```
-* * * * * cd /path/to/nina && make tg-bot >> /tmp/nina-bot.log 2>&1
-```
-
-## Usage — LLM
-
-Nina uses [LiteLLM](https://github.com/BerriAI/litellm) as a unified interface to any LLM provider. Switching from Groq to OpenAI or Anthropic is a one-line `.env` change — no code changes needed.
-
-### Configure
+### 2. Configure the LLM
 
 Add to `.env`:
 
@@ -191,76 +79,70 @@ LLM_MODEL=groq/llama-3.3-70b-versatile
 GROQ_API_KEY=gsk_...
 ```
 
-To use a different provider:
-
-```
-LLM_MODEL=openai/gpt-4o-mini
-OPENAI_API_KEY=sk_...
-
-# or Anthropic
-LLM_MODEL=anthropic/claude-haiku-4-5-20251001
-ANTHROPIC_API_KEY=sk-ant-...
-
-# or local Ollama (no key needed)
-LLM_MODEL=ollama/llama3.2
-```
-
-### Verify connectivity
+Other supported providers: `openai/gpt-4o-mini`, `anthropic/claude-haiku-4-5-20251001`, `ollama/llama3.2`.
 
 ```bash
-make llm-ping
-#   ✓  groq/llama-3.3-70b-versatile  →  OK
+make play-llm-ping   # verify connectivity
 ```
 
-## Usage — Daemon
+### 3. Set up the Telegram bot
 
-Run Nina in daemon mode — keeps the process alive and triggers scheduled jobs. No external cron required.
+1. Talk to [@BotFather](https://t.me/BotFather) → `/newbot` → copy token to `TELEGRAM_BOT_TOKEN` in `.env`
+2. Run `make daemon`, then send `/start` to your bot
+3. Copy the chat ID it replies with to `TELEGRAM_OWNER_ID` in `.env`
+
+### 4. Start Nina
 
 ```bash
-make daemon
-# 2026-03-27 07:00:00  INFO  scheduler started — 0 job(s) registered
-# Nina daemon running — press Ctrl+C to stop
+make dev      # daemon + console in a split tmux session
+# or
+make daemon   # daemon only (Telegram bot + HTTP API + scheduler)
+make console  # console only (daemon must be running)
 ```
-
-Jobs are registered in `nina/scheduler/jobs/` and wired in `nina/cli.py`. The daemon handles `SIGINT` and `SIGTERM` for graceful shutdown.
 
 ## Project Layout
 
 ```
-nina.py                      # CLI entry point
-demo_digest.py               # LLM digest demo with real/simulated data
 nina/
-    errors.py                # shared exceptions (AuthError, GmailError, …)
+    errors.py                # shared exceptions
+    i18n/                    # bilingual strings (en / pt)
+    locale/                  # locale config (language preference)
+    presence/                # presence status tracking
+    profile/                 # Google account mapping per presence
+    workdays/                # work schedule and timezone
+    notifications/           # notification config and state
     google/
         auth.py              # Google OAuth flow, token caching, auto-discovery
-        gmail/
-            client.py        # GmailClient + GmailMultiClient
+        gmail/client.py
         calendar/
-            client.py        # CalendarClient (list_upcoming, list_next_days)
-    telegram/
-        client.py            # TgClient — Telethon user client (read/send as you)
-        bot.py               # Telegram Bot batch processor (receive commands)
-    llm/
-        client.py            # LLMClient — LiteLLM wrapper (Groq, OpenAI, Anthropic, Ollama)
-        digest.py            # LLM-powered daily brief
+            client.py        # CalendarClient (list, create events)
+            blocking.py      # LLM-based calendar blocking
+            schedule_parser.py  # structured schedule command parser (no LLM)
+    telegram/bot.py          # Telegram Bot (daemon mode)
+    llm/client.py            # LLMClient — LiteLLM wrapper
+    console/runner.py        # interactive REPL
+    daemon/
+        runner.py            # daemon with APScheduler + HTTP server
+        http.py              # HTTP API (presence, workdays, schedule, notifications)
+        client.py            # console → daemon HTTP client
     scheduler/
-        runner.py            # APScheduler-based daemon runner
-        jobs/                # scheduled job implementations (added incrementally)
+        jobs/
+            calendar_notifications.py  # reminders + change detection (every 5 min)
 make/                        # setup.sh, test.sh, lint.sh
-credentials/                 # credentials.json from Google Cloud Console (git-ignored)
-tokens/                      # OAuth tokens, Telegram session, bot offset (all git-ignored)
-tests/                       # pytest test suite
+credentials/                 # credentials.json (git-ignored)
+tokens/                      # OAuth tokens, locale, profile, workdays, notifications (git-ignored)
+tests/                       # pytest test suite (170 tests)
 ```
 
 ## Development
 
 ```bash
-make setup      # Create .venv and install dependencies (first time only)
-make test       # Run all tests
-make lint       # Lint with ruff
-make fmt        # Format code with ruff
-make typecheck  # Type-check with mypy
-make daemon     # Start Nina in daemon mode
+make setup      # create .venv and install dependencies
+make test       # run all tests
+make lint       # lint with ruff
+make fmt        # format code with ruff
+make typecheck  # type-check with mypy
+make dev        # start daemon + console in tmux
 ```
 
 ## License

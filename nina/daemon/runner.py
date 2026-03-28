@@ -21,7 +21,8 @@ def _init_state(tokens_dir: Path) -> None:
 
 async def _serve(tokens_dir: Path, port: int, scheduler: Scheduler) -> None:
     http_app = create_app(tokens_dir)
-    config = uvicorn.Config(http_app, host="127.0.0.1", port=port, log_level="info")
+    host = os.environ.get("NINA_HTTP_HOST", "127.0.0.1")
+    config = uvicorn.Config(http_app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
 
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -76,7 +77,20 @@ def run() -> None:
     _init_state(tokens_dir)
 
     scheduler = Scheduler()
-    # Jobs will be registered here as they are implemented.
+
+    _bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    _owner_raw = os.environ.get("TELEGRAM_OWNER_ID", "")
+    if _bot_token and _owner_raw:
+        try:
+            from nina.scheduler.jobs.calendar_notifications import make_job
+            scheduler.add_job(
+                make_job(tokens_dir, _bot_token, int(_owner_raw)),
+                "interval",
+                minutes=5,
+            )
+        except Exception as e:
+            logging.warning("calendar notifications job not registered: %s", e)
+
     scheduler.start()
 
     asyncio.run(_serve(tokens_dir, port, scheduler))

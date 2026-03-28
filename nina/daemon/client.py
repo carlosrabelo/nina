@@ -35,3 +35,7 @@ def get(path: str) -> Any:
 
 def put(path: str, body: dict) -> Any:
     return _request("PUT", path, body)
+
+
+def post(path: str, body: dict) -> Any:
+    return _request("POST", path, body)

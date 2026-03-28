@@ -29,10 +29,16 @@ class Event:
     id: str
     account: str
     title: str
-    start: str
-    end: str
+    start: datetime
+    end: datetime
     location: str
     calendar: str
+    link: str = ""
+    updated: str = ""   # ISO datetime of last modification
+
+    @property
+    def event_id(self) -> str:
+        return self.id
 
 
 class CalendarClient:
@@ -125,15 +131,74 @@ class CalendarClient:
         events.sort(key=lambda e: e.start)
         return events
 
+    def list_in_window(
+        self, start: datetime, end: datetime, calendar_id: str = "primary"
+    ) -> list[Event]:
+        """Return events that overlap with the [start, end] window."""
+        try:
+            result = (
+                self._svc.events()
+                .list(
+                    calendarId=calendar_id,
+                    timeMin=start.isoformat(),
+                    timeMax=end.isoformat(),
+                    singleEvents=True,
+                    orderBy="startTime",
+                )
+                .execute()
+            )
+        except HttpError as e:
+            raise CalendarError(self.account, str(e)) from e
+        return [self._parse(item) for item in result.get("items", [])]
+
+    def create_event(
+        self,
+        title: str,
+        start: datetime,
+        end: datetime,
+        calendar_id: str = "primary",
+        description: str = "",
+    ) -> Event:
+        """Create a new event and return it."""
+        body = {
+            "summary": title,
+            "description": description,
+            "start": {"dateTime": start.isoformat()},
+            "end":   {"dateTime": end.isoformat()},
+        }
+        try:
+            raw = self._svc.events().insert(calendarId=calendar_id, body=body).execute()
+        except HttpError as e:
+            raise CalendarError(self.account, str(e)) from e
+        return self._parse(raw)
+
+    @staticmethod
+    def _parse_dt(value: str) -> datetime:
+        """Parse a dateTime or date string from the Calendar API into a datetime."""
+        if not value:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        # dateTime format: 2024-03-28T16:00:00+00:00 or 2024-03-28T16:00:00Z
+        # date format: 2024-03-28 (all-day events)
+        if "T" in value:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        # All-day event: treat as midnight UTC
+        from datetime import date
+        d = date.fromisoformat(value)
+        return datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+
     def _parse(self, raw: dict) -> Event:  # type: ignore[type-arg]
-        start = raw.get("start", {})
-        end = raw.get("end", {})
+        start_raw = raw.get("start", {})
+        end_raw = raw.get("end", {})
+        start_str = start_raw.get("dateTime", start_raw.get("date", ""))
+        end_str = end_raw.get("dateTime", end_raw.get("date", ""))
         return Event(
             id=raw["id"],
             account=self.account,
             title=raw.get("summary", "(sem título)"),
-            start=start.get("dateTime", start.get("date", "")),
-            end=end.get("dateTime", end.get("date", "")),
+            start=self._parse_dt(start_str),
+            end=self._parse_dt(end_str),
             location=raw.get("location", ""),
             calendar=raw.get("organizer", {}).get("email", "primary"),
+            link=raw.get("htmlLink", ""),
+            updated=raw.get("updated", ""),
         )

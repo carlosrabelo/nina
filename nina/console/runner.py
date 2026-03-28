@@ -141,6 +141,43 @@ class NinaConsole(cmd.Cmd):
     def help_context(self) -> None:
         print(t("help.context", _lang()))
 
+    # ── profile ───────────────────────────────────────────────────────────────
+
+    def do_profile(self, arg: str) -> None:
+        from nina.presence.models import PresenceStatus
+        from nina.profile.store import load as load_profile
+        lang = _lang()
+        profile = load_profile(_tokens_dir())
+
+        statuses = list(PresenceStatus)
+        if arg.strip():
+            try:
+                statuses = [PresenceStatus(arg.strip().lower())]
+            except ValueError:
+                pass
+
+        if profile.is_empty():
+            print(f"  {t('profile.empty', lang)}")
+            return
+
+        print(f"  {t('profile.title', lang)}")
+        for status in statuses:
+            p = profile.for_presence(status)
+            label = t(f"presence.label.{status.value}", lang)
+            print(f"\n  {status.value} — {label}")
+            if p.gmail:
+                print(f"    {t('profile.gmail', lang, accounts=', '.join(p.gmail))}")
+            if p.calendar:
+                print(f"    {t('profile.calendar', lang, accounts=', '.join(p.calendar))}")
+            if not p.gmail and not p.calendar:
+                print(f"    {t('profile.no_accounts', lang)}")
+
+    def help_profile(self) -> None:
+        print(t("help.profile", _lang()))
+
+    def complete_profile(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:  # noqa: ARG002
+        return [v for v in _PRESENCE_VALUES if v.startswith(text)]
+
     # ── lang ──────────────────────────────────────────────────────────────────
 
     def do_lang(self, arg: str) -> None:
@@ -164,6 +201,82 @@ class NinaConsole(cmd.Cmd):
     def complete_lang(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:  # noqa: ARG002
         from nina.locale.models import SUPPORTED
         return [v for v in sorted(SUPPORTED) if v.startswith(text)]
+
+    # ── notify ────────────────────────────────────────────────────────────────
+
+    def do_notify(self, arg: str) -> None:
+        lang = _lang()
+        parts = arg.strip().split()
+        try:
+            if not parts:
+                data = client.get("/notifications/config")
+                print(f"  {t('notify.config', lang, reminder_minutes=data['reminder_minutes'], watch_days=data['watch_days'])}")
+            elif parts[0] == "reminder" and len(parts) == 2:
+                val = int(parts[1])
+                if val <= 0:
+                    raise ValueError
+                client.put("/notifications/config", {"reminder_minutes": val})
+                print(f"  {t('notify.reminder_set', lang, minutes=val)}")
+            elif parts[0] == "days" and len(parts) == 2:
+                val = int(parts[1])
+                if val <= 0:
+                    raise ValueError
+                client.put("/notifications/config", {"watch_days": val})
+                print(f"  {t('notify.days_set', lang, days=val)}")
+            else:
+                print(f"  {t('notify.usage', lang)}")
+        except ValueError:
+            raw = parts[1] if len(parts) > 1 else ""
+            print(f"  {t('notify.invalid_value', lang, value=raw)}")
+        except ConnectionError as e:
+            print(f"  ✗  {e}")
+
+    def help_notify(self) -> None:
+        print(t("help.notify", _lang()))
+
+    # ── schedule ──────────────────────────────────────────────────────────────
+
+    def do_schedule(self, arg: str) -> None:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        from nina.google.calendar.schedule_parser import parse as parse_schedule
+        from nina.workdays.store import load as load_workdays
+        lang = _lang()
+        if not arg.strip():
+            print(t("schedule.parse_error", lang))
+            return
+        schedule = load_workdays(_tokens_dir())
+        tz = ZoneInfo(schedule.timezone)
+        now = datetime.now(tz)
+        parsed = parse_schedule(arg, now)
+        if parsed is None:
+            print(f"  {t('schedule.parse_error', lang)}")
+            return
+        try:
+            data = client.post("/schedule", {
+                "start_time": parsed.start.strftime("%H:%M"),
+                "title": parsed.title,
+                "duration_minutes": parsed.duration_minutes,
+            })
+        except ConnectionError as e:
+            print(f"  ✗  {e}")
+            return
+        if "detail" in data:
+            if data["detail"] == "no_calendar_account":
+                print(f"  {t('schedule.no_account', lang)}")
+            else:
+                print(f"  ✗  {data['detail']}")
+            return
+        start = data["start"][11:16]
+        end = data["end"][11:16]
+        print(f"  {t('schedule.created', lang, title=data['event_title'], start=start, end=end, account=data['account'])}")
+        if data.get("link"):
+            print(f"  {data['link']}")
+        if data.get("conflicts"):
+            print(f"  {t('schedule.conflict', lang, titles=', '.join(data['conflicts']))}")
+
+    def help_schedule(self) -> None:
+        print(t("help.schedule", _lang()))
 
     # ── exit ──────────────────────────────────────────────────────────────────
 
@@ -197,13 +310,52 @@ class NinaConsole(cmd.Cmd):
             print(f"  {t('llm.unavailable', lang)}")
             return
 
+        from nina.errors import CalendarError
+        from nina.google.calendar.blocking import execute as execute_blocking
+        from nina.google.calendar.blocking import interpret as interpret_blocking
         from nina.presence.interpreter import interpret as interpret_presence
         from nina.presence.models import PresenceState
-        from nina.presence.store import save as save_presence
+        from nina.presence.store import load as load_presence, save as save_presence
+        from nina.profile.interpreter import apply as apply_profile
+        from nina.profile.interpreter import interpret as interpret_profile
+        from nina.profile.store import load as load_profile, save as save_profile
         from nina.workdays.interpreter import apply as apply_schedule
         from nina.workdays.interpreter import interpret as interpret_schedule
         from nina.workdays.store import load as load_workdays, save as save_workdays
 
+        # 1. Calendar blocking (most specific — check before presence)
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        _schedule_pre = load_workdays(_tokens_dir())
+        _now = datetime.now(ZoneInfo(_schedule_pre.timezone))
+        blocking_intents = interpret_blocking(line, llm, now=_now)
+        if blocking_intents:
+            presence = load_presence(_tokens_dir())
+            profile = load_profile(_tokens_dir())
+            cal_accounts = profile.for_presence(presence.status).calendar
+            if not cal_accounts:
+                print(f"  {t('blocking.no_account', lang)}")
+                return
+            time_fmt = "%H:%M"
+            for blocking_intent in blocking_intents:
+                try:
+                    result = execute_blocking(
+                        blocking_intent,
+                        account=cal_accounts[0],
+                        tokens_dir=_tokens_dir(),
+                        tz_name=_schedule_pre.timezone,
+                    )
+                except CalendarError as e:
+                    print(f"  ✗  {e}")
+                    continue
+                print(f"  {t('blocking.created', lang, title=result.event_title, start=result.start.strftime(time_fmt), end=result.end.strftime(time_fmt), account=cal_accounts[0])}")
+                if result.link:
+                    print(f"  {result.link}")
+                if result.conflicts:
+                    print(f"  {t('blocking.conflict', lang, titles=', '.join(result.conflicts))}")
+            return
+
+        # 2. Presence change
         presence_intent = interpret_presence(line, llm)
         if presence_intent.action == "set_presence" and presence_intent.status is not None:
             save_presence(PresenceState(status=presence_intent.status, note=presence_intent.note), _tokens_dir())
@@ -211,11 +363,20 @@ class NinaConsole(cmd.Cmd):
             print(f"  {t('llm.presence_set', lang, status=presence_intent.status.value, label=label)}")
             return
 
+        # 3. Work schedule change
         schedule_intent = interpret_schedule(line, llm)
         if schedule_intent.action == "update_schedule":
             schedule = load_workdays(_tokens_dir())
             save_workdays(apply_schedule(schedule_intent, schedule), _tokens_dir())
             print(f"  {t('llm.schedule_set', lang)}")
+            return
+
+        # 4. Profile account mapping
+        profile_intent = interpret_profile(line, llm)
+        if profile_intent.action == "update_profile":
+            profile = load_profile(_tokens_dir())
+            save_profile(apply_profile(profile_intent, profile), _tokens_dir())
+            print(f"  {t('profile.set_ok', lang)}")
             return
 
         print(f"  {t('llm.not_understood', lang)}")

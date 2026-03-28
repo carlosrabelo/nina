@@ -51,7 +51,7 @@ def _lang(ctx: ContextTypes.DEFAULT_TYPE) -> str:
 
 _COMMAND_NAMES = [
     "start", "help", "lang", "presence", "health",
-    "workdays", "timezone", "context", "unread", "latest", "events", "dialogs",
+    "workdays", "timezone", "context", "profile", "schedule", "notify",
 ]
 
 
@@ -286,6 +286,132 @@ async def handle_context(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     await update.message.reply_text(f"{context.label}{flags_str}\n{work} · {context.presence_status}")
 
 
+async def handle_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    from nina.presence.models import PresenceStatus
+    from nina.profile.store import load as load_profile
+    lang = _lang(ctx)
+    tokens_dir: Path = ctx.bot_data["tokens_dir"]
+    profile = load_profile(tokens_dir)
+
+    # Filter to specific presence if arg given
+    statuses = list(PresenceStatus)
+    if ctx.args:
+        try:
+            statuses = [PresenceStatus(ctx.args[0].lower())]
+        except ValueError:
+            pass
+
+    if profile.is_empty():
+        await update.message.reply_text(t("profile.empty", lang))
+        return
+
+    lines = [t("profile.title", lang)]
+    for status in statuses:
+        p = profile.for_presence(status)
+        label = t(f"presence.label.{status.value}", lang)
+        lines.append(f"\n{status.value} — {label}")
+        if p.gmail:
+            lines.append(f"  {t('profile.gmail', lang, accounts=', '.join(p.gmail))}")
+        if p.calendar:
+            lines.append(f"  {t('profile.calendar', lang, accounts=', '.join(p.calendar))}")
+        if not p.gmail and not p.calendar:
+            lines.append(f"  {t('profile.no_accounts', lang)}")
+
+    await update.message.reply_text("\n".join(lines))
+
+
+async def handle_notify(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    from nina.notifications.store import load as load_notif, save as save_notif
+    lang = _lang(ctx)
+    tokens_dir: Path = ctx.bot_data["tokens_dir"]
+    args = ctx.args or []
+
+    state = load_notif(tokens_dir)
+    if not args:
+        await update.message.reply_text(
+            t("notify.config", lang,
+              reminder_minutes=state.config.reminder_minutes,
+              watch_days=state.config.watch_days)
+        )
+        return
+
+    try:
+        if args[0] == "reminder" and len(args) == 2:
+            val = int(args[1])
+            if val <= 0:
+                raise ValueError
+            state.config.reminder_minutes = val
+            save_notif(state, tokens_dir)
+            await update.message.reply_text(t("notify.reminder_set", lang, minutes=val))
+        elif args[0] == "days" and len(args) == 2:
+            val = int(args[1])
+            if val <= 0:
+                raise ValueError
+            state.config.watch_days = val
+            save_notif(state, tokens_dir)
+            await update.message.reply_text(t("notify.days_set", lang, days=val))
+        else:
+            await update.message.reply_text(t("notify.usage", lang))
+    except ValueError:
+        raw = args[1] if len(args) > 1 else ""
+        await update.message.reply_text(t("notify.invalid_value", lang, value=raw))
+
+
+async def handle_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from nina.errors import CalendarError
+    from nina.google.calendar.blocking import execute as execute_blocking, BlockingIntent
+    from nina.google.calendar.schedule_parser import parse as parse_schedule
+    from nina.presence.store import load as load_presence
+    from nina.profile.store import load as load_profile
+    from nina.workdays.store import load as load_workdays
+    lang = _lang(ctx)
+    tokens_dir: Path = ctx.bot_data["tokens_dir"]
+    arg = " ".join(ctx.args) if ctx.args else ""
+    if not arg.strip():
+        await update.message.reply_text(t("schedule.parse_error", lang))
+        return
+    schedule = load_workdays(tokens_dir)
+    tz = ZoneInfo(schedule.timezone)
+    now = datetime.now(tz)
+    parsed = parse_schedule(arg, now)
+    if parsed is None:
+        await update.message.reply_text(t("schedule.parse_error", lang))
+        return
+    presence = load_presence(tokens_dir)
+    profile = load_profile(tokens_dir)
+    cal_accounts = profile.for_presence(presence.status).calendar
+    if not cal_accounts:
+        await update.message.reply_text(t("schedule.no_account", lang))
+        return
+    intent = BlockingIntent(
+        action="block_calendar",
+        title=parsed.title,
+        duration_minutes=parsed.duration_minutes,
+        start_time=parsed.start.strftime("%H:%M"),
+    )
+    try:
+        result = execute_blocking(
+            intent,
+            account=cal_accounts[0],
+            tokens_dir=tokens_dir,
+            tz_name=schedule.timezone,
+        )
+    except CalendarError as e:
+        await update.message.reply_text(f"✗ {e}")
+        return
+    time_fmt = "%H:%M"
+    msg = t("schedule.created", lang, title=result.event_title,
+            start=result.start.strftime(time_fmt), end=result.end.strftime(time_fmt),
+            account=cal_accounts[0])
+    if result.link:
+        msg += f"\n{result.link}"
+    if result.conflicts:
+        msg += f"\n{t('schedule.conflict', lang, titles=', '.join(result.conflicts))}"
+    await update.message.reply_text(msg)
+
+
 async def handle_lang(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     lang = _lang(ctx)
     tokens_dir: Path = ctx.bot_data["tokens_dir"]
@@ -311,11 +437,16 @@ async def handle_lang(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 # ---------------------------------------------------------------------------
 
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    from nina.errors import LLMError
+    from nina.errors import CalendarError, LLMError
     from nina.llm.client import LLMClient
+    from nina.google.calendar.blocking import execute as execute_blocking
+    from nina.google.calendar.blocking import interpret as interpret_blocking
     from nina.presence.interpreter import interpret as interpret_presence
     from nina.presence.models import PresenceState
-    from nina.presence.store import save as save_presence
+    from nina.presence.store import load as load_presence, save as save_presence
+    from nina.profile.interpreter import apply as apply_profile
+    from nina.profile.interpreter import interpret as interpret_profile
+    from nina.profile.store import load as load_profile, save as save_profile
     from nina.workdays.interpreter import apply as apply_schedule
     from nina.workdays.interpreter import interpret as interpret_schedule
     from nina.workdays.store import load as load_workdays, save as save_workdays
@@ -330,7 +461,44 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text(t("llm.unavailable", lang))
         return
 
-    # Try presence first
+    # 1. Calendar blocking (most specific — check before presence)
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    _schedule_pre = load_workdays(tokens_dir)
+    _now = datetime.now(ZoneInfo(_schedule_pre.timezone))
+    blocking_intents = interpret_blocking(text, llm, now=_now)
+    if blocking_intents:
+        presence = load_presence(tokens_dir)
+        profile = load_profile(tokens_dir)
+        cal_accounts = profile.for_presence(presence.status).calendar
+        if not cal_accounts:
+            await update.message.reply_text(t("blocking.no_account", lang))
+            return
+        time_fmt = "%H:%M"
+        for blocking_intent in blocking_intents:
+            try:
+                result = execute_blocking(
+                    blocking_intent,
+                    account=cal_accounts[0],
+                    tokens_dir=tokens_dir,
+                    tz_name=_schedule_pre.timezone,
+                )
+            except CalendarError as e:
+                await update.message.reply_text(f"✗ {e}")
+                continue
+            reply = t("blocking.created", lang,
+                      title=result.event_title,
+                      start=result.start.strftime(time_fmt),
+                      end=result.end.strftime(time_fmt),
+                      account=cal_accounts[0])
+            if result.link:
+                reply += f"\n{result.link}"
+            if result.conflicts:
+                reply += "\n" + t("blocking.conflict", lang, titles=", ".join(result.conflicts))
+            await update.message.reply_text(reply)
+        return
+
+    # 2. Presence change
     presence_intent = interpret_presence(text, llm)
     if presence_intent.action == "set_presence" and presence_intent.status is not None:
         save_presence(PresenceState(status=presence_intent.status, note=presence_intent.note), tokens_dir)
@@ -340,12 +508,20 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         )
         return
 
-    # Try schedule
+    # 3. Work schedule change
     schedule_intent = interpret_schedule(text, llm)
     if schedule_intent.action == "update_schedule":
         schedule = load_workdays(tokens_dir)
         save_workdays(apply_schedule(schedule_intent, schedule), tokens_dir)
         await update.message.reply_text(t("llm.schedule_set", lang))
+        return
+
+    # 4. Profile account mapping
+    profile_intent = interpret_profile(text, llm)
+    if profile_intent.action == "update_profile":
+        profile = load_profile(tokens_dir)
+        save_profile(apply_profile(profile_intent, profile), tokens_dir)
+        await update.message.reply_text(t("profile.set_ok", lang))
         return
 
     await update.message.reply_text(t("llm.not_understood", lang))
@@ -377,10 +553,9 @@ def create_application(token: str, owner_id: int, tokens_dir: Path) -> Applicati
     app.add_handler(CommandHandler("workdays",  handle_workdays,  filters=owner_filter))
     app.add_handler(CommandHandler("timezone",  handle_timezone,  filters=owner_filter))
     app.add_handler(CommandHandler("context",   handle_context,   filters=owner_filter))
-    app.add_handler(CommandHandler("unread",   handle_unread,   filters=owner_filter))
-    app.add_handler(CommandHandler("latest",   handle_latest,   filters=owner_filter))
-    app.add_handler(CommandHandler("events",   handle_events,   filters=owner_filter))
-    app.add_handler(CommandHandler("dialogs",  handle_dialogs,  filters=owner_filter))
+    app.add_handler(CommandHandler("profile",   handle_profile,   filters=owner_filter))
+    app.add_handler(CommandHandler("schedule",  handle_schedule,  filters=owner_filter))
+    app.add_handler(CommandHandler("notify",    handle_notify,    filters=owner_filter))
     app.add_handler(MessageHandler(owner_filter & filters.TEXT & ~filters.COMMAND, handle_message))
     return app
 

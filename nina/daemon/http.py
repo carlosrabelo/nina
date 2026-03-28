@@ -29,6 +29,18 @@ class WorkDayUpdate(BaseModel):
     active: bool = True
 
 
+class NotificationConfigUpdate(BaseModel):
+    reminder_minutes: int | None = None
+    watch_days: int | None = None
+
+
+class ScheduleRequest(BaseModel):
+    start_time: str           # "HH:MM" (24h)
+    title: str
+    duration_minutes: int = 60
+    calendar_id: str = "primary"
+
+
 def create_app(tokens_dir: Path) -> FastAPI:
     app = FastAPI(title="Nina", docs_url="/docs")
 
@@ -93,7 +105,74 @@ def create_app(tokens_dir: Path) -> FastAPI:
             "note": state.note,
         }
 
-    # ── schedule ──────────────────────────────────────────────────────────────
+    # ── notifications ─────────────────────────────────────────────────────────
+
+    @app.get("/notifications/config")
+    def get_notifications_config() -> dict:
+        from nina.notifications.store import load as load_notif
+        state = load_notif(tokens_dir)
+        return {
+            "reminder_minutes": state.config.reminder_minutes,
+            "watch_days": state.config.watch_days,
+        }
+
+    @app.put("/notifications/config")
+    def update_notifications_config(body: NotificationConfigUpdate) -> dict:
+        from nina.notifications.store import load as load_notif, save as save_notif
+        state = load_notif(tokens_dir)
+        if body.reminder_minutes is not None:
+            if body.reminder_minutes <= 0:
+                raise HTTPException(status_code=422, detail="reminder_minutes must be positive")
+            state.config.reminder_minutes = body.reminder_minutes
+        if body.watch_days is not None:
+            if body.watch_days <= 0:
+                raise HTTPException(status_code=422, detail="watch_days must be positive")
+            state.config.watch_days = body.watch_days
+        save_notif(state, tokens_dir)
+        return {
+            "reminder_minutes": state.config.reminder_minutes,
+            "watch_days": state.config.watch_days,
+        }
+
+    # ── calendar schedule ─────────────────────────────────────────────────────
+
+    @app.post("/schedule")
+    def create_schedule(body: ScheduleRequest) -> dict:
+        from nina.errors import CalendarError
+        from nina.google.calendar.blocking import BlockingIntent, execute as execute_blocking
+        from nina.profile.store import load as load_profile
+        schedule = load_schedule(tokens_dir)
+        presence = load_presence(tokens_dir)
+        profile = load_profile(tokens_dir)
+        cal_accounts = profile.for_presence(presence.status).calendar
+        if not cal_accounts:
+            raise HTTPException(status_code=409, detail="no_calendar_account")
+        intent = BlockingIntent(
+            action="block_calendar",
+            title=body.title,
+            duration_minutes=body.duration_minutes,
+            start_time=body.start_time,
+        )
+        try:
+            result = execute_blocking(
+                intent,
+                account=cal_accounts[0],
+                tokens_dir=tokens_dir,
+                tz_name=schedule.timezone,
+                calendar_id=body.calendar_id,
+            )
+        except CalendarError as e:
+            raise HTTPException(status_code=502, detail=str(e)) from e
+        return {
+            "event_title": result.event_title,
+            "start": result.start.isoformat(),
+            "end": result.end.isoformat(),
+            "conflicts": result.conflicts,
+            "link": result.link,
+            "account": cal_accounts[0],
+        }
+
+    # ── workdays ──────────────────────────────────────────────────────────────
 
     @app.get("/workdays")
     def get_schedule() -> dict:

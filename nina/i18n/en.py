@@ -16,16 +16,11 @@ STRINGS: dict[str, str] = {
         "/presence <status> — change presence (home|office|out|dnd)\n"
         "/health — daemon status\n"
         "/workdays — work schedule\n"
+        "/timezone — current timezone\n"
         "/context — current context\n"
         "/lang — current language\n"
-        "/lang <code> — change language (en|pt)\n\n"
-        "📧 Gmail\n"
-        "/unread — unread emails\n"
-        "/latest — recent emails\n\n"
-        "📅 Calendar\n"
-        "/events — upcoming events\n\n"
-        "💬 Telegram\n"
-        "/dialogs — recent chats\n"
+        "/lang <code> — change language (en|pt)\n"
+        "/profile — account mapping per presence\n"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -84,6 +79,21 @@ STRINGS: dict[str, str] = {
     "events.not_found":   "No events found.",
     "events.location":    "Location: {location}",
 
+    # ── calendar blocking ─────────────────────────────────────────────────────
+    "blocking.created":    "✓ {title}\n{start} → {end}\nAccount: {account}",
+    "blocking.conflict":   "⚠️ Conflict: {titles}",
+    "blocking.no_account": "No calendar account configured for current presence. Set it with /profile.",
+
+    # ── profile ───────────────────────────────────────────────────────────────
+    "profile.title":            "Account profile:",
+    "profile.no_accounts":      "(not configured)",
+    "profile.gmail":            "gmail:    {accounts}",
+    "profile.calendar":         "calendar: {accounts}",
+    "profile.set_ok":           "✓ Profile updated.",
+    "profile.empty":            "No accounts configured yet.\nSend a message like: \"at the office use work@company.com\"",
+    "help.profile":             "  profile   Show account mapping per presence\n  profile <presence>   Show for specific presence",
+    "cmd.profile":              "Show account profile per presence",
+
     # ── llm interpreter ───────────────────────────────────────────────────────
     "llm.presence_set":    "✓ {status} — {label}",
     "llm.schedule_set":    "✓ Schedule updated.",
@@ -106,6 +116,27 @@ STRINGS: dict[str, str] = {
     "help.lang":              "  lang              Show current language\n  lang <code>       Set language  (en | pt)",
     "help.exit":              "  exit / quit   Exit the console",
 
+    # ── schedule command ──────────────────────────────────────────────────────
+    "schedule.created":  "✓ {title}\n{start} → {end}\nAccount: {account}",
+    "schedule.conflict": "⚠️ Conflict: {titles}",
+    "schedule.no_account": "No calendar account configured for current presence. Set it with /profile.",
+    "schedule.parse_error": (
+        "Could not parse. Usage:\n"
+        "  schedule HH:MM <title> [duration]\n"
+        "  schedule today 16:00 Meeting 1h\n"
+        "  schedule tomorrow 10:00 Appointment 30min\n"
+        "  schedule 29/03 14:00 Training 2h"
+    ),
+    "help.schedule": (
+        "  schedule HH:MM <title> [duration]\n"
+        "  schedule today|tomorrow HH:MM <title> [duration]\n"
+        "  schedule DD/MM HH:MM <title> [duration]\n"
+        "  schedule DD/MM/YYYY HH:MM <title> [duration]\n"
+        "\n"
+        "  Duration: 1h  30min  1h30  (default: 60min)"
+    ),
+    "cmd.schedule":  "Schedule a calendar event directly",
+
     # ── bot command descriptions (shown in Telegram autocomplete) ─────────────
     "cmd.start":     "Start Nina",
     "cmd.help":      "List available commands",
@@ -118,6 +149,15 @@ STRINGS: dict[str, str] = {
     "cmd.latest":    "Recent emails",
     "cmd.events":    "Upcoming calendar events",
     "cmd.dialogs":   "Recent Telegram chats",
+
+    # ── notifications ─────────────────────────────────────────────────────────
+    "notify.config":         "Reminder: {reminder_minutes} min before  |  Watch: {watch_days} days ahead",
+    "notify.reminder_set":   "✓ Reminder set to {minutes} minutes before.",
+    "notify.days_set":       "✓ Watch window set to {days} days.",
+    "notify.invalid_value":  "Invalid value '{value}'. Must be a positive integer.",
+    "notify.usage":          "  notify                    Show notification settings\n  notify reminder <min>     Set reminder advance (minutes)\n  notify days <n>           Set watch window (days)",
+    "help.notify":           "  notify                    Show notification settings\n  notify reminder <min>     Set reminder advance (minutes)\n  notify days <n>           Set watch window (days)",
+    "cmd.notify":            "Show or configure notifications",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "No chats found.",

@@ -3,6 +3,7 @@ MAKEFLAGS += --no-print-directory
 ACCOUNT   ?=
 LIMIT     ?=
 CAL       ?=
+IMAGE     ?= nina
 
 _py       := .venv/bin/python -m nina
 _play     := .venv/bin/python -m nina_play
@@ -13,6 +14,7 @@ _cal      := $(if $(CAL),--calendar $(CAL),)
 .PHONY: help
 .PHONY: setup test lint fmt typecheck clean
 .PHONY: auth-google auth-telegram status-google status-telegram console daemon dev
+.PHONY: docker-build docker-up docker-down docker-logs docker-auth-google
 .PHONY: play-gmail-latest play-gmail-unread play-gmail-search
 .PHONY: play-cal-calendars play-cal-events
 .PHONY: play-tg-bot play-tg-bot-setup play-tg-dialogs play-tg-messages play-tg-send
@@ -32,13 +34,20 @@ help:
 	@echo "  clean                Remove build artifacts and __pycache__"
 	@echo ""
 	@echo "Nina"
-	@echo "  auth google          Add a Google account via OAuth (opens browser)"
-	@echo "  auth telegram        Authenticate with Telegram (phone verification)"
-	@echo "  status google        Show Google auth status for all accounts"
-	@echo "  status telegram      Show Telegram authentication status"
+	@echo "  auth-google          Add a Google account via OAuth (opens browser)"
+	@echo "  auth-telegram        Authenticate with Telegram (phone verification)"
+	@echo "  status-google        Show Google auth status for all accounts"
+	@echo "  status-telegram      Show Telegram authentication status"
 	@echo "  console              Open interactive console (requires daemon)"
 	@echo "  daemon               Start Nina in daemon mode (scheduler + HTTP)"
 	@echo "  dev                  Launch daemon + console in a tmux session"
+	@echo ""
+	@echo "Docker"
+	@echo "  docker-build         Build the Docker image"
+	@echo "  docker-up            Start daemon container (detached)"
+	@echo "  docker-down          Stop daemon container"
+	@echo "  docker-logs          Tail daemon container logs"
+	@echo "  docker-auth-google   Run Google OAuth flow inside the container"
 	@echo ""
 	@echo "Nina Play — exploration                [ACCOUNT=] [LIMIT=] [CAL=]"
 	@echo "  play-gmail-latest    Headers of the most recent emails"
@@ -104,11 +113,28 @@ dev:
 	else \
 		tmux new-session -d -s nina -x 220 -y 50; \
 		tmux send-keys -t nina:0.0 "cd $(CURDIR) && make daemon" Enter; \
-		tmux split-window -h -t nina:0.0; \
+		tmux split-window -v -t nina:0.0; \
 		tmux send-keys -t nina:0.1 "cd $(CURDIR) && sleep 2 && make console" Enter; \
 		tmux select-pane -t nina:0.1; \
 		tmux attach-session -t nina; \
 	fi
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+
+docker-build:
+	docker compose build
+
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down
+
+docker-logs:
+	docker compose logs -f
+
+docker-auth-google:
+	docker compose run --rm -it nina python -m nina auth google
 
 # ── Nina Play — Gmail ─────────────────────────────────────────────────────────
 

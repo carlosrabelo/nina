@@ -1,0 +1,15 @@
+services:
+  nina:
+    build: .
+    container_name: nina-daemon
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NINA_HTTP_HOST: "0.0.0.0"
+      TOKENS_DIR: /app/tokens
+      GOOGLE_CREDENTIALS_FILE: /app/credentials/credentials.json
+    ports:
+      - "127.0.0.1:8765:8765"   # console on the host can connect via localhost:8765
+    volumes:
+      - ./tokens:/app/tokens
+      - ./credentials:/app/credentials

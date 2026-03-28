@@ -1,6 +1,7 @@
 # tests/test_calendar.py
 """Tests for the Google Calendar client."""
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -43,7 +44,7 @@ class TestCalendarClientParse:
         ev = client._parse(raw)
         assert ev.title == "Team sync"
         assert ev.account == "user@gmail.com"
-        assert ev.start == "2026-03-27T10:00:00-03:00"
+        assert ev.start == datetime(2026, 3, 27, 10, 0, tzinfo=timezone(timedelta(hours=-3)))
         assert ev.location == ""
 
     def test_parse_event_with_location(self, client: CalendarClient) -> None:
@@ -60,7 +61,7 @@ class TestCalendarClientParse:
             "organizer": {"email": "primary"},
         }
         ev = client._parse(raw)
-        assert ev.start == "2026-04-21"
+        assert ev.start == datetime(2026, 4, 21, 0, 0, tzinfo=timezone.utc)
 
     def test_parse_missing_title(self, client: CalendarClient) -> None:
         raw = {
