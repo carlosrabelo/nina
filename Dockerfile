@@ -16,12 +16,14 @@ COPY nina/ ./nina/
 COPY nina_play/ ./nina_play/
 RUN pip install --no-cache-dir -e .
 
-# Volumes for secrets — never baked into the image
-VOLUME ["/app/tokens", "/app/credentials"]
+# Volumes for secrets and data — never baked into the image
+VOLUME ["/app/tokens", "/app/data", "/app/sessions", "/app/credentials"]
 
 EXPOSE 8765
 
 ENV TOKENS_DIR=/app/tokens
+ENV DATA_DIR=/app/data
+ENV SESSIONS_DIR=/app/sessions
 ENV GOOGLE_CREDENTIALS_FILE=/app/credentials/credentials.json
 ENV NINA_HTTP_HOST=0.0.0.0
 

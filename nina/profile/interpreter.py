@@ -8,6 +8,15 @@ from nina.llm.client import LLMClient
 from nina.presence.models import PresenceStatus
 from nina.profile.models import Profile
 
+_KEYWORDS = {"gmail", "calendar", "conta", "account", "usar", "use", "@"}
+
+
+def has_context(text: str, lang: str = "pt") -> bool:  # noqa: ARG001
+    """Keyword gate — no LLM."""
+    lower = text.lower()
+    return any(kw in lower for kw in _KEYWORDS)
+
+
 _SYSTEM_PROMPT = """You are an assistant that interprets account-to-presence mappings from natural language.
 
 Presence statuses: home, office, out, dnd.

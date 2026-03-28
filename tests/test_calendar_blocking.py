@@ -45,6 +45,18 @@ class TestBlockingInterpreter:
         result = interpret("Qual é o tempo?", _llm("[]"))
         assert result == []
 
+    def test_no_time_signal_skips_llm(self) -> None:
+        llm = _llm('[{"action": "block_calendar", "title": "X", "duration_minutes": 60, "start_time": "15:00"}]')
+        result = interpret("atualiza o obsidian para mim", llm)
+        assert result == []
+        llm.complete.assert_not_called()
+
+    def test_no_time_signal_generic_command(self) -> None:
+        llm = MagicMock()
+        result = interpret("quais meus memos?", llm)
+        assert result == []
+        llm.complete.assert_not_called()
+
     def test_absolute_time_preserved(self) -> None:
         payload = '[{"action": "block_calendar", "title": "Atendimento Sandra Mariotto", "duration_minutes": 60, "start_time": "16:00"}]'
         llm = _llm(payload)

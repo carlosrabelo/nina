@@ -13,14 +13,14 @@ from nina.workdays.store import load as load_schedule, save as save_schedule
 from nina.scheduler.runner import Scheduler
 
 
-def _init_state(tokens_dir: Path) -> None:
+def _init_state(data_dir: Path) -> None:
     """Persist default state files on first run."""
-    save_presence(load_presence(tokens_dir), tokens_dir)
-    save_schedule(load_schedule(tokens_dir), tokens_dir)
+    save_presence(load_presence(data_dir), data_dir)
+    save_schedule(load_schedule(data_dir), data_dir)
 
 
-async def _serve(tokens_dir: Path, port: int, scheduler: Scheduler) -> None:
-    http_app = create_app(tokens_dir)
+async def _serve(tokens_dir: Path, data_dir: Path, sessions_dir: Path, port: int, scheduler: Scheduler) -> None:
+    http_app = create_app(tokens_dir, data_dir)
     host = os.environ.get("NINA_HTTP_HOST", "127.0.0.1")
     config = uvicorn.Config(http_app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
@@ -47,7 +47,7 @@ async def _serve(tokens_dir: Path, port: int, scheduler: Scheduler) -> None:
             return
 
         from nina.telegram.bot import create_application
-        bot = create_application(bot_token, owner_id, tokens_dir)
+        bot = create_application(bot_token, owner_id, tokens_dir, data_dir, sessions_dir)
         async with bot:
             await bot.updater.start_polling()
             await bot.start()
@@ -72,9 +72,11 @@ async def _serve(tokens_dir: Path, port: int, scheduler: Scheduler) -> None:
 def run() -> None:
     load_dotenv()
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    sessions_dir = Path(os.environ.get("SESSIONS_DIR", "sessions"))
     port = int(os.environ.get("NINA_HTTP_PORT", "8765"))
 
-    _init_state(tokens_dir)
+    _init_state(data_dir)
 
     scheduler = Scheduler()
 
@@ -84,14 +86,20 @@ def run() -> None:
         try:
             from nina.scheduler.jobs.calendar_notifications import make_job
             scheduler.add_job(
-                make_job(tokens_dir, _bot_token, int(_owner_raw)),
+                make_job(tokens_dir, data_dir, _bot_token, int(_owner_raw)),
                 "interval",
                 minutes=5,
             )
         except Exception as e:
             logging.warning("calendar notifications job not registered: %s", e)
 
+    try:
+        from nina.scheduler.jobs.obsidian_sync import make_job as make_output_job
+        scheduler.add_job(make_output_job(tokens_dir, data_dir), "interval", minutes=5)
+    except Exception as e:
+        logging.warning("output sync job not registered: %s", e)
+
     scheduler.start()
 
-    asyncio.run(_serve(tokens_dir, port, scheduler))
+    asyncio.run(_serve(tokens_dir, data_dir, sessions_dir, port, scheduler))
     scheduler.stop()

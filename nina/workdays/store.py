@@ -7,8 +7,8 @@ from nina.workdays.models import WorkDay, WorkSchedule, default_schedule
 _FILENAME = "workdays.json"
 
 
-def load(tokens_dir: Path) -> WorkSchedule:
-    path = tokens_dir / _FILENAME
+def load(data_dir: Path) -> WorkSchedule:
+    path = data_dir / _FILENAME
     if not path.exists():
         return default_schedule()
     data = json.loads(path.read_text())
@@ -23,9 +23,9 @@ def load(tokens_dir: Path) -> WorkSchedule:
     return WorkSchedule(days=days, timezone=data.get("timezone", "America/Sao_Paulo"))
 
 
-def save(schedule: WorkSchedule, tokens_dir: Path) -> None:
-    tokens_dir.mkdir(parents=True, exist_ok=True)
-    path = tokens_dir / _FILENAME
+def save(schedule: WorkSchedule, data_dir: Path) -> None:
+    data_dir.mkdir(parents=True, exist_ok=True)
+    path = data_dir / _FILENAME
     path.write_text(json.dumps({
         "timezone": schedule.timezone,
         "days": [

@@ -173,9 +173,9 @@ class TgClient:
         except ValueError:
             raise TelegramError(f"TELEGRAM_API_ID must be a number, got: {api_id_raw!r}")
 
-        tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
-        tokens_dir.mkdir(parents=True, exist_ok=True)
-        session_path = tokens_dir / "telegram"  # Telethon appends .session
+        sessions_dir = Path(os.environ.get("SESSIONS_DIR", "sessions"))
+        sessions_dir.mkdir(parents=True, exist_ok=True)
+        session_path = sessions_dir / "telegram"  # Telethon appends .session
 
         return cls(api_id, api_hash, session_path)
 

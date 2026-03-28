@@ -80,6 +80,7 @@ STRINGS: dict[str, str] = {
     "events.location":    "Local: {location}",
 
     # ── calendar blocking ─────────────────────────────────────────────────────
+    "calendar.no_events":  "Nenhum evento próximo encontrado.",
     "blocking.created":    "✓ {title}\n{start} → {end}\nConta: {account}",
     "blocking.conflict":   "⚠️ Conflito: {titles}",
     "blocking.no_account": "Nenhuma conta de calendar configurada para a presença atual. Configure com /profile.",
@@ -97,7 +98,7 @@ STRINGS: dict[str, str] = {
     # ── llm interpreter ───────────────────────────────────────────────────────
     "llm.presence_set":    "✓ {status} — {label}",
     "llm.schedule_set":    "✓ Horário atualizado.",
-    "llm.not_understood":  "Não entendi. Tente /presence ou /workdays.",
+    "llm.not_understood":  "Não entendi.",
     "llm.unavailable":     "LLM não configurada. Defina LLM_MODEL e a chave de API no .env.",
 
     # ── console ───────────────────────────────────────────────────────────────
@@ -158,6 +159,25 @@ STRINGS: dict[str, str] = {
     "notify.usage":          "  notify                       Ver configurações de notificação\n  notify reminder <min>        Definir antecedência do lembrete (minutos)\n  notify days <n>              Definir janela de monitoramento (dias)",
     "help.notify":           "  notify                       Ver configurações de notificação\n  notify reminder <min>        Definir antecedência do lembrete (minutos)\n  notify days <n>              Definir janela de monitoramento (dias)",
     "cmd.notify":            "Ver ou configurar notificações",
+
+    # ── memo ──────────────────────────────────────────────────────────────────
+    "memo.saved":       "✓ Memo salvo.",
+    "memo.done":        "✓ Memo marcado como concluído.",
+    "memo.dismissed":   "✓ Memo descartado.",
+    "memo.not_found":   "Memo não encontrado.",
+    "memo.none_open":   "Nenhum memo aberto.",
+    "memo.item":        "[{index}] {text}{due}",
+    "memo.due":         "  Vence: {date}",
+    "memo.usage":       "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluído\n  memo dismiss <id>        Descartar memo",
+    "help.memo":        "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluído\n  memo dismiss <id>        Descartar",
+    "cmd.memo":         "Salvar ou listar memos",
+    "cmd.memos":        "Listar memos abertos",
+
+    # ── obsidian ──────────────────────────────────────────────────────────────
+    "cmd.obsidian":       "Sincronizar vault Obsidian agora",
+    "obsidian.done":      "✓ Obsidian sincronizado → {path}",
+    "obsidian.not_set":   "OBSIDIAN_VAULT_PATH não configurado.",
+    "help.obsidian":      "  obsidian   Forçar sincronização Obsidian (escreve today.md e open.md)",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "Nenhum chat encontrado.",

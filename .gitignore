@@ -5,6 +5,12 @@
 .env
 tokens/
 credentials/
+
+# Application data
+data/
+
+# Sessions
+sessions/
 *.session
 *.session-journal
 !credentials/.gitkeep

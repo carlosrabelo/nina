@@ -7,6 +7,21 @@ from dataclasses import dataclass
 from nina.llm.client import LLMClient
 from nina.presence.models import PresenceStatus
 
+_KEYWORDS: dict[str, set[str]] = {
+    "pt": {"home", "casa", "escritório", "escritorio", "saindo", "saí", "sai",
+           "cheguei", "chegando", "dnd", "foco", "presença", "trabalhando",
+           "voltei", "no escritório", "em casa"},
+    "en": {"home", "office", "out", "dnd", "focus", "arrived", "leaving",
+           "presence", "working"},
+}
+
+
+def has_context(text: str, lang: str = "pt") -> bool:
+    """Keyword gate — no LLM."""
+    lower = text.lower()
+    return any(kw in lower for kw in _KEYWORDS.get(lang, _KEYWORDS["pt"]))
+
+
 _SYSTEM_PROMPT = """You are an assistant that interprets presence status from natural language messages.
 
 The available presence statuses are:

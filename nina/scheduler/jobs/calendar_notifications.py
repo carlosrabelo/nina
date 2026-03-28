@@ -46,7 +46,7 @@ def _event_key(account: str, event_id: str) -> str:
     return f"{account}:{event_id}"
 
 
-def make_job(tokens_dir: Path, bot_token: str, owner_id: int):  # type: ignore[no-untyped-def]
+def make_job(tokens_dir: Path, data_dir: Path, bot_token: str, owner_id: int):  # type: ignore[no-untyped-def]
     """Return the job function bound to the given context."""
 
     def job() -> None:
@@ -61,10 +61,10 @@ def make_job(tokens_dir: Path, bot_token: str, owner_id: int):  # type: ignore[n
         from nina.workdays.checker import get_context
         from nina.workdays.store import load as load_workdays
 
-        lang = load_locale(tokens_dir).lang
-        state = load_state(tokens_dir)
-        schedule = load_workdays(tokens_dir)
-        presence = load_presence(tokens_dir)
+        lang = load_locale(data_dir).lang
+        state = load_state(data_dir)
+        schedule = load_workdays(data_dir)
+        presence = load_presence(data_dir)
         ctx = get_context(schedule, presence, lang)
 
         is_dnd = presence.status == PresenceStatus("dnd")
@@ -201,6 +201,6 @@ def make_job(tokens_dir: Path, bot_token: str, owner_id: int):  # type: ignore[n
                     state.queue.append(QueuedNotification(id=qid, message=msg))
 
         state.last_can_notify = can_notify
-        save_state(state, tokens_dir)
+        save_state(state, data_dir)
 
     return job

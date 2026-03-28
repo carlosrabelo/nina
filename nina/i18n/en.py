@@ -80,6 +80,7 @@ STRINGS: dict[str, str] = {
     "events.location":    "Location: {location}",
 
     # ── calendar blocking ─────────────────────────────────────────────────────
+    "calendar.no_events":  "No upcoming events found.",
     "blocking.created":    "✓ {title}\n{start} → {end}\nAccount: {account}",
     "blocking.conflict":   "⚠️ Conflict: {titles}",
     "blocking.no_account": "No calendar account configured for current presence. Set it with /profile.",
@@ -97,7 +98,7 @@ STRINGS: dict[str, str] = {
     # ── llm interpreter ───────────────────────────────────────────────────────
     "llm.presence_set":    "✓ {status} — {label}",
     "llm.schedule_set":    "✓ Schedule updated.",
-    "llm.not_understood":  "I couldn't understand that. Try /presence or /workdays.",
+    "llm.not_understood":  "I couldn't understand that.",
     "llm.unavailable":     "LLM not configured. Set LLM_MODEL and the API key in .env.",
 
     # ── console ───────────────────────────────────────────────────────────────
@@ -158,6 +159,25 @@ STRINGS: dict[str, str] = {
     "notify.usage":          "  notify                    Show notification settings\n  notify reminder <min>     Set reminder advance (minutes)\n  notify days <n>           Set watch window (days)",
     "help.notify":           "  notify                    Show notification settings\n  notify reminder <min>     Set reminder advance (minutes)\n  notify days <n>           Set watch window (days)",
     "cmd.notify":            "Show or configure notifications",
+
+    # ── memo ──────────────────────────────────────────────────────────────────
+    "memo.saved":       "✓ Memo saved.",
+    "memo.done":        "✓ Memo marked as done.",
+    "memo.dismissed":   "✓ Memo dismissed.",
+    "memo.not_found":   "Memo not found.",
+    "memo.none_open":   "No open memos.",
+    "memo.item":        "[{index}] {text}{due}",
+    "memo.due":         "  Due: {date}",
+    "memo.usage":       "  memo <text>          Save a new memo\n  memo <text> due <date>  Save with due date (YYYY-MM-DD)\n  memos                List open memos\n  memo done <id>       Mark memo as done\n  memo dismiss <id>    Dismiss memo",
+    "help.memo":        "  memo <text>          Save a new memo\n  memo <text> due <date>  Save with due date\n  memos                List open memos\n  memo done <id>       Mark as done\n  memo dismiss <id>    Dismiss",
+    "cmd.memo":         "Save or list memos",
+    "cmd.memos":        "List open memos",
+
+    # ── obsidian ──────────────────────────────────────────────────────────────
+    "cmd.obsidian":       "Sync Obsidian vault now",
+    "obsidian.done":      "✓ Obsidian synced → {path}",
+    "obsidian.not_set":   "OBSIDIAN_VAULT_PATH not configured.",
+    "help.obsidian":      "  obsidian   Force Obsidian sync (writes today.md and open.md)",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "No chats found.",

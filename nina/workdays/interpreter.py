@@ -8,6 +8,21 @@ from datetime import time
 from nina.llm.client import LLMClient
 from nina.workdays.models import WorkSchedule
 
+_KEYWORDS: dict[str, set[str]] = {
+    "pt": {"segunda", "terça", "terca", "quarta", "quinta", "sexta",
+           "sábado", "sabado", "domingo", "horário", "horario",
+           "timezone", "fuso", "trabalho", "trabalhar"},
+    "en": {"monday", "tuesday", "wednesday", "thursday", "friday",
+           "saturday", "sunday", "schedule", "timezone", "work"},
+}
+
+
+def has_context(text: str, lang: str = "pt") -> bool:
+    """Keyword gate — no LLM."""
+    lower = text.lower()
+    return any(kw in lower for kw in _KEYWORDS.get(lang, _KEYWORDS["pt"]))
+
+
 _SYSTEM_PROMPT = """You are an assistant that interprets work schedule changes from natural language messages.
 
 Days of the week are numbered 0 (Monday) to 6 (Sunday).

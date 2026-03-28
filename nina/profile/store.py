@@ -6,8 +6,8 @@ from nina.profile.models import PresenceProfile, Profile
 _FILENAME = "profile.json"
 
 
-def load(tokens_dir: Path) -> Profile:
-    path = tokens_dir / _FILENAME
+def load(data_dir: Path) -> Profile:
+    path = data_dir / _FILENAME
     if not path.exists():
         return Profile()
     data = json.loads(path.read_text())
@@ -21,8 +21,8 @@ def load(tokens_dir: Path) -> Profile:
     return Profile(mapping=mapping)
 
 
-def save(profile: Profile, tokens_dir: Path) -> None:
-    tokens_dir.mkdir(parents=True, exist_ok=True)
+def save(profile: Profile, data_dir: Path) -> None:
+    data_dir.mkdir(parents=True, exist_ok=True)
     data = {
         presence: {
             "gmail": p.gmail,
@@ -30,4 +30,4 @@ def save(profile: Profile, tokens_dir: Path) -> None:
         }
         for presence, p in profile.mapping.items()
     }
-    (tokens_dir / _FILENAME).write_text(json.dumps(data, indent=2))
+    (data_dir / _FILENAME).write_text(json.dumps(data, indent=2))

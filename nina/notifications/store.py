@@ -1,4 +1,4 @@
-"""Persist notification state to tokens/notifications.json."""
+"""Persist notification state to data/notifications.json."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from nina.notifications.models import (
 _FILENAME = "notifications.json"
 
 
-def load(tokens_dir: Path) -> NotificationState:
-    path = tokens_dir / _FILENAME
+def load(data_dir: Path) -> NotificationState:
+    path = data_dir / _FILENAME
     if not path.exists():
         return NotificationState()
     try:
@@ -55,8 +55,8 @@ def load(tokens_dir: Path) -> NotificationState:
     )
 
 
-def save(state: NotificationState, tokens_dir: Path) -> None:
-    tokens_dir.mkdir(parents=True, exist_ok=True)
+def save(state: NotificationState, data_dir: Path) -> None:
+    data_dir.mkdir(parents=True, exist_ok=True)
     data = {
         "config": {
             "reminder_minutes": state.config.reminder_minutes,
@@ -77,4 +77,4 @@ def save(state: NotificationState, tokens_dir: Path) -> None:
         "queue": [{"id": q.id, "message": q.message} for q in state.queue],
         "last_can_notify": state.last_can_notify,
     }
-    (tokens_dir / _FILENAME).write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    (data_dir / _FILENAME).write_text(json.dumps(data, indent=2, ensure_ascii=False))

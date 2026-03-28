@@ -86,6 +86,7 @@ def cmd_revoke(args: argparse.Namespace) -> None:
 
 def cmd_console(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Open the interactive console (requires daemon running)."""
+    load_dotenv()
     from nina.console.runner import run
     run()
 

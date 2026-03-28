@@ -5,6 +5,33 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+# Layer 1 gate: require at least one time/scheduling signal before calling LLM.
+# Without this, any unrecognized sentence gets turned into a calendar event.
+_TIME_SIGNAL = re.compile(
+    r"""
+    \b(
+        \d+\s*h\b           # "15h", "2h"
+      | \d{1,2}:\d{2}       # "15:30", "8:00"
+      | \d+\s*hora[s]?      # "1 hora", "2 horas"
+      | \d+\s*minuto[s]?    # "30 minutos"
+      | agora               # "agora"
+      | now\b               # "now"
+      | daqui\b             # "daqui 15 minutos"
+      | às\s+\d             # "às 15"
+      | at\s+\d             # "at 3"
+      | bloqueie?\b         # "bloqueie", "bloqueia"
+      | agende?\b           # "agende", "agenda"
+      | schedule\b          # "schedule"
+    )\b
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+def has_time_signal(text: str) -> bool:
+    """Keyword gate — no LLM."""
+    return bool(_TIME_SIGNAL.search(text))
+
+
 from nina.errors import CalendarError
 from nina.llm.client import LLMClient
 
@@ -69,6 +96,8 @@ class BlockingResult:
 
 def interpret(text: str, llm: LLMClient, now: datetime | None = None) -> list[BlockingIntent]:
     """Parse *text* and return a list of BlockingIntents. Never raises."""
+    if not _TIME_SIGNAL.search(text):
+        return []
     if now is None:
         now = datetime.now()
     stamped = f"[now: {now.strftime('%H:%M')}]\n{text}"

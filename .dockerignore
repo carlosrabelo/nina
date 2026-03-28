@@ -2,6 +2,8 @@
 .venv/
 tokens/
 credentials/
+data/
+sessions/
 *.session
 *.session-journal
 __pycache__/

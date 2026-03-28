@@ -41,19 +41,19 @@ class ScheduleRequest(BaseModel):
     calendar_id: str = "primary"
 
 
-def create_app(tokens_dir: Path) -> FastAPI:
+def create_app(tokens_dir: Path, data_dir: Path) -> FastAPI:
     app = FastAPI(title="Nina", docs_url="/docs")
 
     def _lang() -> str:
-        return load_locale(tokens_dir).lang
+        return load_locale(data_dir).lang
 
     @app.get("/")
     def root() -> dict:
         uptime = int(time.time() - _start_time)
         hours, remainder = divmod(uptime, 3600)
         minutes, seconds = divmod(remainder, 60)
-        presence = load_presence(tokens_dir)
-        schedule = load_schedule(tokens_dir)
+        presence = load_presence(data_dir)
+        schedule = load_schedule(data_dir)
         ctx = get_context(schedule, presence, _lang())
         return {
             "nina": "ok",
@@ -81,7 +81,7 @@ def create_app(tokens_dir: Path) -> FastAPI:
 
     @app.get("/presence")
     def get_presence() -> dict:
-        state = load_presence(tokens_dir)
+        state = load_presence(data_dir)
         return {
             "status": state.status.value,
             "since": state.since.isoformat(),
@@ -98,7 +98,7 @@ def create_app(tokens_dir: Path) -> FastAPI:
             )
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e
-        save_presence(state, tokens_dir)
+        save_presence(state, data_dir)
         return {
             "status": state.status.value,
             "since": state.since.isoformat(),
@@ -110,7 +110,7 @@ def create_app(tokens_dir: Path) -> FastAPI:
     @app.get("/notifications/config")
     def get_notifications_config() -> dict:
         from nina.notifications.store import load as load_notif
-        state = load_notif(tokens_dir)
+        state = load_notif(data_dir)
         return {
             "reminder_minutes": state.config.reminder_minutes,
             "watch_days": state.config.watch_days,
@@ -119,7 +119,7 @@ def create_app(tokens_dir: Path) -> FastAPI:
     @app.put("/notifications/config")
     def update_notifications_config(body: NotificationConfigUpdate) -> dict:
         from nina.notifications.store import load as load_notif, save as save_notif
-        state = load_notif(tokens_dir)
+        state = load_notif(data_dir)
         if body.reminder_minutes is not None:
             if body.reminder_minutes <= 0:
                 raise HTTPException(status_code=422, detail="reminder_minutes must be positive")
@@ -128,7 +128,7 @@ def create_app(tokens_dir: Path) -> FastAPI:
             if body.watch_days <= 0:
                 raise HTTPException(status_code=422, detail="watch_days must be positive")
             state.config.watch_days = body.watch_days
-        save_notif(state, tokens_dir)
+        save_notif(state, data_dir)
         return {
             "reminder_minutes": state.config.reminder_minutes,
             "watch_days": state.config.watch_days,
@@ -141,9 +141,9 @@ def create_app(tokens_dir: Path) -> FastAPI:
         from nina.errors import CalendarError
         from nina.google.calendar.blocking import BlockingIntent, execute as execute_blocking
         from nina.profile.store import load as load_profile
-        schedule = load_schedule(tokens_dir)
-        presence = load_presence(tokens_dir)
-        profile = load_profile(tokens_dir)
+        schedule = load_schedule(data_dir)
+        presence = load_presence(data_dir)
+        profile = load_profile(data_dir)
         cal_accounts = profile.for_presence(presence.status).calendar
         if not cal_accounts:
             raise HTTPException(status_code=409, detail="no_calendar_account")
@@ -177,7 +177,7 @@ def create_app(tokens_dir: Path) -> FastAPI:
     @app.get("/workdays")
     def get_schedule() -> dict:
         lang = _lang()
-        schedule = load_schedule(tokens_dir)
+        schedule = load_schedule(data_dir)
         return {
             "timezone": schedule.timezone,
             "days": [
@@ -197,20 +197,20 @@ def create_app(tokens_dir: Path) -> FastAPI:
         if day < 0 or day > 6:
             raise HTTPException(status_code=422, detail="day must be 0 (Monday) to 6 (Sunday)")
         from datetime import time as dt_time
-        schedule = load_schedule(tokens_dir)
+        schedule = load_schedule(data_dir)
         for d in schedule.days:
             if d.day == day:
                 d.active = body.active
                 d.start = dt_time.fromisoformat(body.start) if body.start else None
                 d.end = dt_time.fromisoformat(body.end) if body.end else None
                 break
-        save_schedule(schedule, tokens_dir)
+        save_schedule(schedule, data_dir)
         return {"updated": DAY_NAMES_EN[day]}
 
     @app.get("/workdays/context")
     def schedule_context() -> dict:
-        schedule = load_schedule(tokens_dir)
-        presence = load_presence(tokens_dir)
+        schedule = load_schedule(data_dir)
+        presence = load_presence(data_dir)
         ctx = get_context(schedule, presence, _lang())
         return {
             "label": ctx.label,
