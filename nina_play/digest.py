@@ -7,11 +7,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from nina.errors import AuthError, CalendarError, ConfigError, GmailError, LLMError
-from nina.google.auth import discover_accounts
-from nina.google.calendar.client import CalendarClient, Event
-from nina.google.gmail.client import GmailMultiClient, Message
-from nina.llm.client import LLMClient
-from nina.llm.digest import daily_brief
+from nina.integrations.google.auth import discover_accounts
+from nina.integrations.google.calendar.client import CalendarClient, Event
+from nina.integrations.google.gmail.client import GmailMultiClient, Message
+from nina.core.llm.client import LLMClient
+from nina.core.llm.digest import daily_brief
 
 load_dotenv()
 

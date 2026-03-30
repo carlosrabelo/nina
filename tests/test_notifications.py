@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from nina.notifications.models import (
+from nina.skills.notifications.models import (
     KnownEvent,
     NotificationConfig,
     NotificationState,
     QueuedNotification,
 )
-from nina.notifications.store import load, save
+from nina.skills.notifications.store import load, save
 
 
 class TestNotificationModels:

@@ -8,8 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from nina.errors import AuthError, TelegramError
-from nina.google.auth import discover_accounts, is_authenticated, revoke, run_oauth_flow
-from nina.telegram.client import TgClient
+from nina.integrations.google.auth import discover_accounts, is_authenticated, revoke, run_oauth_flow
 
 
 def _tokens_dir() -> Path:
@@ -40,6 +39,7 @@ def cmd_auth(args: argparse.Namespace) -> None:
             sys.exit(1)
 
     elif args.provider == "telegram":
+        from nina.integrations.telegram.client import TgClient
         with TgClient.from_env() as tg:
             if tg.is_authorized():
                 print(f"Already authenticated as: {tg.me()}")
@@ -66,6 +66,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     elif args.provider == "telegram":
         try:
+            from nina.integrations.telegram.client import TgClient
             with TgClient.from_env() as tg:
                 if tg.is_authorized():
                     print(f"  ✓  {tg.me()}")
@@ -87,19 +88,19 @@ def cmd_revoke(args: argparse.Namespace) -> None:
 def cmd_console(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Open the interactive console (requires daemon running)."""
     load_dotenv()
-    from nina.console.runner import run
+    from nina.core.console.runner import run
     run()
 
 
 # ── Daemon ────────────────────────────────────────────────────────────────────
 
-def cmd_daemon(args: argparse.Namespace) -> None:  # noqa: ARG001
+def cmd_daemon(args: argparse.Namespace) -> None:
     """Start Nina in daemon mode (scheduler + HTTP server)."""
     import logging
     logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 
-    from nina.daemon.runner import run
-    run()
+    from nina.core.daemon.runner import run
+    run(dev=args.dev)
 
 
 # ── Parser ────────────────────────────────────────────────────────────────────
@@ -128,6 +129,7 @@ def main() -> None:
     p_console.set_defaults(func=cmd_console)
 
     p_daemon = sub.add_parser("daemon", help="Start Nina in daemon mode (scheduler + HTTP)")
+    p_daemon.add_argument("--dev", action="store_true", help="Development mode — disables Telegram bot")
     p_daemon.set_defaults(func=cmd_daemon)
 
     args = parser.parse_args()

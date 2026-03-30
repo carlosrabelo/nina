@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 
-from nina.google.calendar.client import Event
-from nina.llm.digest import DigestResult, daily_brief, summarise_emails, summarise_events
-from nina.google.gmail.client import Message
-from nina.llm.client import LLMClient
+from nina.integrations.google.calendar.client import Event
+from nina.core.llm.digest import DigestResult, daily_brief, summarise_emails, summarise_events
+from nina.integrations.google.gmail.client import Message
+from nina.core.llm.client import LLMClient
 
 
 def _client(response: str = "resposta simulada") -> MagicMock:

@@ -4,10 +4,10 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from nina.presence.models import PresenceStatus
-from nina.profile.interpreter import ProfileIntent, ProfileUpdate, apply, interpret
-from nina.profile.models import PresenceProfile, Profile
-from nina.profile.store import load, save
+from nina.skills.presence.models import PresenceStatus
+from nina.skills.profile.interpreter import ProfileIntent, ProfileUpdate, apply, interpret
+from nina.skills.profile.models import PresenceProfile, Profile
+from nina.skills.profile.store import load, save
 
 
 class TestProfileStore:

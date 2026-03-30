@@ -3,7 +3,7 @@
 
 from unittest.mock import MagicMock
 
-from nina.notifications.interpreter import NotificationIntent, interpret, try_action
+from nina.skills.notifications.interpreter import NotificationIntent, interpret, try_action
 
 
 class TestTryAction:

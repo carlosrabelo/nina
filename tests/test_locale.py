@@ -3,8 +3,8 @@
 
 from pathlib import Path
 
-from nina.locale.models import LocaleConfig
-from nina.locale.store import load, save
+from nina.core.locale.models import LocaleConfig
+from nina.core.locale.store import load, save
 
 
 class TestLocaleStore:

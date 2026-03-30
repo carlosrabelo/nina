@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nina.scheduler.runner import Scheduler
+from nina.core.scheduler.runner import Scheduler
 
 
 @pytest.fixture()

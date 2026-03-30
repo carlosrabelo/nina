@@ -4,7 +4,7 @@
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from nina.google.calendar.blocking import BlockingIntent, interpret
+from nina.skills.calendar.blocking import BlockingIntent, interpret
 
 
 def _llm(response: str) -> MagicMock:

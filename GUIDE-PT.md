@@ -73,6 +73,51 @@ O horário de início é arredondado para baixo até o bloco de 15 minutos mais 
 
 ---
 
+## memo / memos
+
+Salva uma nota ou lembrete; lista, fecha ou descarta memos existentes.
+
+```
+memo <texto>
+memo <texto> due <AAAA-MM-DD>
+memos
+memo done <id>
+memo dismiss <id>
+```
+
+| Sub-comando | Descrição |
+|---|---|
+| `memo <texto>` | Salvar um novo memo |
+| `memo <texto> due <data>` | Salvar com data de vencimento |
+| `memos` | Listar todos os memos abertos |
+| `memo done <id>` | Marcar memo como concluído |
+| `memo dismiss <id>` | Descartar memo sem concluir |
+
+O `<id>` são os primeiros 8 caracteres mostrados na saída do `memos` (ex: `a3f9c1b2`).
+
+**Exemplos:**
+```
+memo ligar para o fornecedor sobre a nota fiscal
+# ✓ Memo salvo.
+
+memo consulta dentista due 2026-04-15
+# ✓ Memo salvo.
+
+memos
+# [a3f9c1b2] ligar para o fornecedor sobre a nota fiscal
+# [d7e20f41] consulta dentista  Vence: 2026-04-15
+
+memo done a3f9c1b2
+# ✓ Memo marcado como concluído.
+
+memo dismiss d7e20f41
+# ✓ Memo descartado.
+```
+
+Você também pode criar e gerenciar memos usando texto livre — veja [Texto livre (LLM)](#texto-livre-llm).
+
+---
+
 ## workdays
 
 Mostra seu horário de trabalho configurado.
@@ -251,24 +296,68 @@ health
 
 ## Texto livre (LLM)
 
-No console e no bot do Telegram, você pode digitar qualquer coisa em linguagem natural. A Nina tenta entender sua intenção nesta ordem:
+No console e no bot do Telegram, você pode digitar qualquer coisa em linguagem natural. A Nina usa uma abordagem em duas camadas: primeiro verifica se há sinais de palavra-chave no texto, depois chama a LLM apenas para o domínio identificado (ou uma única chamada ao roteador LLM se nenhuma palavra-chave for encontrada).
 
-1. **Bloqueio de agenda** — cria um evento no calendário
-2. **Mudança de presença** — atualiza seu status de presença
-3. **Mudança de horário de trabalho** — atualiza workdays ou timezone
-4. **Mapeamento de perfil** — associa contas a uma presença
+**Domínios suportados:**
 
-**Exemplos:**
+| Domínio | Gatilhos | Resultado |
+|---|---|---|
+| Memo | "me lembre", "salva uma nota", "memo" | Cria memo ou lembrete com data de vencimento |
+| Bloqueio de agenda | sinais de tempo + palavras de agendamento | Cria evento no calendário |
+| Presença | palavras de status de presença | Atualiza presença |
+| Horário de trabalho | palavras de horário / timezone | Atualiza workdays ou timezone |
+| Perfil | palavras de mapeamento de conta | Associa conta a uma presença |
+| Notificações | palavras de "lembrete", "notifica", "alerta" | Atualiza configurações de notificação |
+
+**Exemplos de bloqueio de agenda:**
+```
+estou em reunião com a Sandra por 1 hora
+→ ✓ Reunião com Sandra  sáb, 29/03 · 10:00 → 11:00
+
+agende na segunda-feira às 14:00 que preciso formatar uma máquina para o Rafael
+→ ✓ Formatar máquina — Rafael  seg, 30/03 · 14:00 → 15:00
+
+coloca na minha agenda de trabalho: terça às 09:00 reunião de equipe 30min
+→ ✓ Reunião de equipe  ter, 31/03 · 09:00 → 09:30
+   Conta: trabalho@empresa.com
+```
+
+Uma única mensagem pode conter múltiplos eventos de calendário:
+```
+estou em reunião agora por 30 minutos e às 16:00 tenho uma consultoria por 1 hora
+→ ✓ Reunião  sáb, 29/03 · 10:15 → 10:45
+→ ✓ Consultoria  sáb, 29/03 · 16:00 → 17:00
+```
+
+**Exemplos de lembrete** — frases com "me lembre" criam um memo com data de vencimento em vez de evento no calendário:
+```
+me lembre na segunda às 10h de formatar a máquina do Rafael
+→ ✓ Lembrete para 2026-03-30 10:00 — formatar máquina do Rafael
+
+não esquece de mandar o relatório até sexta
+→ ✓ Lembrete para 2026-04-03 — mandar o relatório
+```
+
+**Exemplos de memo:**
+```
+salva uma nota: ligar para o fornecedor sobre a nota fiscal
+→ ✓ Memo salvo.
+
+quais os memos que eu tenho?
+→ [a3f9c1b2] ligar para o fornecedor sobre a nota fiscal
+```
+
+**Exemplos de presença:**
 ```
 acabei de chegar no escritório
 → ✓ office — no escritório
 
-estou em reunião com a Sandra por 1 hora
-→ ✓ Reunião com Sandra  10:00 → 11:00
+estou indo para casa
+→ ✓ home — em casa
+```
 
-preciso atender a professora Vera Lucia às 16:00 por uma hora
-→ ✓ Atendimento Vera Lucia  16:00 → 17:00
-
+**Exemplos de horário e perfil:**
+```
 meu horário de trabalho é de segunda a sexta das 9h às 18h
 → ✓ Horário atualizado.
 
@@ -276,12 +365,7 @@ no escritório usar trabalho@empresa.com para o calendário
 → ✓ Perfil atualizado.
 ```
 
-Uma única mensagem pode conter múltiplos eventos de calendário:
-```
-estou em reunião agora por 30 minutos e às 16:00 tenho uma consultoria por 1 hora
-→ ✓ Reunião  10:15 → 10:45
-→ ✓ Consultoria  16:00 → 17:00
-```
+**Seleção de conta de calendário:** Quando o texto menciona "agenda de trabalho" ou "escritório", a conta de trabalho é usada independentemente da presença atual. Quando menciona "agenda pessoal" ou "casa", a conta pessoal é usada.
 
 ---
 

@@ -73,6 +73,51 @@ Start times are rounded down to the nearest 15-minute block. End times are round
 
 ---
 
+## memo / memos
+
+Save a note or reminder; list, close, or dismiss existing memos.
+
+```
+memo <text>
+memo <text> due <YYYY-MM-DD>
+memos
+memo done <id>
+memo dismiss <id>
+```
+
+| Sub-command | Description |
+|---|---|
+| `memo <text>` | Save a new memo |
+| `memo <text> due <date>` | Save with a due date |
+| `memos` | List all open memos |
+| `memo done <id>` | Mark memo as done |
+| `memo dismiss <id>` | Dismiss memo without completing it |
+
+The `<id>` is the first 8 characters shown in `memos` output (e.g. `a3f9c1b2`).
+
+**Examples:**
+```
+memo call the supplier about the invoice
+# ✓ Memo saved.
+
+memo dentist appointment due 2026-04-15
+# ✓ Memo saved.
+
+memos
+# [a3f9c1b2] call the supplier about the invoice
+# [d7e20f41] dentist appointment  Due: 2026-04-15
+
+memo done a3f9c1b2
+# ✓ Memo marked as done.
+
+memo dismiss d7e20f41
+# ✓ Memo dismissed.
+```
+
+You can also create and manage memos using free text — see [Free-text (LLM)](#free-text-llm).
+
+---
+
 ## workdays
 
 Show your configured work schedule.
@@ -249,45 +294,78 @@ health
 
 ---
 
-## context (alias)
-
-See [context](#context).
-
----
-
 ## Free-text (LLM)
 
-In both the console and the Telegram bot, you can type anything in natural language. Nina tries to understand your intent in this order:
+In both the console and the Telegram bot, you can type anything in natural language. Nina uses a two-layer approach: first it checks for keyword signals in the text, then calls the LLM only for the matched domain (or a single router LLM call if no keywords matched).
 
-1. **Calendar blocking** — creates an event on your calendar
-2. **Presence change** — updates your presence status
-3. **Work schedule change** — updates workdays or timezone
-4. **Profile mapping** — associates accounts with a presence
+**Domains handled:**
 
-**Examples:**
+| Domain | Triggers | Result |
+|---|---|---|
+| Memo | "remind me", "save a note", "memo" | Creates memo or reminder with due date |
+| Calendar blocking | time signals + scheduling words | Creates calendar event |
+| Presence | presence status words | Updates presence |
+| Work schedule | schedule / timezone words | Updates workdays or timezone |
+| Profile | account mapping words | Associates account with presence |
+| Notifications | "reminder", "notify", "alert" words | Updates notification settings |
+
+**Calendar blocking examples:**
 ```
-I just arrived at the office
-→ ✓ office — at the office
-
 I'm in a meeting with Sandra for 1 hour
-→ ✓ Meeting with Sandra  10:00 → 11:00
+→ ✓ Meeting with Sandra  Sat, 29/03 · 10:00 → 11:00
 
-I need to attend a training at 16:00 for 2 hours
-→ ✓ Training  16:00 → 18:00
+schedule on Monday at 14:00 that I need to format a machine for Rafael
+→ ✓ Format machine — Rafael  Mon, 30/03 · 14:00 → 15:00
 
-Work schedule is Monday to Friday 9am to 6pm
-→ ✓ Schedule updated.
-
-At the office use work@company.com for calendar
-→ ✓ Profile updated.
+add to my work calendar: Tuesday at 09:00 team standup 30min
+→ ✓ Team standup  Tue, 31/03 · 09:00 → 09:30
+   Account: work@company.com
 ```
 
 A single message can contain multiple calendar events:
 ```
 I'm in a meeting now for 30 min and at 16:00 I have a consultation for 1 hour
-→ ✓ Meeting  10:15 → 10:45
-→ ✓ Consultation  16:00 → 17:00
+→ ✓ Meeting  Sat, 29/03 · 10:15 → 10:45
+→ ✓ Consultation  Sat, 29/03 · 16:00 → 17:00
 ```
+
+**Reminder examples** — "remind me" phrases create a memo with a due date instead of a calendar event:
+```
+remind me on Monday at 10h to format a machine for Rafael
+→ ✓ Reminder for 2026-03-30 10:00 — format machine for Rafael
+
+don't forget to send the report by Friday
+→ ✓ Reminder for 2026-04-03 — send the report
+```
+
+**Memo examples:**
+```
+save a note: call the supplier about the invoice
+→ ✓ Memo saved.
+
+what memos do I have?
+→ [a3f9c1b2] call the supplier about the invoice
+```
+
+**Presence examples:**
+```
+I just arrived at the office
+→ ✓ office — at the office
+
+heading home
+→ ✓ home — working from home
+```
+
+**Work schedule and profile examples:**
+```
+work schedule Monday to Friday 9am to 6pm
+→ ✓ Schedule updated.
+
+at the office use work@company.com for calendar
+→ ✓ Profile updated.
+```
+
+**Calendar account selection:** When the text mentions "work calendar" or "office", the work account is used regardless of current presence. When it mentions "personal calendar" or "home", the personal account is used.
 
 ---
 

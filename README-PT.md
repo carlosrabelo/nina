@@ -4,11 +4,15 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 
 ## Destaques
 
-- Rastreie sua **presença** (home / office / out / dnd) e deixe a Nina adaptar o contexto
-- **Perfil** mapeia cada status de presença para as contas Google certas (Gmail + Agenda)
-- **Console interativo** com linguagem natural: escreva livremente e a LLM interpreta sua intenção
-- **Bloqueio de agenda** por texto livre ("estou em reunião por 1h") ou comando direto (`schedule`)
-- **Notificações de agenda** via Telegram — lembretes, novos eventos, alterações, cancelamentos
+- Rastreie presença (home / office / out / dnd) e deixe a Nina adaptar a seleção de conta ao contexto
+- Perfil mapeia cada status de presença para as contas Google certas (Gmail + Agenda)
+- Console interativo e bot do Telegram — escreva livremente e a LLM interpreta sua intenção
+- Roteamento de intenção híbrido: filtros por palavra-chave + roteador LLM único para o domínio certo
+- Bloqueio de agenda por texto livre ("estou em reunião por 1h") com resolução de data completa ("segunda-feira às 14h")
+- Lembretes via linguagem natural ("me lembre na segunda às 10h") — armazenados como memos com data de vencimento
+- Gerenciamento de memos: criar, listar, fechar e dispensar anotações pelo console ou Telegram
+- Sincronização do vault Obsidian ativada por linguagem natural
+- Notificações de agenda via Telegram — lembretes, novos eventos, alterações, cancelamentos
 - Interface bilíngue (inglês / português) — troque com `lang pt` ou `/lang pt`
 - Autentica qualquer número de contas Google via OAuth — descobertas automaticamente pelos tokens
 - Consulta qualquer provedor de LLM (Groq, OpenAI, Anthropic, Ollama) via interface unificada LiteLLM
@@ -21,8 +25,8 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 
 - [Pré-requisitos](#pré-requisitos)
 - [Instalação](#instalação)
-- [Configuração](#configuração)
 - [Primeiros Passos](#primeiros-passos)
+- [Configuração](#configuração)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Desenvolvimento](#desenvolvimento)
 - [Licença](#licença)
@@ -43,21 +47,6 @@ make setup
 cp .env.example .env
 # Edite o .env — preencha as credenciais de cada serviço que quiser usar
 ```
-
-## Configuração
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | Credenciais OAuth baixadas do Google Cloud Console |
-| `TOKENS_DIR` | `tokens` | Diretório para todos os tokens e arquivos de sessão (ignorado pelo git) |
-| `TELEGRAM_BOT_TOKEN` | — | Token do bot fornecido pelo @BotFather |
-| `TELEGRAM_OWNER_ID` | — | Seu chat ID pessoal no Telegram (o bot só responde a este ID) |
-| `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | String do modelo LiteLLM: `<provedor>/<modelo>` |
-| `GROQ_API_KEY` | — | Chave de API do Groq (obrigatória ao usar Groq) |
-| `OPENAI_API_KEY` | — | Chave de API da OpenAI (obrigatória ao usar OpenAI) |
-| `ANTHROPIC_API_KEY` | — | Chave de API da Anthropic (obrigatória ao usar Anthropic) |
-| `LLM_TEMPERATURE` | `0.3` | Temperatura de amostragem |
-| `LLM_MAX_TOKENS` | `1024` | Número máximo de tokens na resposta |
 
 ## Primeiros Passos
 
@@ -100,38 +89,58 @@ make daemon   # apenas o daemon (bot do Telegram + API HTTP + agendador)
 make console  # apenas o console (o daemon precisa estar rodando)
 ```
 
+## Configuração
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | Credenciais OAuth baixadas do Google Cloud Console |
+| `TOKENS_DIR` | `tokens` | Diretório para todos os tokens e arquivos de sessão (ignorado pelo git) |
+| `TELEGRAM_BOT_TOKEN` | — | Token do bot fornecido pelo @BotFather |
+| `TELEGRAM_OWNER_ID` | — | Seu chat ID pessoal no Telegram (o bot só responde a este ID) |
+| `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | String do modelo LiteLLM: `<provedor>/<modelo>` |
+| `GROQ_API_KEY` | — | Chave de API do Groq (obrigatória ao usar Groq) |
+| `OPENAI_API_KEY` | — | Chave de API da OpenAI (obrigatória ao usar OpenAI) |
+| `ANTHROPIC_API_KEY` | — | Chave de API da Anthropic (obrigatória ao usar Anthropic) |
+| `LLM_TEMPERATURE` | `0.3` | Temperatura de amostragem |
+| `LLM_MAX_TOKENS` | `1024` | Número máximo de tokens na resposta |
+
 ## Estrutura do Projeto
 
 ```
 nina/
+    cli.py                   # ponto de entrada da CLI
     errors.py                # exceções compartilhadas
-    i18n/                    # strings bilíngues (en / pt)
-    locale/                  # configuração de idioma
-    presence/                # rastreamento de presença
-    profile/                 # mapeamento de contas Google por presença
-    workdays/                # horário de trabalho e timezone
-    notifications/           # configuração e estado das notificações
-    google/
-        auth.py              # fluxo OAuth, cache de tokens, descoberta automática
-        gmail/client.py
-        calendar/
-            client.py        # CalendarClient (listar, criar eventos)
-            blocking.py      # bloqueio de agenda via LLM
-            schedule_parser.py  # parser de comando schedule (sem LLM)
-    telegram/bot.py          # Bot do Telegram (modo daemon)
-    llm/client.py            # LLMClient — wrapper LiteLLM
-    console/runner.py        # REPL interativo
-    daemon/
-        runner.py            # daemon com APScheduler + servidor HTTP
-        http.py              # API HTTP (presence, workdays, schedule, notifications)
-        client.py            # cliente HTTP console → daemon
-    scheduler/
-        jobs/
-            calendar_notifications.py  # lembretes + detecção de mudanças (a cada 5 min)
+    skills/
+        memo/                # criação, listagem e gerenciamento de lembretes
+        presence/            # rastreamento de presença
+        workdays/            # horário de trabalho e timezone
+        calendar/            # bloqueio via LLM, interpretador de intenção, parser de agenda
+        notifications/       # configuração e estado das notificações
+        profile/             # mapeamento de contas Google por presença
+    integrations/
+        google/
+            auth.py          # fluxo OAuth, cache de tokens, descoberta automática
+            gmail/client.py
+            calendar/client.py  # CalendarClient (listar, criar eventos)
+        telegram/bot.py      # Bot do Telegram (modo daemon)
+    core/
+        intent/              # roteador de domínio via LLM
+        store/               # banco de dados SQLite (memos, actions, emails, events)
+        llm/                 # LLMClient — wrapper LiteLLM
+        i18n/                # strings bilíngues (en / pt)
+        locale/              # configuração de idioma
+        scheduler/
+            jobs/
+                calendar_notifications.py  # lembretes + detecção de mudanças (a cada 5 min)
+        daemon/
+            runner.py        # daemon com APScheduler + servidor HTTP
+            http.py          # API HTTP (presence, workdays, schedule, notifications)
+            client.py        # cliente HTTP console → daemon
+        console/runner.py    # REPL interativo
 make/                        # setup.sh, test.sh, lint.sh
 credentials/                 # credentials.json (ignorado pelo git)
 tokens/                      # tokens OAuth, locale, profile, workdays, notifications (ignorados pelo git)
-tests/                       # suite de testes pytest (170 testes)
+tests/                       # suite de testes pytest (235+ testes)
 ```
 
 ## Desenvolvimento

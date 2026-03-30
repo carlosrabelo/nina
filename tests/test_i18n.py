@@ -3,7 +3,7 @@
 
 import pytest
 
-from nina.i18n import t
+from nina.core.i18n import t
 
 
 class TestTranslation:

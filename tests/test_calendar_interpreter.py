@@ -3,7 +3,7 @@
 
 from unittest.mock import MagicMock
 
-from nina.google.calendar.interpreter import CalendarIntent, interpret, try_action
+from nina.skills.calendar.interpreter import CalendarIntent, interpret, try_action
 
 
 class TestTryAction:

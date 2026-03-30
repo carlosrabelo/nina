@@ -3,8 +3,8 @@
 
 from unittest.mock import MagicMock
 
-from nina.presence.interpreter import PresenceIntent, interpret
-from nina.presence.models import PresenceStatus
+from nina.skills.presence.interpreter import PresenceIntent, interpret
+from nina.skills.presence.models import PresenceStatus
 
 
 def _llm(response: str) -> MagicMock:

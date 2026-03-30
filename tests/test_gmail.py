@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nina.errors import ConfigError
-from nina.google.gmail.client import GmailClient, GmailMultiClient, Message
+from nina.integrations.google.gmail.client import GmailClient, GmailMultiClient, Message
 
 
 def _make_raw_message(
@@ -34,8 +34,8 @@ def _make_raw_message(
 class TestGmailClientParse:
     @pytest.fixture()
     def client(self, tmp_path: Path) -> GmailClient:
-        with patch("nina.google.gmail.client.get_credentials") as mock_creds, \
-             patch("nina.google.gmail.client.build") as mock_build:
+        with patch("nina.integrations.google.gmail.client.get_credentials") as mock_creds, \
+             patch("nina.integrations.google.gmail.client.build") as mock_build:
             mock_creds.return_value = MagicMock()
             mock_build.return_value = MagicMock()
             return GmailClient("user@gmail.com", tmp_path / "tokens")
@@ -74,17 +74,17 @@ class TestGmailMultiClientFromEnv:
         self, tmp_path: Path, monkeypatch
     ) -> None:
         monkeypatch.delenv("GMAIL_ACCOUNTS", raising=False)
-        with patch("nina.google.gmail.client.load_dotenv"), \
-             patch("nina.google.gmail.client.discover_accounts", return_value=[]), \
+        with patch("nina.integrations.google.gmail.client.load_dotenv"), \
+             patch("nina.integrations.google.gmail.client.discover_accounts", return_value=[]), \
              pytest.raises(ConfigError, match="No authenticated accounts"):
             GmailMultiClient.from_env(env_file=tmp_path / ".env")
 
     def test_uses_discovered_accounts(
         self, tmp_path: Path, monkeypatch
     ) -> None:
-        with patch("nina.google.gmail.client.load_dotenv"), \
-             patch("nina.google.gmail.client.discover_accounts", return_value=["a@gmail.com"]), \
-             patch("nina.google.gmail.client.GmailClient") as MockClient:
+        with patch("nina.integrations.google.gmail.client.load_dotenv"), \
+             patch("nina.integrations.google.gmail.client.discover_accounts", return_value=["a@gmail.com"]), \
+             patch("nina.integrations.google.gmail.client.GmailClient") as MockClient:
             MockClient.return_value = MagicMock()
             nina = GmailMultiClient.from_env()
             assert nina.accounts == ["a@gmail.com"]
@@ -94,7 +94,7 @@ class TestGmailMultiClientOperations:
     @pytest.fixture()
     def nina(self) -> GmailMultiClient:
         accounts = ["a@gmail.com", "b@gmail.com"]
-        with patch("nina.google.gmail.client.GmailClient") as MockClient:
+        with patch("nina.integrations.google.gmail.client.GmailClient") as MockClient:
             instances: dict[str, MagicMock] = {}
 
             def make_client(account: str, *_) -> MagicMock:  # type: ignore[no-untyped-def]

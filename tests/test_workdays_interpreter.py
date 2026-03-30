@@ -4,8 +4,8 @@
 from datetime import time
 from unittest.mock import MagicMock
 
-from nina.workdays.interpreter import ScheduleChange, ScheduleIntent, apply, interpret
-from nina.workdays.models import default_schedule
+from nina.skills.workdays.interpreter import ScheduleChange, ScheduleIntent, apply, interpret
+from nina.skills.workdays.models import default_schedule
 
 
 def _llm(response: str) -> MagicMock:

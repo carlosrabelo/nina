@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nina.telegram.client import Dialog, TgClient, TgMessage, _entity_name, _fmt_date
+from nina.integrations.telegram.client import Dialog, TgClient, TgMessage, _entity_name, _fmt_date
 
 
 class TestFmtDate:
@@ -26,7 +26,7 @@ class TestTgClientFromEnv:
         monkeypatch.delenv("TELEGRAM_API_ID", raising=False)
         monkeypatch.delenv("TELEGRAM_API_HASH", raising=False)
         from nina.errors import TelegramError
-        with patch("nina.telegram.client.load_dotenv"), \
+        with patch("nina.integrations.telegram.client.load_dotenv"), \
              pytest.raises(TelegramError, match="TELEGRAM_API_ID"):
             TgClient.from_env()
 
@@ -34,8 +34,8 @@ class TestTgClientFromEnv:
         monkeypatch.setenv("TELEGRAM_API_ID", "notanumber")
         monkeypatch.setenv("TELEGRAM_API_HASH", "abc")
         from nina.errors import TelegramError
-        with patch("nina.telegram.client.load_dotenv"), \
-             patch("nina.telegram.client.TelethonClient"), \
+        with patch("nina.integrations.telegram.client.load_dotenv"), \
+             patch("nina.integrations.telegram.client.TelethonClient"), \
              pytest.raises(TelegramError, match="must be a number"):
             TgClient.from_env()
 
@@ -43,8 +43,8 @@ class TestTgClientFromEnv:
         monkeypatch.setenv("TELEGRAM_API_ID", "12345")
         monkeypatch.setenv("TELEGRAM_API_HASH", "abc123")
         monkeypatch.setenv("TOKENS_DIR", str(tmp_path))
-        with patch("nina.telegram.client.load_dotenv"), \
-             patch("nina.telegram.client.TelethonClient") as MockTelethon:
+        with patch("nina.integrations.telegram.client.load_dotenv"), \
+             patch("nina.integrations.telegram.client.TelethonClient") as MockTelethon:
             MockTelethon.return_value = MagicMock()
             client = TgClient.from_env()
             assert client is not None
@@ -56,7 +56,7 @@ class TestTgClientFromEnv:
 
 @pytest.fixture()
 def tg_client(tmp_path: Path) -> TgClient:
-    with patch("nina.telegram.client.TelethonClient") as MockTelethon:
+    with patch("nina.integrations.telegram.client.TelethonClient") as MockTelethon:
         mock_inner = MagicMock()
         MockTelethon.return_value = mock_inner
         client = TgClient(12345, "abc", tmp_path / "telegram")

@@ -3,7 +3,7 @@
 
 from unittest.mock import MagicMock
 
-from nina.memo.interpreter import MemoIntent, interpret, try_action
+from nina.skills.memo.interpreter import MemoIntent, interpret, try_action
 
 
 class TestTryAction:
@@ -73,19 +73,19 @@ class TestTryAction:
 
 class TestHasReminderContext:
     def test_me_lembre_pt(self) -> None:
-        from nina.memo.interpreter import has_reminder_context
+        from nina.skills.memo.interpreter import has_reminder_context
         assert has_reminder_context("me lembre na segunda às 10h", "pt")
 
     def test_me_avisa_pt(self) -> None:
-        from nina.memo.interpreter import has_reminder_context
+        from nina.skills.memo.interpreter import has_reminder_context
         assert has_reminder_context("me avisa amanhã de manhã", "pt")
 
     def test_remind_me_en(self) -> None:
-        from nina.memo.interpreter import has_reminder_context
+        from nina.skills.memo.interpreter import has_reminder_context
         assert has_reminder_context("remind me on monday at 10am", "en")
 
     def test_no_reminder_keyword(self) -> None:
-        from nina.memo.interpreter import has_reminder_context
+        from nina.skills.memo.interpreter import has_reminder_context
         assert not has_reminder_context("feche o memo compras", "pt")
         assert not has_reminder_context("bloqueia 15h para reunião", "pt")
 

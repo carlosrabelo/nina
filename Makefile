@@ -112,7 +112,7 @@ dev:
 		tmux attach-session -t nina; \
 	else \
 		tmux new-session -d -s nina -x 220 -y 50; \
-		tmux send-keys -t nina:0.0 "cd $(CURDIR) && make daemon" Enter; \
+		tmux send-keys -t nina:0.0 "cd $(CURDIR) && $(_py) daemon --dev" Enter; \
 		tmux split-window -v -t nina:0.0; \
 		tmux send-keys -t nina:0.1 "cd $(CURDIR) && sleep 2 && make console" Enter; \
 		tmux select-pane -t nina:0.1; \

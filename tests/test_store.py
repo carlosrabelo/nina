@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from nina.store.db import open_db
-from nina.store.models import Action, EmailRecord, EventRecord, Memo
-from nina.store.repos import action as action_repo
-from nina.store.repos import email as email_repo
-from nina.store.repos import event as event_repo
-from nina.store.repos import memo as memo_repo
+from nina.core.store.db import open_db
+from nina.core.store.models import Action, EmailRecord, EventRecord, Memo
+from nina.core.store.repos import action as action_repo
+from nina.core.store.repos import email as email_repo
+from nina.core.store.repos import event as event_repo
+from nina.core.store.repos import memo as memo_repo
 
 
 @pytest.fixture()

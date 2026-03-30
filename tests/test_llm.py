@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nina.errors import LLMError
-from nina.llm.client import LLMClient, Message
+from nina.core.llm.client import LLMClient, Message
 
 _LLM_KEYS = {"LLM_MODEL", "LLM_TEMPERATURE", "LLM_MAX_TOKENS", "GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
 

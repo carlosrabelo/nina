@@ -8,11 +8,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from nina.errors import AuthError, CalendarError, ConfigError, GmailError, LLMError, TelegramError
-from nina.google.auth import discover_accounts
-from nina.google.calendar.client import CalendarClient
-from nina.google.gmail.client import GmailMultiClient
-from nina.llm.client import LLMClient
-from nina.telegram.client import TgClient
+from nina.integrations.google.auth import discover_accounts
+from nina.integrations.google.calendar.client import CalendarClient
+from nina.integrations.google.gmail.client import GmailMultiClient
+from nina.core.llm.client import LLMClient
+from nina.integrations.telegram.client import TgClient
 
 
 def _tokens_dir() -> Path:
@@ -158,7 +158,7 @@ def cmd_llm_ping(args: argparse.Namespace) -> None:  # noqa: ARG001
 
 def cmd_tg_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Process pending Telegram bot commands (batch mode — fetches and exits)."""
-    from nina.telegram.bot import run_batch_from_env
+    from nina.integrations.telegram.bot import run_batch_from_env
     try:
         count = run_batch_from_env()
         print(f"Processed {count} command(s).")
@@ -169,7 +169,7 @@ def cmd_tg_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
 
 def cmd_tg_bot_setup(args: argparse.Namespace) -> None:  # noqa: ARG001
     """Discover who messaged the bot and print their chat IDs."""
-    from nina.telegram.bot import setup_from_env
+    from nina.integrations.telegram.bot import setup_from_env
     try:
         setup_from_env()
     except TelegramError as e:

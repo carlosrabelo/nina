@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from nina.google.calendar.schedule_parser import parse
+from nina.skills.calendar.schedule_parser import parse
 
 _TZ = ZoneInfo("America/Cuiaba")
 _NOW = datetime(2024, 3, 28, 10, 0, 0, tzinfo=_TZ)  # Thursday 10:00
