@@ -10,6 +10,8 @@ class WorkDay:
     day: int               # 0=Monday … 6=Sunday
     start: time | None = None
     end: time | None = None
+    lunch_start: time | None = None
+    lunch_end: time | None = None
     active: bool = False
 
 
@@ -21,7 +23,8 @@ class WorkSchedule:
 
 @dataclass
 class WorkContext:
-    is_work_time: bool      # dentro do horário definido
+    is_work_time: bool      # dentro do horário definido (excluindo almoço)
+    is_lunch_time: bool     # dentro do horário de almoço
     presence_status: str    # home / office / out / dnd
     label: str              # "home office", "no escritório", "hora extra", etc.
     overtime: bool          # trabalhando além do horário

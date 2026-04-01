@@ -18,6 +18,8 @@ def load(data_dir: Path) -> WorkSchedule:
             day=d["day"],
             start=time.fromisoformat(d["start"]) if d.get("start") else None,
             end=time.fromisoformat(d["end"]) if d.get("end") else None,
+            lunch_start=time.fromisoformat(d["lunch_start"]) if d.get("lunch_start") else None,
+            lunch_end=time.fromisoformat(d["lunch_end"]) if d.get("lunch_end") else None,
             active=d.get("active", False),
         ))
     return WorkSchedule(days=days, timezone=data.get("timezone", "America/Sao_Paulo"))
@@ -33,6 +35,8 @@ def save(schedule: WorkSchedule, data_dir: Path) -> None:
                 "day": d.day,
                 "start": d.start.isoformat() if d.start else None,
                 "end": d.end.isoformat() if d.end else None,
+                "lunch_start": d.lunch_start.isoformat() if d.lunch_start else None,
+                "lunch_end": d.lunch_end.isoformat() if d.lunch_end else None,
                 "active": d.active,
             }
             for d in schedule.days

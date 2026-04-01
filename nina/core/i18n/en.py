@@ -41,6 +41,7 @@ STRINGS: dict[str, str] = {
     "workdays.timezone_set":     "✓ Timezone set to: {tz}",
     "workdays.timezone_invalid": "Unknown timezone '{tz}'. Use a valid tz name, e.g. America/Cuiaba.",
     "workdays.hours":    "{start} → {end}",
+    "workdays.lunch":    "lunch: {start} → {end}",
     "workdays.off":      "—",
     "day.0": "Monday",
     "day.1": "Tuesday",
@@ -53,6 +54,7 @@ STRINGS: dict[str, str] = {
     # ── context ───────────────────────────────────────────────────────────────
     "context.label.dnd":          "deep focus",
     "context.label.out":          "on the move",
+    "context.label.lunch":        "lunch break",
     "context.label.weekend_work": "working on the weekend",
     "context.label.overtime":     "overtime",
     "context.label.home_office":  "home office",
@@ -61,7 +63,9 @@ STRINGS: dict[str, str] = {
     "context.flag.overtime":      "overtime",
     "context.flag.weekend":       "weekend",
     "context.in_work_time":       "✓ work hours",
+    "context.lunch_time":         "🍽️ lunch break",
     "context.off_hours":          "✗ outside work hours",
+    "lunch.reminder":             "🍽️ Time for lunch! Don't forget to take a break.",
 
     # ── gmail ─────────────────────────────────────────────────────────────────
     "unread.none":    "No unread emails.",

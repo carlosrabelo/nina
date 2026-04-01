@@ -6,45 +6,11 @@ services:
     env_file: .env
     environment:
       NINA_HTTP_HOST: "0.0.0.0"
-      TOKENS_DIR: /app/tokens
-      DATA_DIR: /app/data
-      SESSIONS_DIR: /app/sessions
-      GOOGLE_CREDENTIALS_FILE: /app/credentials/credentials.json
+      DATA_DIR: /data/db
+      TOKENS_DIR: /data/tokens
+      SESSIONS_DIR: /data/sessions
+      GOOGLE_CREDENTIALS_FILE: /data/credentials/credentials.json
     ports:
       - "127.0.0.1:8765:8765"
     volumes:
-      - ./tokens:/app/tokens
-      - ./data:/app/data
-      - ./sessions:/app/sessions
-      - ./credentials:/app/credentials
-      # Shared vault with obsidian container — uncomment when obsidian is enabled:
-      # - ./vault:/vault
-
-  # ── Obsidian desktop (browser access) ────────────────────────────────────
-  # Runs Obsidian as a desktop app accessible via browser (KasmVNC).
-  # Steps to activate:
-  #   1. Uncomment this service and the vault volume at the bottom
-  #   2. Uncomment the vault volume in the nina service above
-  #   3. Set OBSIDIAN_VAULT_PATH=/vault in .env
-  #   4. Access http://<server-ip>:3000 → log in with your Obsidian account
-  #   5. Enable Obsidian Sync pointing to the /vault folder
-  #   From then on: Nina writes → Obsidian Sync pushes to all your devices
-  #
-  # obsidian:
-  #   image: lscr.io/linuxserver/obsidian:latest
-  #   container_name: obsidian
-  #   restart: unless-stopped
-  #   env_file: .env
-  #   environment:
-  #     PUID: 1000
-  #     PGID: 1000
-  #     TZ: ${TZ:-America/Sao_Paulo}
-  #   security_opt:
-  #     - seccomp:unconfined
-  #   ports:
-  #     - "3000:3000"   # web UI (HTTP)
-  #     - "3001:3001"   # web UI (HTTPS)
-  #   volumes:
-  #     - ./obsidian-config:/config
-  #     - ./vault:/vault
-  #   shm_size: 1gb
+      - ./data:/data

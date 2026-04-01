@@ -4,6 +4,7 @@ ACCOUNT   ?=
 LIMIT     ?=
 CAL       ?=
 IMAGE     ?= nina
+REGISTRY  ?= carlosrabelo
 
 _py       := .venv/bin/python -m nina
 _play     := .venv/bin/python -m nina_play
@@ -14,7 +15,7 @@ _cal      := $(if $(CAL),--calendar $(CAL),)
 .PHONY: help
 .PHONY: setup test lint fmt typecheck clean
 .PHONY: auth-google auth-telegram status-google status-telegram console daemon dev
-.PHONY: docker-build docker-up docker-down docker-logs docker-auth-google
+.PHONY: docker-build docker-push docker-up docker-down docker-logs docker-auth-google
 .PHONY: play-gmail-latest play-gmail-unread play-gmail-search
 .PHONY: play-cal-calendars play-cal-events
 .PHONY: play-tg-bot play-tg-bot-setup play-tg-dialogs play-tg-messages play-tg-send
@@ -43,7 +44,8 @@ help:
 	@echo "  dev                  Launch daemon + console in a tmux session"
 	@echo ""
 	@echo "Docker"
-	@echo "  docker-build         Build the Docker image"
+	@echo "  docker-build         Build the Docker image and tag as $(REGISTRY)/$(IMAGE)"
+	@echo "  docker-push          Build and push image to Docker Hub ($(REGISTRY)/$(IMAGE))"
 	@echo "  docker-up            Start daemon container (detached)"
 	@echo "  docker-down          Stop daemon container"
 	@echo "  docker-logs          Tail daemon container logs"
@@ -122,7 +124,10 @@ dev:
 # ── Docker ────────────────────────────────────────────────────────────────────
 
 docker-build:
-	docker compose build
+	docker build -t $(REGISTRY)/$(IMAGE) .
+
+docker-push: docker-build
+	docker push $(REGISTRY)/$(IMAGE)
 
 docker-up:
 	docker compose up -d

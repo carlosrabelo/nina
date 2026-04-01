@@ -174,7 +174,10 @@ class NinaConsole(cmd.Cmd):
             print(f"  {t('workdays.timezone', lang, tz=data['timezone'])}\n")
             for d in data["days"]:
                 if d["active"] and d["start"] and d["end"]:
-                    print(f"  {d['name']:<10}  {d['start']} → {d['end']}")
+                    lunch = ""
+                    if d.get("lunch_start") and d.get("lunch_end"):
+                        lunch = f"  ({t('workdays.lunch', lang, start=d['lunch_start'], end=d['lunch_end'])})"
+                    print(f"  {d['name']:<10}  {d['start']} → {d['end']}{lunch}")
                 else:
                     print(f"  {d['name']:<10}  {t('workdays.off', lang)}")
         except ConnectionError as e:
@@ -222,7 +225,12 @@ class NinaConsole(cmd.Cmd):
             if data["weekend_work"]:
                 flags.append(t("context.flag.weekend", lang))
             flags_str = f"  [{', '.join(flags)}]" if flags else ""
-            work = t("context.in_work_time" if data["is_work_time"] else "context.off_hours", lang)
+            if data["is_work_time"]:
+                work = t("context.in_work_time", lang)
+            elif data.get("is_lunch_time"):
+                work = t("context.lunch_time", lang)
+            else:
+                work = t("context.off_hours", lang)
             print(f"  {data['label']}{flags_str}")
             print(t("console.context.presence", lang, work=work, presence=data["presence"]))
         except ConnectionError as e:

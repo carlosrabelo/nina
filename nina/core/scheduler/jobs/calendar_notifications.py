@@ -53,6 +53,7 @@ def make_job(tokens_dir: Path, data_dir: Path, bot_token: str, owner_id: int):  
         from nina.integrations.google.auth import discover_accounts
         from nina.integrations.google.calendar.client import CalendarClient
         from nina.errors import CalendarError
+        from nina.core.i18n import t
         from nina.core.locale.store import load as load_locale
         from nina.skills.notifications.models import KnownEvent, QueuedNotification
         from nina.skills.notifications.store import load as load_state, save as save_state
@@ -68,7 +69,7 @@ def make_job(tokens_dir: Path, data_dir: Path, bot_token: str, owner_id: int):  
         ctx = get_context(schedule, presence, lang)
 
         is_dnd = presence.status == PresenceStatus("dnd")
-        can_notify = ctx.is_work_time and not is_dnd
+        can_notify = (ctx.is_work_time or ctx.is_lunch_time) and not is_dnd
 
         tz = ZoneInfo(schedule.timezone)
         now = datetime.now(tz)
@@ -78,6 +79,12 @@ def make_job(tokens_dir: Path, data_dir: Path, bot_token: str, owner_id: int):  
         state.reminders_sent = {
             k: v for k, v in state.reminders_sent.items() if v == today_str
         }
+
+        # ── Lunch reminder ────────────────────────────────────────────────────
+        lunch_key = f"lunch:{today_str}"
+        if ctx.is_lunch_time and lunch_key not in state.reminders_sent:
+            _send_telegram(bot_token, owner_id, t("lunch.reminder", lang))
+            state.reminders_sent[lunch_key] = today_str
 
         notifications_to_send: list[str] = []
 

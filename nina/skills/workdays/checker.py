@@ -19,11 +19,19 @@ def get_context(
         None,
     )
 
+    is_lunch_time = (
+        work_day is not None
+        and work_day.lunch_start is not None
+        and work_day.lunch_end is not None
+        and work_day.lunch_start <= current_time <= work_day.lunch_end
+    )
+
     is_work_time = (
         work_day is not None
         and work_day.start is not None
         and work_day.end is not None
         and work_day.start <= current_time <= work_day.end
+        and not is_lunch_time
     )
 
     is_weekend = day_of_week >= 5
@@ -43,6 +51,8 @@ def get_context(
         label = t("context.label.dnd", lang)
     elif presence.status == PresenceStatus.OUT:
         label = t("context.label.out", lang)
+    elif is_lunch_time:
+        label = t("context.label.lunch", lang)
     elif weekend_work:
         label = t("context.label.weekend_work", lang)
     elif overtime:
@@ -58,6 +68,7 @@ def get_context(
 
     return WorkContext(
         is_work_time=is_work_time,
+        is_lunch_time=is_lunch_time,
         presence_status=presence.status.value,
         label=label,
         overtime=overtime,

@@ -37,6 +37,8 @@ Each change in the list has:
 - "active": true or false
 - "start": "HH:MM" string or null (only when active is true)
 - "end": "HH:MM" string or null (only when active is true)
+- "lunch_start": "HH:MM" string or null — lunch break start time
+- "lunch_end": "HH:MM" string or null — lunch break end time
 
 Rules:
 - If the message changes all working days uniformly, repeat the same change for each affected day.
@@ -44,6 +46,8 @@ Rules:
 - If the message says "I don't work on X", set active=false for that day (no start/end needed).
 - Always use 24-hour format for times.
 - If a start or end time is not mentioned for an active day, use null.
+- If a lunch break is mentioned (e.g. "almoço das 12h às 13h", "lunch 12:00-13:00"), extract lunch_start and lunch_end.
+- If no lunch break is mentioned, use null for both lunch fields.
 
 Return ONLY valid JSON, no explanation, no markdown.
 
@@ -54,13 +58,13 @@ Examples:
 "Meu horário é de Brasília"
 -> {"action": "update_schedule", "timezone": "America/Sao_Paulo", "changes": []}
 
-"Trabalho de segunda a sexta das 9 às 18"
+"Trabalho de segunda a sexta das 9 às 18, almoço das 12h às 13h"
 -> {"action": "update_schedule", "timezone": null, "changes": [
-     {"day": 0, "active": true, "start": "09:00", "end": "18:00"},
-     {"day": 1, "active": true, "start": "09:00", "end": "18:00"},
-     {"day": 2, "active": true, "start": "09:00", "end": "18:00"},
-     {"day": 3, "active": true, "start": "09:00", "end": "18:00"},
-     {"day": 4, "active": true, "start": "09:00", "end": "18:00"}
+     {"day": 0, "active": true, "start": "09:00", "end": "18:00", "lunch_start": "12:00", "lunch_end": "13:00"},
+     {"day": 1, "active": true, "start": "09:00", "end": "18:00", "lunch_start": "12:00", "lunch_end": "13:00"},
+     {"day": 2, "active": true, "start": "09:00", "end": "18:00", "lunch_start": "12:00", "lunch_end": "13:00"},
+     {"day": 3, "active": true, "start": "09:00", "end": "18:00", "lunch_start": "12:00", "lunch_end": "13:00"},
+     {"day": 4, "active": true, "start": "09:00", "end": "18:00", "lunch_start": "12:00", "lunch_end": "13:00"}
    ]}
 
 "Sexta-feira eu saio às 17"
@@ -102,6 +106,8 @@ class ScheduleChange:
     active: bool
     start: time | None
     end: time | None
+    lunch_start: time | None = None
+    lunch_end: time | None = None
 
 
 @dataclass
@@ -142,7 +148,10 @@ def interpret(text: str, llm: LLMClient) -> ScheduleIntent:
             active = bool(item["active"])
             start = time.fromisoformat(item["start"]) if item.get("start") else None
             end = time.fromisoformat(item["end"]) if item.get("end") else None
-            changes.append(ScheduleChange(day=day, active=active, start=start, end=end))
+            lunch_start = time.fromisoformat(item["lunch_start"]) if item.get("lunch_start") else None
+            lunch_end = time.fromisoformat(item["lunch_end"]) if item.get("lunch_end") else None
+            changes.append(ScheduleChange(day=day, active=active, start=start, end=end,
+                                          lunch_start=lunch_start, lunch_end=lunch_end))
         except (KeyError, ValueError):
             continue
 
@@ -164,8 +173,14 @@ def apply(intent: ScheduleIntent, schedule: WorkSchedule) -> WorkSchedule:
                     wd.start = change.start
                 if change.end is not None:
                     wd.end = change.end
+                if change.lunch_start is not None:
+                    wd.lunch_start = change.lunch_start
+                if change.lunch_end is not None:
+                    wd.lunch_end = change.lunch_end
                 if not change.active:
                     wd.start = None
                     wd.end = None
+                    wd.lunch_start = None
+                    wd.lunch_end = None
                 break
     return schedule

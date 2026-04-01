@@ -7,11 +7,10 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Rastreie presença (home / office / out / dnd) e deixe a Nina adaptar a seleção de conta ao contexto
 - Perfil mapeia cada status de presença para as contas Google certas (Gmail + Agenda)
 - Console interativo e bot do Telegram — escreva livremente e a LLM interpreta sua intenção
-- Roteamento de intenção híbrido: filtros por palavra-chave + roteador LLM único para o domínio certo
+- Roteador de intenção unificado: uma única chamada LLM classifica o domínio e extrai entidades; domínios simples não precisam de segunda chamada
 - Bloqueio de agenda por texto livre ("estou em reunião por 1h") com resolução de data completa ("segunda-feira às 14h")
 - Lembretes via linguagem natural ("me lembre na segunda às 10h") — armazenados como memos com data de vencimento
 - Gerenciamento de memos: criar, listar, fechar e dispensar anotações pelo console ou Telegram
-- Sincronização do vault Obsidian ativada por linguagem natural
 - Notificações de agenda via Telegram — lembretes, novos eventos, alterações, cancelamentos
 - Interface bilíngue (inglês / português) — troque com `lang pt` ou `/lang pt`
 - Autentica qualquer número de contas Google via OAuth — descobertas automaticamente pelos tokens
@@ -83,9 +82,9 @@ make play-llm-ping   # verificar conectividade
 ### 4. Iniciar a Nina
 
 ```bash
-make dev      # daemon + console em janelas tmux divididas
+make dev      # daemon + console em janelas tmux divididas (desenvolvimento — sem Telegram)
 # ou
-make daemon   # apenas o daemon (bot do Telegram + API HTTP + agendador)
+make daemon   # daemon de produção (bot do Telegram + API HTTP + agendador)
 make console  # apenas o console (o daemon precisa estar rodando)
 ```
 
@@ -151,7 +150,7 @@ make test       # executar todos os testes
 make lint       # lint com ruff
 make fmt        # formatar código com ruff
 make typecheck  # verificação de tipos com mypy
-make dev        # iniciar daemon + console no tmux
+make dev        # iniciar daemon + console no tmux (sem Telegram)
 ```
 
 ## Licença

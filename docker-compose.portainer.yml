@@ -1,0 +1,24 @@
+services:
+  nina:
+    image: carlosrabelo/nina
+    container_name: nina-daemon
+    restart: unless-stopped
+    environment:
+      NINA_HTTP_HOST: "0.0.0.0"
+      DATA_DIR: /data/db
+      TOKENS_DIR: /data/tokens
+      SESSIONS_DIR: /data/sessions
+      GOOGLE_CREDENTIALS_FILE: /data/credentials/credentials.json
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_OWNER_ID: ${TELEGRAM_OWNER_ID}
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+      LLM_MODEL: ${LLM_MODEL}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    ports:
+      - "8765:8765"
+    volumes:
+      - nina-data:/data
+
+volumes:
+  nina-data:

@@ -24,8 +24,10 @@ class PresenceUpdate(BaseModel):
 
 
 class WorkDayUpdate(BaseModel):
-    start: str | None = None   # "HH:MM"
-    end: str | None = None     # "HH:MM"
+    start: str | None = None         # "HH:MM"
+    end: str | None = None           # "HH:MM"
+    lunch_start: str | None = None   # "HH:MM"
+    lunch_end: str | None = None     # "HH:MM"
     active: bool = True
 
 
@@ -187,6 +189,8 @@ def create_app(tokens_dir: Path, data_dir: Path) -> FastAPI:
                     "active": d.active,
                     "start": d.start.isoformat() if d.start else None,
                     "end": d.end.isoformat() if d.end else None,
+                    "lunch_start": d.lunch_start.isoformat() if d.lunch_start else None,
+                    "lunch_end": d.lunch_end.isoformat() if d.lunch_end else None,
                 }
                 for d in schedule.days
             ],
@@ -203,6 +207,8 @@ def create_app(tokens_dir: Path, data_dir: Path) -> FastAPI:
                 d.active = body.active
                 d.start = dt_time.fromisoformat(body.start) if body.start else None
                 d.end = dt_time.fromisoformat(body.end) if body.end else None
+                d.lunch_start = dt_time.fromisoformat(body.lunch_start) if body.lunch_start else None
+                d.lunch_end = dt_time.fromisoformat(body.lunch_end) if body.lunch_end else None
                 break
         save_schedule(schedule, data_dir)
         return {"updated": DAY_NAMES_EN[day]}
@@ -215,6 +221,7 @@ def create_app(tokens_dir: Path, data_dir: Path) -> FastAPI:
         return {
             "label": ctx.label,
             "is_work_time": ctx.is_work_time,
+            "is_lunch_time": ctx.is_lunch_time,
             "presence": ctx.presence_status,
             "overtime": ctx.overtime,
             "weekend_work": ctx.weekend_work,

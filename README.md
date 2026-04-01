@@ -7,11 +7,10 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - Track presence (home / office / out / dnd) and let Nina adapt account selection to context
 - Profile maps each presence status to the right Google accounts (Gmail + Calendar)
 - Interactive console and Telegram bot — type freely and the LLM interprets your intent
-- Hybrid intent routing: keyword gates + single LLM router dispatch to the right domain
+- Unified intent router: single LLM call classifies domain and extracts entities; simple domains need no second call
 - Calendar blocking via free text ("I'm in a meeting for 1h") with full date resolution ("next Monday at 14:00")
 - Reminders via natural language ("remind me on Monday at 10h") — stored as memos with due dates
 - Memo management: create, list, close, and dismiss notes from console or Telegram
-- Obsidian vault sync triggered by natural language
 - Calendar notifications via Telegram — reminders, new events, changes, cancellations
 - Bilingual interface (English / Portuguese) — switch with `lang en` or `/lang en`
 - Authenticate any number of Google accounts via OAuth — auto-discovered from saved tokens
@@ -83,9 +82,9 @@ make play-llm-ping   # verify connectivity
 ### 4. Start Nina
 
 ```bash
-make dev      # daemon + console in a split tmux session
+make dev      # daemon + console in a split tmux session (development — no Telegram)
 # or
-make daemon   # daemon only (Telegram bot + HTTP API + scheduler)
+make daemon   # production daemon (Telegram bot + HTTP API + scheduler)
 make console  # console only (daemon must be running)
 ```
 
@@ -151,7 +150,7 @@ make test       # run all tests
 make lint       # lint with ruff
 make fmt        # format code with ruff
 make typecheck  # type-check with mypy
-make dev        # start daemon + console in tmux
+make dev        # start daemon + console in tmux (no Telegram)
 ```
 
 ## License
