@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nina"
+version = "0.1.0"
+description = "Nina — personal assistant for managing Gmail, Calendar, and daily life"
+requires-python = ">=3.12"
+dependencies = [
+    "google-auth>=2.29",
+    "google-auth-oauthlib>=1.2",
+    "google-auth-httplib2>=0.2",
+    "google-api-python-client>=2.127",
+    "python-dotenv>=1.0",
+    "telethon>=1.36",
+    "python-telegram-bot>=21.0",
+    "litellm>=1.40",
+    "apscheduler>=3.10",
+    "fastapi>=0.111",
+    "uvicorn>=0.29",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+nina      = "nina.cli:main"
+nina-play = "nina_play.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nina*", "nina_play*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v --tb=short"
+asyncio_mode = "auto"
+
+[tool.ruff]
+src = ["."]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

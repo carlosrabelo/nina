@@ -1,0 +1,101 @@
+# ============================================================================
+# AI TOOLS
+# ============================================================================
+
+# Directories
+.claude/
+.gemini/
+.antigravity/
+.opencode/
+.cursor/
+.aider/
+
+# Files
+CLAUDE.md
+CLAUDE.local.md
+GEMINI.md
+opencode.json
+.aider.conf.yml
+AGENTS.md
+.nexor/
+
+# ============================================================================
+# SECRETS
+# ============================================================================
+
+# Directories
+# (none - secrets are typically files)
+
+# Files
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+credentials/
+tokens/
+
+# ============================================================================
+# PYTHON
+# ============================================================================
+
+# Directories
+__pycache__/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+htmlcov/
+.tox/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+
+# Files
+*.py[cod]
+*.pyo
+MANIFEST
+.coverage
+.coverage.*
+
+# ============================================================================
+# APPLICATION DATA
+# ============================================================================
+
+# Directories
+data/
+sessions/
+
+# Files
+*.session
+*.session-journal
+
+# ============================================================================
+# EDITORS
+# ============================================================================
+
+# Directories
+.vscode/
+.idea/
+
+# Files
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# OS
+# ============================================================================
+
+# Files
+.DS_Store
+Thumbs.db
+
+# ============================================================================
+# EXCEPTIONS (preserve these)
+# ============================================================================
+
+# Credentials — preserve placeholder directory
+!credentials/.gitkeep
