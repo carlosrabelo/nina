@@ -1,0 +1,16 @@
+services:
+  nina:
+    build: .
+    container_name: nina-daemon
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NINA_HTTP_HOST: "0.0.0.0"
+      DATA_DIR: /data/db
+      TOKENS_DIR: /data/tokens
+      SESSIONS_DIR: /data/sessions
+      GOOGLE_CREDENTIALS_FILE: /data/credentials/credentials.json
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - ./data:/data
