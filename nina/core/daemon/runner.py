@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 from nina.core.daemon.http import create_app
 from nina.core.scheduler.runner import Scheduler
+from nina.core.config.required_env import exit_if_missing_required_env
 from nina.core.locale.store import ensure_default as ensure_default_locale
 from nina.skills.notifications.store import ensure_default as ensure_default_notifications
 from nina.skills.presence.store import ensure_default as ensure_default_presence
@@ -81,6 +82,7 @@ async def _serve(tokens_dir: Path, data_dir: Path, sessions_dir: Path, port: int
 
 def run(dev: bool = False) -> None:
     load_dotenv()
+    exit_if_missing_required_env()
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     sessions_dir = Path(os.environ.get("SESSIONS_DIR", "sessions"))

@@ -16,13 +16,24 @@ def _base_url() -> str:
 
 
 def _request(method: str, path: str, body: dict | None = None) -> Any:
+    load_dotenv()
     url = _base_url() + path
     data = json.dumps(body).encode() if body is not None else None
     headers = {"Content-Type": "application/json"} if data else {}
+    api_key = os.environ.get("NINA_API_KEY", "").strip()
+    if api_key:
+        headers["X-Api-Key"] = api_key
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=3) as resp:
             return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            raise ConnectionError(
+                "Nina daemon rejected the request (invalid_api_key). "
+                "Set NINA_API_KEY in your local .env to match the daemon."
+            )
+        raise
     except urllib.error.URLError:
         raise ConnectionError(
             "Nina daemon is not running. Start it with: nina daemon"

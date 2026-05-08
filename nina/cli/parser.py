@@ -10,7 +10,6 @@ from nina.cli import (
     gmail,
     llm,
     make_aliases,
-    migrate,
     revoke,
     status,
     telegram,
@@ -34,7 +33,6 @@ def main() -> None:
     calendar.register(sub)
     telegram.register(sub)
     llm.register(sub)
-    migrate.register(sub)
 
     args = parser.parse_args()
     if args.command is None:

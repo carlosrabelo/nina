@@ -70,9 +70,9 @@ def set_status(conn: psycopg.Connection[dict], memo_id: str, status: str) -> boo
     return cur.rowcount > 0
 
 
-def done(conn: sqlite3.Connection, memo_id: str) -> bool:
+def done(conn: psycopg.Connection[dict], memo_id: str) -> bool:
     return set_status(conn, memo_id, "done")
 
 
-def dismiss(conn: sqlite3.Connection, memo_id: str) -> bool:
+def dismiss(conn: psycopg.Connection[dict], memo_id: str) -> bool:
     return set_status(conn, memo_id, "dismissed")

@@ -1,9 +1,13 @@
 services:
   nina:
-    build: .
+    image: carlosrabelo/nina
     container_name: nina-daemon
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
+      - .env.docker
+    environment:
+      TZ: ${TZ?missing_TZ}
     ports:
       - "${NINA_HTTP_HOST?missing_NINA_HTTP_HOST}:${NINA_HTTP_PORT?missing_NINA_HTTP_PORT}:${NINA_HTTP_PORT?missing_NINA_HTTP_PORT}"
     volumes:
@@ -16,7 +20,11 @@ services:
     image: postgres:16-alpine
     container_name: nina-postgres
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ?missing_TZ}
+      PGTZ: ${TZ?missing_TZ}
     ports:
       - "${POSTGRES_PORT?missing_POSTGRES_PORT}:5432"
     volumes:

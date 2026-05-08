@@ -19,6 +19,14 @@ Rode da raiz do projeto usando o venv:
 # ou após ativar o venv: nina <comando>
 ```
 
+Se preferir alvos do make (carrega `.env` automaticamente):
+
+```bash
+make console           # abre o console interativo (daemon precisa estar rodando)
+make run <comando>     # roda qualquer comando da CLI nina
+make run migrate to-postgres
+```
+
 Cada comando tem um alias plano (memória muscular para quem usava `make`) e a forma hierárquica. Os dois ficam registrados no parser.
 
 ### Autenticação
@@ -40,6 +48,14 @@ nina console         # REPL interativo — conversa com o daemon via HTTP
 ```
 
 `make dev-start` é um atalho que abre `daemon --dev` e `console` numa sessão tmux.
+
+Docker (modo imagem por padrão; use `docker-compose.override.yml` para build local):
+
+```bash
+docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
+make docker-restart
+```
 
 ### Gmail
 
@@ -97,6 +113,7 @@ NINA_API_KEY=escolha-uma-chave-forte
 ```
 
 Reinicie o daemon (`make dev-stop && make dev-start` ou reinicie seu processo `nina daemon`). Quando `NINA_API_KEY` está definida, todas as requisições precisam levar o header `X-API-Key: <chave>`.
+O console envia automaticamente `X-Api-Key` quando `NINA_API_KEY` está setada localmente.
 
 ### Endpoints
 

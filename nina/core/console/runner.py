@@ -6,6 +6,7 @@ import shlex
 from pathlib import Path
 
 from nina.core.daemon import client
+from nina.core.config.required_env import exit_if_missing_required_env
 from nina.core.i18n import t
 from nina.core.locale.store import load as load_locale
 from nina.skills.presence.models import PresenceStatus
@@ -724,4 +725,5 @@ class NinaConsole(cmd.Cmd):
 
 
 def run() -> None:
+    exit_if_missing_required_env()
     NinaConsole().cmdloop()

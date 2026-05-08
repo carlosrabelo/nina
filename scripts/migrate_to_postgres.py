@@ -1,9 +1,14 @@
-"""`nina migrate` — one-off migration helpers."""
+#!/usr/bin/env python3
+"""One-off migration: legacy DATA_DIR (SQLite + JSON files) -> PostgreSQL.
+
+This script is intentionally kept OUTSIDE the nina package so it can be removed
+later without affecting the app runtime.
+"""
 
 from __future__ import annotations
 
-import argparse
 import json
+import os
 import sqlite3
 from pathlib import Path
 
@@ -12,8 +17,6 @@ from nina.core.store.kv import set_json
 
 
 def _data_dir() -> Path:
-    import os
-
     return Path(os.environ.get("DATA_DIR", "data"))
 
 
@@ -63,12 +66,19 @@ def _migrate_json_file_to_kv(dst, data_dir: Path, filename: str, key: str) -> bo
     return True
 
 
-def cmd_to_postgres(args: argparse.Namespace) -> None:
+def main() -> int:
     data_dir = _data_dir()
+
+    json_files = [
+        ("presence.json", "presence"),
+        ("workdays.json", "workdays"),
+        ("notifications.json", "notifications"),
+        ("profile.json", "profile"),
+        ("locale.json", "locale"),
+    ]
 
     dst = open_db(data_dir)
     try:
-        # 1) migrate SQLite → Postgres
         sqlite_path = data_dir / "nina.db"
         if sqlite_path.exists():
             src = sqlite3.connect(sqlite_path)
@@ -159,18 +169,10 @@ def cmd_to_postgres(args: argparse.Namespace) -> None:
         else:
             memos = actions = emails = events = 0
 
-        # 2) migrate JSON files → kv_state
         migrated = []
-        for filename, key in [
-            ("presence.json", "presence"),
-            ("workdays.json", "workdays"),
-            ("notifications.json", "notifications"),
-            ("profile.json", "profile"),
-            ("locale.json", "locale"),
-        ]:
+        for filename, key in json_files:
             if _migrate_json_file_to_kv(dst, data_dir, filename, key):
                 migrated.append(filename)
-
     finally:
         dst.close()
 
@@ -184,13 +186,30 @@ def cmd_to_postgres(args: argparse.Namespace) -> None:
     else:
         print("  kv_state:       (no JSON files found)")
 
+    # Cleanup legacy files only after a successful migration.
+    deleted: list[str] = []
 
-def register(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser("migrate", help="Data migrations")
-    g = p.add_subparsers(dest="action", required=True)
+    for filename, _key in json_files:
+        path = data_dir / filename
+        if path.exists():
+            path.unlink()
+            deleted.append(filename)
 
-    g.add_parser(
-        "to-postgres",
-        help="Migrate legacy SQLite + JSON files in DATA_DIR to PostgreSQL",
-    ).set_defaults(func=cmd_to_postgres)
+    sqlite_path = data_dir / "nina.db"
+    if sqlite_path.exists():
+        sqlite_path.unlink()
+        deleted.append("nina.db")
+    for suffix in (".db-wal", ".db-shm"):
+        p = data_dir / f"nina{suffix}"
+        if p.exists():
+            p.unlink()
+            deleted.append(p.name)
+
+    if deleted:
+        print(f"  deleted:        {', '.join(deleted)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 

@@ -1,0 +1,5 @@
+services:
+  nina:
+    build: .
+    image: nina:dev
+

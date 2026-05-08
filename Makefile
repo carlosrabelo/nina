@@ -3,8 +3,8 @@ MAKEFLAGS += --no-print-directory
 .DEFAULT_GOAL := help
 
 .PHONY: clean dev-start dev-status dev-stop docker-auth-google docker-build \
-        docker-down docker-logs docker-push docker-up fmt help lint quality \
-        run setup test
+        docker-down docker-logs docker-push docker-reload docker-restart docker-up \
+        console fmt help lint quality run setup test
 
 # Load local environment variables (if .env exists)
 -include .env
@@ -75,6 +75,10 @@ docker-up: ## Start daemon container (detached)
 docker-down: ## Stop daemon container
 	docker compose down
 
+docker-restart: docker-down docker-up ## Restart docker compose stack (down + up)
+
+docker-reload: docker-restart ## Alias for docker-restart
+
 docker-logs: ## Tail daemon container logs
 	docker compose logs -f
 
@@ -84,7 +88,15 @@ docker-auth-google: ## Run Google OAuth flow inside the container
 # ── Run local CLI ─────────────────────────────────────────────────────────────
 
 run: ## Run nina CLI locally (uses .env). Example: make run migrate to-postgres
-	@.venv/bin/python -m nina $(filter-out $@,$(MAKECMDGOALS))
+	@ARGS="$(filter-out $@,$(MAKECMDGOALS))"; \
+	if [ "$$ARGS" = "migrate to-postgres" ]; then \
+		.venv/bin/python scripts/migrate_to_postgres.py; \
+	else \
+		.venv/bin/python -m nina $$ARGS; \
+	fi
+
+console: ## Open interactive console (requires daemon)
+	@.venv/bin/python -m nina console
 
 # Swallow extra args as make "targets" (e.g. `make run migrate to-postgres`)
 %:

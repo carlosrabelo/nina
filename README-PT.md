@@ -82,15 +82,22 @@ Outros provedores: `openai/gpt-4o-mini`, `anthropic/claude-haiku-4-5-20251001`, 
 make dev-start  # daemon + console em janelas tmux divididas (desenvolvimento — sem Telegram)
 # ou
 .venv/bin/python -m nina daemon   # daemon de produção (bot do Telegram + API HTTP + agendador)
-.venv/bin/python -m nina console  # apenas o console (o daemon precisa estar rodando)
+make console     # apenas o console (o daemon precisa estar rodando)
 ```
 
 ## Configuração
 
 | Variável | Padrão | Descrição |
 |---|---|---|
+| `DATABASE_URL` | — | String de conexão do PostgreSQL (obrigatória) |
 | `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | Credenciais OAuth baixadas do Google Cloud Console |
 | `TOKENS_DIR` | `tokens` | Diretório para todos os tokens e arquivos de sessão (ignorado pelo git) |
+| `DATA_DIR` | `data/db` | Diretório local de dados (host); no container usa `/data/db` via `.env.docker` |
+| `SESSIONS_DIR` | `data/sessions` | Diretório local de sessões (host); no container usa `/data/sessions` via `.env.docker` |
+| `NINA_HTTP_HOST` | `0.0.0.0` | Interface para bind/publicação da porta HTTP |
+| `NINA_HTTP_PORT` | `8765` | Porta HTTP |
+| `NINA_API_KEY` | — | Se setada, protege a API HTTP via header `X-Api-Key` |
+| `TZ` | `Etc/GMT+4` | Timezone dos containers |
 | `TELEGRAM_BOT_TOKEN` | — | Token do bot fornecido pelo @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Seu chat ID pessoal no Telegram (o bot só responde a este ID) |
 | `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | String do modelo LiteLLM: `<provedor>/<modelo>` |
@@ -127,7 +134,7 @@ nina/
             router.py          # roteador LLM unificado (4 camadas)
             local_router.py    # pattern matching local — zero LLM
         nlp/                   # parser local de data/hora/duração
-        store/               # banco de dados SQLite (memos, actions, emails, events)
+        store/               # banco de dados PostgreSQL (memos, actions, emails, events) + kv_state
         llm/                 # LLMClient — wrapper LiteLLM
         i18n/                # strings bilíngues (en / pt)
         locale/              # configuração de idioma
@@ -156,6 +163,8 @@ make fmt        # formatar código com ruff
 make quality    # fmt + lint + typecheck (mypy) em um único alvo
 .venv/bin/python -m nina typecheck   # apenas mypy no pacote nina
 make dev-start  # iniciar daemon + console no tmux (sem Telegram)
+make console    # abrir o console (daemon precisa estar rodando)
+make docker-restart # docker compose down + up
 ```
 
 ## Licença
