@@ -1,17 +1,21 @@
-import json
 from datetime import datetime
 from pathlib import Path
 
+from nina.core.store.db import open_db
+from nina.core.store.kv import ensure_json, get_json, set_json
 from nina.skills.presence.models import PresenceState, PresenceStatus
 
-_FILENAME = "presence.json"
+_KEY = "presence"
 
 
 def load(data_dir: Path) -> PresenceState:
-    path = data_dir / _FILENAME
-    if not path.exists():
+    conn = open_db(data_dir)
+    try:
+        data = get_json(conn, _KEY)
+    finally:
+        conn.close()
+    if not data:
         return PresenceState(status=PresenceStatus.HOME)
-    data = json.loads(path.read_text())
     return PresenceState(
         status=PresenceStatus(data["status"]),
         since=datetime.fromisoformat(data["since"]),
@@ -21,18 +25,37 @@ def load(data_dir: Path) -> PresenceState:
 
 def save(state: PresenceState, data_dir: Path) -> PresenceStatus | None:
     """Save presence state. Returns old status for transition detection, or None if first save."""
-    data_dir.mkdir(parents=True, exist_ok=True)
-    path = data_dir / _FILENAME
+    conn = open_db(data_dir)
+    try:
+        old_data = get_json(conn, _KEY)
+        old_status = PresenceStatus(old_data["status"]) if old_data else None
+        set_json(
+            conn,
+            _KEY,
+            {
+                "status": state.status.value,
+                "since": state.since.isoformat(),
+                "note": state.note,
+            },
+        )
+        return old_status
+    finally:
+        conn.close()
 
-    old_status = None
-    if path.exists():
-        old_data = json.loads(path.read_text())
-        old_status = PresenceStatus(old_data["status"])
 
-    path.write_text(json.dumps({
-        "status": state.status.value,
-        "since": state.since.isoformat(),
-        "note": state.note,
-    }, indent=2))
-
-    return old_status
+def ensure_default(data_dir: Path) -> None:
+    """Create a default presence record on first run (idempotent)."""
+    default = PresenceState(status=PresenceStatus.HOME)
+    conn = open_db(data_dir)
+    try:
+        ensure_json(
+            conn,
+            _KEY,
+            {
+                "status": default.status.value,
+                "since": default.since.isoformat(),
+                "note": default.note,
+            },
+        )
+    finally:
+        conn.close()

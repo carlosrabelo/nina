@@ -3,23 +3,29 @@ services:
     image: carlosrabelo/nina
     container_name: nina-daemon
     restart: unless-stopped
-    environment:
-      NINA_HTTP_HOST: "0.0.0.0"
-      DATA_DIR: /data/db
-      TOKENS_DIR: /data/tokens
-      SESSIONS_DIR: /data/sessions
-      GOOGLE_CREDENTIALS_FILE: /data/credentials/credentials.json
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_OWNER_ID: ${TELEGRAM_OWNER_ID}
-      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
-      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
-      LLM_MODEL: ${LLM_MODEL}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      NINA_API_KEY: ${NINA_API_KEY}
+    env_file: .env
     ports:
-      - "8765:8765"
+      - "${NINA_HTTP_HOST?missing_NINA_HTTP_HOST}:${NINA_HTTP_PORT?missing_NINA_HTTP_PORT}:${NINA_HTTP_PORT?missing_NINA_HTTP_PORT}"
     volumes:
-      - nina-data:/data
+      - ./data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: nina-postgres
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${POSTGRES_PORT?missing_POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  nina-data:
+  postgres_data:

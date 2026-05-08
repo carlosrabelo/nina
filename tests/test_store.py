@@ -1,6 +1,7 @@
 # tests/test_store.py
-"""Tests for the SQLite store — db, models, and memo repo."""
+"""Tests for the PostgreSQL store — db, models, and repos."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -15,31 +16,44 @@ from nina.core.store.repos import memo as memo_repo
 
 @pytest.fixture()
 def conn(tmp_path: Path):  # type: ignore[no-untyped-def]
-    return open_db(tmp_path)
+    if not os.environ.get("DATABASE_URL", "").strip():
+        pytest.skip("DATABASE_URL not set (PostgreSQL store tests skipped)")
+    c = open_db(tmp_path)
+    try:
+        yield c
+    finally:
+        c.close()
 
 
 # ── db ────────────────────────────────────────────────────────────────────────
 
 
 class TestOpenDb:
-    def test_creates_file(self, tmp_path: Path) -> None:
-        open_db(tmp_path)
-        assert (tmp_path / "nina.db").exists()
-
     def test_idempotent_migrations(self, tmp_path: Path) -> None:
         # Running twice should not raise
+        if not os.environ.get("DATABASE_URL", "").strip():
+            pytest.skip("DATABASE_URL not set")
         open_db(tmp_path)
         open_db(tmp_path)
 
     def test_all_tables_created(self, tmp_path: Path) -> None:
+        if not os.environ.get("DATABASE_URL", "").strip():
+            pytest.skip("DATABASE_URL not set")
         conn = open_db(tmp_path)
-        tables = {
-            row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
+        try:
+            rows = conn.execute(
+                """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                """
             ).fetchall()
-        }
-        assert {"memos", "actions", "emails", "calendar_events"}.issubset(tables)
+            tables = {r["table_name"] for r in rows}
+            assert {"memos", "actions", "emails", "calendar_events", "kv_state"}.issubset(
+                tables
+            )
+        finally:
+            conn.close()
 
 
 # ── memo repo ─────────────────────────────────────────────────────────────────

@@ -1,16 +1,20 @@
-import json
 from pathlib import Path
 
+from nina.core.store.db import open_db
+from nina.core.store.kv import ensure_json, get_json, set_json
 from nina.skills.profile.models import PresenceProfile, Profile
 
-_FILENAME = "profile.json"
+_KEY = "profile"
 
 
 def load(data_dir: Path) -> Profile:
-    path = data_dir / _FILENAME
-    if not path.exists():
+    conn = open_db(data_dir)
+    try:
+        data = get_json(conn, _KEY)
+    finally:
+        conn.close()
+    if not data:
         return Profile()
-    data = json.loads(path.read_text())
     mapping = {
         presence: PresenceProfile(
             gmail=entry.get("gmail", []),
@@ -22,7 +26,6 @@ def load(data_dir: Path) -> Profile:
 
 
 def save(profile: Profile, data_dir: Path) -> None:
-    data_dir.mkdir(parents=True, exist_ok=True)
     data = {
         presence: {
             "gmail": p.gmail,
@@ -30,4 +33,16 @@ def save(profile: Profile, data_dir: Path) -> None:
         }
         for presence, p in profile.mapping.items()
     }
-    (data_dir / _FILENAME).write_text(json.dumps(data, indent=2))
+    conn = open_db(data_dir)
+    try:
+        set_json(conn, _KEY, data)
+    finally:
+        conn.close()
+
+
+def ensure_default(data_dir: Path) -> None:
+    conn = open_db(data_dir)
+    try:
+        ensure_json(conn, _KEY, {})
+    finally:
+        conn.close()

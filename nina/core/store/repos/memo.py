@@ -1,9 +1,10 @@
 # nina/store/repos/memo.py
 """Memo repository — CRUD over the memos table."""
 
-import sqlite3
 import uuid
 from datetime import UTC, datetime
+
+import psycopg
 
 from nina.core.store.models import Memo
 
@@ -12,7 +13,7 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _row_to_memo(row: sqlite3.Row) -> Memo:
+def _row_to_memo(row: dict) -> Memo:
     return Memo(
         id=row["id"],
         text=row["text"],
@@ -24,7 +25,7 @@ def _row_to_memo(row: sqlite3.Row) -> Memo:
     )
 
 
-def add(conn: sqlite3.Connection, memo: Memo) -> Memo:
+def add(conn: psycopg.Connection[dict], memo: Memo) -> Memo:
     """Insert a new memo and return it with id and created_at filled."""
     memo.id = str(uuid.uuid4())
     memo.created_at = _now()
@@ -32,7 +33,7 @@ def add(conn: sqlite3.Connection, memo: Memo) -> Memo:
         """
         INSERT INTO memos (id, text, source, status, due_date,
                            linked_event_id, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """,
         (
             memo.id, memo.text, memo.source, memo.status,
@@ -43,27 +44,27 @@ def add(conn: sqlite3.Connection, memo: Memo) -> Memo:
     return memo
 
 
-def get(conn: sqlite3.Connection, memo_id: str) -> Memo | None:
-    row = conn.execute("SELECT * FROM memos WHERE id = ?", (memo_id,)).fetchone()
+def get(conn: psycopg.Connection[dict], memo_id: str) -> Memo | None:
+    row = conn.execute("SELECT * FROM memos WHERE id = %s", (memo_id,)).fetchone()
     return _row_to_memo(row) if row else None
 
 
-def list_open(conn: sqlite3.Connection) -> list[Memo]:
+def list_open(conn: psycopg.Connection[dict]) -> list[Memo]:
     rows = conn.execute(
         "SELECT * FROM memos WHERE status = 'open' ORDER BY created_at ASC"
     ).fetchall()
     return [_row_to_memo(r) for r in rows]
 
 
-def list_all(conn: sqlite3.Connection) -> list[Memo]:
+def list_all(conn: psycopg.Connection[dict]) -> list[Memo]:
     rows = conn.execute("SELECT * FROM memos ORDER BY created_at DESC").fetchall()
     return [_row_to_memo(r) for r in rows]
 
 
-def set_status(conn: sqlite3.Connection, memo_id: str, status: str) -> bool:
+def set_status(conn: psycopg.Connection[dict], memo_id: str, status: str) -> bool:
     """Update status; returns True if a row was affected."""
     cur = conn.execute(
-        "UPDATE memos SET status = ? WHERE id = ?", (status, memo_id)
+        "UPDATE memos SET status = %s WHERE id = %s", (status, memo_id)
     )
     conn.commit()
     return cur.rowcount > 0

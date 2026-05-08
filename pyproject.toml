@@ -19,6 +19,7 @@ dependencies = [
     "apscheduler>=3.10",
     "fastapi>=0.111",
     "uvicorn>=0.29",
+    "psycopg[binary]>=3.2",
 ]
 
 [project.optional-dependencies]

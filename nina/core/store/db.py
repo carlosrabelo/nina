@@ -1,8 +1,12 @@
-# nina/store/db.py
-"""SQLite connection and schema migrations."""
+"""PostgreSQL connection and schema migrations."""
 
-import sqlite3
+from __future__ import annotations
+
+import os
 from pathlib import Path
+
+import psycopg
+from psycopg.rows import dict_row
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS memos (
@@ -44,24 +48,37 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     title           TEXT NOT NULL,
     start_at        TEXT NOT NULL,
     end_at          TEXT NOT NULL,
-    briefing_done   INTEGER NOT NULL DEFAULT 0,
+    briefing_done   BOOLEAN NOT NULL DEFAULT FALSE,
     first_seen_at   TEXT NOT NULL,
     PRIMARY KEY (event_id, account)
+);
+
+CREATE TABLE IF NOT EXISTS kv_state (
+    key         TEXT PRIMARY KEY,
+    value       JSONB NOT NULL,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 """
 
 
-def open_db(data_dir: Path) -> sqlite3.Connection:
-    """Open (or create) the Nina database and run migrations."""
-    data_dir.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(data_dir / "nina.db")
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
+def open_db(data_dir: Path) -> psycopg.Connection[dict]:
+    """Open a PostgreSQL connection and run schema migrations.
+
+    `data_dir` is kept for backwards-compatible call sites, but PostgreSQL
+    connection is configured exclusively via DATABASE_URL.
+    """
+    _ = data_dir
+    url = os.environ.get("DATABASE_URL", "").strip()
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL is required (PostgreSQL is the primary Nina store)"
+        )
+
+    conn: psycopg.Connection[dict] = psycopg.connect(url, row_factory=dict_row)
     _migrate(conn)
     return conn
 
 
-def _migrate(conn: sqlite3.Connection) -> None:
-    conn.executescript(_SCHEMA)
+def _migrate(conn: psycopg.Connection[dict]) -> None:
+    conn.execute(_SCHEMA)
     conn.commit()

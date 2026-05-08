@@ -4,7 +4,11 @@ MAKEFLAGS += --no-print-directory
 
 .PHONY: clean dev-start dev-status dev-stop docker-auth-google docker-build \
         docker-down docker-logs docker-push docker-up fmt help lint quality \
-        setup test
+        run setup test
+
+# Load local environment variables (if .env exists)
+-include .env
+export
 
 # ── Variables ─────────────────────────────────────────────────────────────────
 
@@ -76,3 +80,12 @@ docker-logs: ## Tail daemon container logs
 
 docker-auth-google: ## Run Google OAuth flow inside the container
 	docker compose run --rm -it nina python -m nina auth-google
+
+# ── Run local CLI ─────────────────────────────────────────────────────────────
+
+run: ## Run nina CLI locally (uses .env). Example: make run migrate to-postgres
+	@.venv/bin/python -m nina $(filter-out $@,$(MAKECMDGOALS))
+
+# Swallow extra args as make "targets" (e.g. `make run migrate to-postgres`)
+%:
+	@:

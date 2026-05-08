@@ -1,19 +1,34 @@
-import json
 from pathlib import Path
 
 from nina.core.locale.models import DEFAULT, LocaleConfig
+from nina.core.store.db import open_db
+from nina.core.store.kv import ensure_json, get_json, set_json
 
-_FILENAME = "locale.json"
+_KEY = "locale"
 
 
 def load(data_dir: Path) -> LocaleConfig:
-    path = data_dir / _FILENAME
-    if not path.exists():
+    conn = open_db(data_dir)
+    try:
+        data = get_json(conn, _KEY)
+    finally:
+        conn.close()
+    if not data:
         return LocaleConfig()
-    data = json.loads(path.read_text())
     return LocaleConfig(lang=data.get("lang", DEFAULT))
 
 
 def save(config: LocaleConfig, data_dir: Path) -> None:
-    data_dir.mkdir(parents=True, exist_ok=True)
-    (data_dir / _FILENAME).write_text(json.dumps({"lang": config.lang}, indent=2))
+    conn = open_db(data_dir)
+    try:
+        set_json(conn, _KEY, {"lang": config.lang})
+    finally:
+        conn.close()
+
+
+def ensure_default(data_dir: Path) -> None:
+    conn = open_db(data_dir)
+    try:
+        ensure_json(conn, _KEY, {"lang": DEFAULT})
+    finally:
+        conn.close()

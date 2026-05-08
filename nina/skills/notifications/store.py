@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
+from nina.core.store.db import open_db
+from nina.core.store.kv import ensure_json, get_json, set_json
 from nina.skills.notifications.models import (
     KnownEvent,
     NotificationConfig,
@@ -12,16 +13,16 @@ from nina.skills.notifications.models import (
     QueuedNotification,
 )
 
-_FILENAME = "notifications.json"
+_KEY = "notifications"
 
 
 def load(data_dir: Path) -> NotificationState:
-    path = data_dir / _FILENAME
-    if not path.exists():
-        return NotificationState()
+    conn = open_db(data_dir)
     try:
-        data = json.loads(path.read_text())
-    except Exception:
+        data = get_json(conn, _KEY)
+    finally:
+        conn.close()
+    if not data:
         return NotificationState()
 
     cfg = data.get("config", {})
@@ -56,7 +57,6 @@ def load(data_dir: Path) -> NotificationState:
 
 
 def save(state: NotificationState, data_dir: Path) -> None:
-    data_dir.mkdir(parents=True, exist_ok=True)
     data = {
         "config": {
             "reminder_minutes": state.config.reminder_minutes,
@@ -77,4 +77,26 @@ def save(state: NotificationState, data_dir: Path) -> None:
         "queue": [{"id": q.id, "message": q.message} for q in state.queue],
         "last_can_notify": state.last_can_notify,
     }
-    (data_dir / _FILENAME).write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    conn = open_db(data_dir)
+    try:
+        set_json(conn, _KEY, data)
+    finally:
+        conn.close()
+
+
+def ensure_default(data_dir: Path) -> None:
+    conn = open_db(data_dir)
+    try:
+        ensure_json(
+            conn,
+            _KEY,
+            {
+                "config": {"reminder_minutes": 15, "watch_days": 7},
+                "reminders_sent": {},
+                "known_events": {},
+                "queue": [],
+                "last_can_notify": True,
+            },
+        )
+    finally:
+        conn.close()

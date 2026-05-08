@@ -9,16 +9,20 @@ from dotenv import load_dotenv
 
 from nina.core.daemon.http import create_app
 from nina.core.scheduler.runner import Scheduler
-from nina.skills.presence.store import load as load_presence
-from nina.skills.presence.store import save as save_presence
-from nina.skills.workdays.store import load as load_schedule
-from nina.skills.workdays.store import save as save_schedule
+from nina.core.locale.store import ensure_default as ensure_default_locale
+from nina.skills.notifications.store import ensure_default as ensure_default_notifications
+from nina.skills.presence.store import ensure_default as ensure_default_presence
+from nina.skills.profile.store import ensure_default as ensure_default_profile
+from nina.skills.workdays.store import ensure_default as ensure_default_workdays
 
 
 def _init_state(data_dir: Path) -> None:
-    """Persist default state files on first run."""
-    save_presence(load_presence(data_dir), data_dir)
-    save_schedule(load_schedule(data_dir), data_dir)
+    """Ensure default state records exist (idempotent)."""
+    ensure_default_presence(data_dir)
+    ensure_default_workdays(data_dir)
+    ensure_default_notifications(data_dir)
+    ensure_default_profile(data_dir)
+    ensure_default_locale(data_dir)
 
 
 async def _serve(tokens_dir: Path, data_dir: Path, sessions_dir: Path, port: int, scheduler: Scheduler, dev: bool) -> None:

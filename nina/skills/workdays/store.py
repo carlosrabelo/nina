@@ -1,17 +1,21 @@
-import json
 from datetime import time
 from pathlib import Path
 
+from nina.core.store.db import open_db
+from nina.core.store.kv import ensure_json, get_json, set_json
 from nina.skills.workdays.models import WorkDay, WorkSchedule, default_schedule
 
-_FILENAME = "workdays.json"
+_KEY = "workdays"
 
 
 def load(data_dir: Path) -> WorkSchedule:
-    path = data_dir / _FILENAME
-    if not path.exists():
+    conn = open_db(data_dir)
+    try:
+        data = get_json(conn, _KEY)
+    finally:
+        conn.close()
+    if not data:
         return default_schedule()
-    data = json.loads(path.read_text())
     days = []
     for d in data["days"]:
         days.append(WorkDay(
@@ -26,9 +30,7 @@ def load(data_dir: Path) -> WorkSchedule:
 
 
 def save(schedule: WorkSchedule, data_dir: Path) -> None:
-    data_dir.mkdir(parents=True, exist_ok=True)
-    path = data_dir / _FILENAME
-    path.write_text(json.dumps({
+    data = {
         "timezone": schedule.timezone,
         "days": [
             {
@@ -41,4 +43,32 @@ def save(schedule: WorkSchedule, data_dir: Path) -> None:
             }
             for d in schedule.days
         ],
-    }, indent=2))
+    }
+    conn = open_db(data_dir)
+    try:
+        set_json(conn, _KEY, data)
+    finally:
+        conn.close()
+
+
+def ensure_default(data_dir: Path) -> None:
+    schedule = default_schedule()
+    data = {
+        "timezone": schedule.timezone,
+        "days": [
+            {
+                "day": d.day,
+                "start": d.start.isoformat() if d.start else None,
+                "end": d.end.isoformat() if d.end else None,
+                "lunch_start": d.lunch_start.isoformat() if d.lunch_start else None,
+                "lunch_end": d.lunch_end.isoformat() if d.lunch_end else None,
+                "active": d.active,
+            }
+            for d in schedule.days
+        ],
+    }
+    conn = open_db(data_dir)
+    try:
+        ensure_json(conn, _KEY, data)
+    finally:
+        conn.close()
