@@ -13,6 +13,7 @@ RUN mkdir -p nina && \
 
 # Now copy the real source and reinstall (fast — deps already cached)
 COPY nina/ ./nina/
+COPY scripts/ ./scripts/
 RUN pip install --no-cache-dir -e .
 
 # Single volume for all persistent data (tokens, sessions, credentials, state)
