@@ -23,7 +23,7 @@ Na raiz do projeto, com o venv:
 nina <comando> [argumentos...]
 ```
 
-O alvo **`make run`** carrega o `.env` e aplica os overrides de host (`*_HOST`, `DATABASE_URL_HOST`, …) para usar Postgres e ficheiros na sua máquina:
+O alvo **`make run`** e **`make console`** chamam Python como `python -m nina …`; o Python carrega o `.env` mais próximo (`load_project_dotenv` em `nina/cli/parser.py`). Fora do Docker, **`DATABASE_URL_HOST`** e **`*_HOST`** não vazios substituem os nomes canónicos para o mesmo `.env` servir Compose e host.
 
 ```bash
 make run gmail latest --limit 5
@@ -69,6 +69,15 @@ Quando existem duas formas, este guia indica o **alias plano** (ex.: `nina gmail
 | `nina gmail-unread [--account …] [--limit N]` | `nina gmail unread …` | Mensagens não lidas (todas as contas se omitir `--account`). |
 | `nina gmail-search "QUERY" [--account …] [--limit N]` | `nina gmail search "QUERY" …` | Pesquisa Gmail com [operadores de pesquisa](https://support.google.com/mail/answer/7190). |
 
+### Etiquetas Gmail aprendidas (CLI)
+
+| Alias plano | Hierárquico | Função |
+|-------------|-------------|--------|
+| `nina email-sync` | `nina email sync` | Passagem única: varre a inbox (janela recente), grava mensagens vistas, aplica regras por conta já existentes; pode abrir sugestões no Telegram para remetentes desconhecidos de alto volume (sem Telegram quando só corre na CLI). |
+| `nina email-infer-rules` | `nina email infer-rules [--days D] [--max-per-account N] [--min-messages M]` | Varre todas as contas Gmail com `newer_than:Dd`; quando a mesma etiqueta de **utilizador** aparece sozinha em mensagens suficientes de um remetente, insere a regra correspondente (não substitui regra existente). |
+
+Ensinar ou listar etiquetas pendentes no **Telegram** (`/emailtag`) ou no **`nina console`** (`emailtag` ou `/emailtag` — omitido da lista `help` do console). Requer o scope OAuth `gmail.modify`.
+
 ### Google Agenda (CLI exploratório)
 
 | Alias plano | Hierárquico | Função |
@@ -102,7 +111,7 @@ Quando existem duas formas, este guia indica o **alias plano** (ex.: `nina gmail
 
 ### Docker e Compose
 
-O Compose sobe **nina** e **PostgreSQL** (`docker-compose.yml`). Copie `.env.example` → `.env` e defina `DATABASE_URL`, `DATABASE_URL_HOST` e caminhos como no README.
+O Compose sobe **nina** e **PostgreSQL** (`docker-compose.yml`). Copie `.env.example` → `.env` e defina `DATABASE_URL` e caminhos como no README.
 
 - **`make docker-start`** — define `NINA_IMAGE` como `REGISTRY/IMAGE:<git curto>` e executa `docker compose up -d --build`.
 - **`make docker-stop`** — `docker compose down`.
@@ -116,8 +125,9 @@ O Compose sobe **nina** e **PostgreSQL** (`docker-compose.yml`). Copie `.env.exa
 ```bash
 nina auth-google && nina status-google
 nina daemon --dev          # terminal A
-make console               # terminal B — `.env` / *_HOST no host devem apontar ao DB e ao daemon
+make console               # terminal B — o `.env` no host deve apontar ao DB e ao daemon
 nina gmail-unread --limit 5
+nina email sync
 nina cal-events --limit 3
 nina llm-ping
 ```
@@ -311,7 +321,7 @@ Atravesse as cercas e veja o status + note virarem em tempo real. A mesma checag
 
 ## Comandos slash
 
-O daemon expõe `/command` para comandos textuais, espelhando o que o bot do Telegram aceita. Útil para integrações pontuais e scripts.
+O daemon expõe `/command` para um **subconjunto** dos comandos textuais que o bot do Telegram também entende. Útil para integrações pontuais e scripts.
 
 ```bash
 curl -X POST http://127.0.0.1:8765/command \
@@ -330,4 +340,6 @@ Comandos suportados:
 | `/memo <texto>`                  | Cria um memo                                 |
 | `/activity <texto>`              | Registra atividade passada                   |
 
-Os mesmos comandos funcionam no bot do Telegram — basta enviar como mensagem normal.
+Comandos como **`/emailtag`** estão disponíveis no **bot Telegram** e no **`nina console`**; **não** são tratados por `POST /command` (subconjunto acima).
+
+Os mesmos comandos da tabela funcionam no bot do Telegram — basta enviar como mensagem normal.

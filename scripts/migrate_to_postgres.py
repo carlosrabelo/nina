@@ -67,6 +67,9 @@ def _migrate_json_file_to_kv(dst, data_dir: Path, filename: str, key: str) -> bo
 
 
 def main() -> int:
+    from nina.cli._env import load_project_dotenv
+
+    load_project_dotenv()
     data_dir = _data_dir()
 
     json_files = [

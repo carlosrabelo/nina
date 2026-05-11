@@ -6,17 +6,17 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from dotenv import load_dotenv
+from nina.cli._env import load_project_dotenv
 
 
 def _base_url() -> str:
-    load_dotenv()
+    load_project_dotenv()
     port = int(os.environ.get("NINA_HTTP_PORT", "8765"))
     return f"http://127.0.0.1:{port}"
 
 
 def _request(method: str, path: str, body: dict | None = None) -> Any:
-    load_dotenv()
+    load_project_dotenv()
     url = _base_url() + path
     data = json.dumps(body).encode() if body is not None else None
     headers = {"Content-Type": "application/json"} if data else {}

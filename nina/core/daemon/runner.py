@@ -5,12 +5,12 @@ import signal
 from pathlib import Path
 
 import uvicorn
-from dotenv import load_dotenv
 
-from nina.core.daemon.http import create_app
-from nina.core.scheduler.runner import Scheduler
+from nina.cli._env import load_project_dotenv
 from nina.core.config.required_env import exit_if_missing_required_env
+from nina.core.daemon.http import create_app
 from nina.core.locale.store import ensure_default as ensure_default_locale
+from nina.core.scheduler.runner import Scheduler
 from nina.skills.notifications.store import ensure_default as ensure_default_notifications
 from nina.skills.presence.store import ensure_default as ensure_default_presence
 from nina.skills.profile.store import ensure_default as ensure_default_profile
@@ -26,7 +26,14 @@ def _init_state(data_dir: Path) -> None:
     ensure_default_locale(data_dir)
 
 
-async def _serve(tokens_dir: Path, data_dir: Path, sessions_dir: Path, port: int, scheduler: Scheduler, dev: bool) -> None:
+async def _serve(
+    tokens_dir: Path,
+    data_dir: Path,
+    sessions_dir: Path,
+    port: int,
+    scheduler: Scheduler,
+    dev: bool,
+) -> None:
     http_app = create_app(tokens_dir, data_dir)
     host = os.environ.get("NINA_HTTP_HOST", "127.0.0.1")
     config = uvicorn.Config(http_app, host=host, port=port, log_level="info")
@@ -57,6 +64,7 @@ async def _serve(tokens_dir: Path, data_dir: Path, sessions_dir: Path, port: int
                 return
 
             from nina.integrations.telegram.bot import create_application
+
             bot = create_application(bot_token, owner_id, tokens_dir, data_dir, sessions_dir)
             async with bot:
                 await bot.updater.start_polling()
@@ -81,7 +89,7 @@ async def _serve(tokens_dir: Path, data_dir: Path, sessions_dir: Path, port: int
 
 
 def run(dev: bool = False) -> None:
-    load_dotenv()
+    load_project_dotenv()
     exit_if_missing_required_env()
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
@@ -98,6 +106,7 @@ def run(dev: bool = False) -> None:
         if _bot_token and _owner_raw:
             try:
                 from nina.core.scheduler.jobs.calendar_notifications import make_job
+
                 scheduler.add_job(
                     make_job(tokens_dir, data_dir, _bot_token, int(_owner_raw)),
                     "interval",
@@ -105,6 +114,16 @@ def run(dev: bool = False) -> None:
                 )
             except Exception as e:
                 logging.warning("calendar notifications job not registered: %s", e)
+            try:
+                from nina.core.scheduler.jobs.email_learning import make_job as make_email_job
+
+                scheduler.add_job(
+                    make_email_job(tokens_dir, data_dir, _bot_token, int(_owner_raw)),
+                    "interval",
+                    minutes=10,
+                )
+            except Exception as e:
+                logging.warning("email learning job not registered: %s", e)
 
     scheduler.start()
 

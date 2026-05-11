@@ -187,6 +187,10 @@ def _execute_memo_intent(action: str, subject: str, lang: str, due_date: str = "
 class NinaConsole(cmd.Cmd):
     prompt = "nina> "
 
+    def get_names(self) -> list[str]:
+        """Hide `emailtag` from the built-in `help` listing (still invocable as /emailtag)."""
+        return [n for n in super().get_names() if n != "do_emailtag"]
+
     def __init__(self) -> None:
         super().__init__()
         self.intro = t("console.intro", _lang())
@@ -534,6 +538,40 @@ class NinaConsole(cmd.Cmd):
     def help_memos(self) -> None:
         print(t("help.memo", _lang()))
 
+    # ── emailtag (Telegram parity; hidden from `help` via get_names) ────────────
+
+    def do_emailtag(self, arg: str) -> None:
+        from nina.skills.email_learning.service import (
+            dismiss_pending_by_prefix,
+            format_pending_list,
+            teach_label_for_pending,
+        )
+
+        lang = _lang()
+        data_dir = _data_dir()
+        tokens_dir = _tokens_dir()
+        parts = shlex.split(arg) if arg.strip() else []
+
+        if not parts:
+            text = format_pending_list(data_dir)
+            for part in text.split("\n"):
+                print(f"  {part}")
+            return
+        if parts[0].lower() == "dismiss":
+            if len(parts) < 2:
+                print(f"  {t('emailtag.usage', lang)}")
+                return
+            out = dismiss_pending_by_prefix(data_dir, parts[1])
+            print(f"  {out}")
+            return
+        if len(parts) < 2:
+            print(f"  {t('emailtag.usage', lang)}")
+            return
+        pending_prefix = parts[0]
+        label = " ".join(parts[1:])
+        out = teach_label_for_pending(tokens_dir, data_dir, pending_prefix, label)
+        print(f"  {out}")
+
     # ── exit ──────────────────────────────────────────────────────────────────
 
     def do_exit(self, arg: str) -> bool:  # noqa: ARG002
@@ -556,6 +594,13 @@ class NinaConsole(cmd.Cmd):
         if line.startswith("/"):
             self.onecmd(line[1:])
             return
+
+        stripped = line.strip()
+        if stripped.startswith("emailtag"):
+            parts = shlex.split(stripped)
+            if parts and parts[0] == "emailtag":
+                self.do_emailtag(" ".join(parts[1:]))
+                return
 
         lang = _lang()
 

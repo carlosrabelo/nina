@@ -23,7 +23,7 @@ From the project root with the venv:
 nina <command> [args...]
 ```
 
-**`make run`** loads `.env` and applies host path / database overrides (`*_HOST`, `DATABASE_URL_HOST`, …) so the same CLI works against Postgres and files on your machine:
+**`make run`** and **`make console`** invoke Python the same way as `python -m nina …`; Python loads the nearest `.env` (`load_project_dotenv` in `nina/cli/parser.py`). Outside Docker, non-empty **`DATABASE_URL_HOST`** and **`*_HOST`** path variables override the Compose-oriented names so one `.env` can serve both.
 
 ```bash
 make run gmail latest --limit 5
@@ -69,6 +69,15 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 | `nina gmail-unread [--account …] [--limit N]` | `nina gmail unread …` | Unread messages (all accounts if `--account` omitted). |
 | `nina gmail-search "QUERY" [--account …] [--limit N]` | `nina gmail search "QUERY" …` | Gmail search using [Gmail search operators](https://support.google.com/mail/answer/7190). |
 
+### Gmail label learning (CLI)
+
+| Flat alias | Hierarchical | What it does |
+|------------|--------------|--------------|
+| `nina email-sync` | `nina email sync` | One-shot: scan inbox (recent window), upsert seen messages, apply existing per-account rules, optionally open Telegram suggestions for unknown high-volume senders (no Telegram when run from CLI alone). |
+| `nina email-infer-rules` | `nina email infer-rules [--days D] [--max-per-account N] [--min-messages M]` | Scan all Gmail accounts over `newer_than:Dd`; when the same **user** label appears alone on enough messages from one sender, insert a matching rule (does not overwrite an existing rule). |
+
+Teach or list pending labels from **Telegram** (`/emailtag`) or **`nina console`** (`emailtag` or `/emailtag` — hidden from the console `help` listing). Requires `gmail.modify` OAuth scope.
+
 ### Google Calendar (exploratory CLI)
 
 | Flat alias | Hierarchical | What it does |
@@ -102,7 +111,7 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 
 ### Docker and Compose
 
-Docker Compose runs **nina** and **PostgreSQL** (`docker-compose.yml`). Copy `.env.example` → `.env` and set `DATABASE_URL`, `DATABASE_URL_HOST`, and paths as in the README.
+Docker Compose runs **nina** and **PostgreSQL** (`docker-compose.yml`). Copy `.env.example` → `.env` and set `DATABASE_URL` and paths as in the README.
 
 - **`make docker-start`** — sets `NINA_IMAGE` to `REGISTRY/IMAGE:<git short sha>` and runs `docker compose up -d --build`.
 - **`make docker-stop`** — `docker compose down`.
@@ -116,8 +125,9 @@ Plain `docker compose up -d` uses `NINA_IMAGE` from `.env`. Use `docker-compose.
 ```bash
 nina auth-google && nina status-google
 nina daemon --dev          # terminal A
-make console               # terminal B — host `.env` / *_HOST must point at DB + daemon
+make console               # terminal B — host `.env` must point at DB + daemon
 nina gmail-unread --limit 5
+nina email sync
 nina cal-events --limit 3
 nina llm-ping
 ```
@@ -311,7 +321,7 @@ Walk through the geofences and watch the status and note flip. Same check from y
 
 ## Slash commands
 
-The daemon exposes `/command` for text commands, mirroring what the Telegram bot accepts. Useful for one-shot integrations and shell scripts.
+The daemon exposes `/command` for a **subset** of text commands the Telegram bot also understands. Useful for one-shot integrations and shell scripts.
 
 ```bash
 curl -X POST http://127.0.0.1:8765/command \
@@ -330,4 +340,6 @@ Supported commands:
 | `/memo <text>`            | Create a memo                                     |
 | `/activity <text>`        | Log past activity                                 |
 
-The same commands work in the Telegram bot — just send them as a normal message.
+Commands such as **`/emailtag`** are available in the **Telegram bot** and **`nina console`**; they are **not** handled by `POST /command` (subset above).
+
+The table above works in the Telegram bot too — send them as a normal message.

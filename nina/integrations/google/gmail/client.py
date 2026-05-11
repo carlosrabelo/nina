@@ -25,6 +25,7 @@ class Message:
     snippet: str
     is_read: bool
     labels: list[str] = field(default_factory=list)
+    thread_id: str = ""
 
 
 class GmailClient:
@@ -51,6 +52,62 @@ class GmailClient:
         """Search messages using Gmail query syntax."""
         return self._search(query, max_results)
 
+    def list_user_label_map(self) -> dict[str, str]:
+        """Map Gmail label id → display name for **user** labels only."""
+        try:
+            lst = self._svc.users().labels().list(userId="me").execute()
+        except HttpError as e:
+            raise GmailError(self.account, str(e)) from e
+        out: dict[str, str] = {}
+        for lb in lst.get("labels", []):
+            if lb.get("type") == "user" and lb.get("id") and lb.get("name") is not None:
+                out[str(lb["id"])] = str(lb["name"])
+        return out
+
+    def search_paged(
+        self,
+        query: str,
+        *,
+        max_messages: int,
+        page_size: int = 100,
+    ) -> list[Message]:
+        """Like :meth:`search`, but follows ``nextPageToken`` until *max_messages*."""
+        messages: list[Message] = []
+        page_token: str | None = None
+        page_size = max(1, min(500, page_size))
+        max_messages = max(1, max_messages)
+
+        while len(messages) < max_messages:
+            batch = min(page_size, max_messages - len(messages))
+            req_kwargs: dict = {"userId": "me", "q": query, "maxResults": batch}
+            if page_token:
+                req_kwargs["pageToken"] = page_token
+            try:
+                result = self._svc.users().messages().list(**req_kwargs).execute()
+            except HttpError as e:
+                raise GmailError(self.account, str(e)) from e
+
+            items = result.get("messages", [])
+            for item in items:
+                if len(messages) >= max_messages:
+                    break
+                try:
+                    raw = (
+                        self._svc.users()
+                        .messages()
+                        .get(userId="me", id=item["id"], format="metadata")
+                        .execute()
+                    )
+                    messages.append(self._parse(raw))
+                except HttpError:
+                    continue
+
+            page_token = result.get("nextPageToken")
+            if not page_token or not items:
+                break
+
+        return messages
+
     def get_message(self, message_id: str) -> Message:
         """Fetch full details for a single message by ID."""
         try:
@@ -71,6 +128,46 @@ class GmailClient:
                 userId="me",
                 id=message_id,
                 body={"removeLabelIds": ["UNREAD"]},
+            ).execute()
+        except HttpError as e:
+            raise GmailError(self.account, str(e)) from e
+
+    def ensure_user_label(self, display_name: str) -> str:
+        """Return the Gmail label id for *display_name*, creating it if missing."""
+        try:
+            lst = self._svc.users().labels().list(userId="me").execute()
+        except HttpError as e:
+            raise GmailError(self.account, str(e)) from e
+        for lb in lst.get("labels", []):
+            if lb.get("type") == "user" and lb.get("name") == display_name:
+                return str(lb["id"])
+        try:
+            body = {
+                "name": display_name,
+                "labelListVisibility": "labelShow",
+                "messageListVisibility": "show",
+            }
+            created = (
+                self._svc.users().labels().create(userId="me", body=body).execute()
+            )
+            return str(created["id"])
+        except HttpError as e:
+            raise GmailError(self.account, str(e)) from e
+
+    def apply_label(
+        self,
+        message_id: str,
+        label_id: str,
+        *,
+        archive_inbox: bool = True,
+    ) -> None:
+        """Attach a user label; optionally remove INBOX (archive out of inbox)."""
+        body: dict[str, list[str]] = {"addLabelIds": [label_id]}
+        if archive_inbox:
+            body["removeLabelIds"] = ["INBOX"]
+        try:
+            self._svc.users().messages().modify(
+                userId="me", id=message_id, body=body
             ).execute()
         except HttpError as e:
             raise GmailError(self.account, str(e)) from e
@@ -120,6 +217,7 @@ class GmailClient:
             snippet=raw.get("snippet", ""),
             is_read="UNREAD" not in labels,
             labels=labels,
+            thread_id=str(raw.get("threadId", "") or ""),
         )
 
 

@@ -6,10 +6,6 @@ MAKEFLAGS += --no-print-directory
         docker-logs docker-migrate docker-push docker-restart docker-start docker-stop \
         console fmt help lint quality run setup test
 
-# Load local environment variables (if .env exists)
--include .env
-export
-
 # ── Variables ─────────────────────────────────────────────────────────────────
 
 IMAGE      ?= nina
@@ -88,31 +84,16 @@ docker-auth-google: ## Run Google OAuth flow inside the container
 
 # ── Run local CLI ─────────────────────────────────────────────────────────────
 
-run: ## Run nina CLI locally (uses .env). Example: make run migrate to-postgres
+run: ## Run nina CLI locally (.env is read by Python). Example: make run migrate to-postgres
 	@ARGS="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ "$$ARGS" = "migrate to-postgres" ]; then \
-		DATABASE_URL="$$DATABASE_URL_HOST" \
-		DATA_DIR="$$DATA_DIR_HOST" \
-		TOKENS_DIR="$$TOKENS_DIR_HOST" \
-		SESSIONS_DIR="$$SESSIONS_DIR_HOST" \
-		GOOGLE_CREDENTIALS_FILE="$$GOOGLE_CREDENTIALS_FILE_HOST" \
 		.venv/bin/python scripts/migrate_to_postgres.py; \
 	else \
-		DATABASE_URL="$$DATABASE_URL_HOST" \
-		DATA_DIR="$$DATA_DIR_HOST" \
-		TOKENS_DIR="$$TOKENS_DIR_HOST" \
-		SESSIONS_DIR="$$SESSIONS_DIR_HOST" \
-		GOOGLE_CREDENTIALS_FILE="$$GOOGLE_CREDENTIALS_FILE_HOST" \
 		.venv/bin/python -m nina $$ARGS; \
 	fi
 
 console: ## Open interactive console (requires daemon)
-	@DATABASE_URL="$$DATABASE_URL_HOST" \
-	DATA_DIR="$$DATA_DIR_HOST" \
-	TOKENS_DIR="$$TOKENS_DIR_HOST" \
-	SESSIONS_DIR="$$SESSIONS_DIR_HOST" \
-	GOOGLE_CREDENTIALS_FILE="$$GOOGLE_CREDENTIALS_FILE_HOST" \
-	.venv/bin/python -m nina console
+	@.venv/bin/python -m nina console
 
 # Swallow extra args as make "targets" (e.g. `make run migrate to-postgres`)
 %:

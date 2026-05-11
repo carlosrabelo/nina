@@ -2,12 +2,10 @@
 
 import argparse
 
-from dotenv import load_dotenv
-
 
 def cmd_console(args: argparse.Namespace) -> None:  # noqa: ARG001
-    load_dotenv()
     from nina.core.console.runner import run
+
     run()
 
 

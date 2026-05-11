@@ -15,6 +15,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Autentica qualquer número de contas Google via OAuth — descobertas automaticamente pelos tokens
 - Consulta qualquer provedor de LLM (Groq, OpenAI, Anthropic, Ollama) via interface unificada LiteLLM
 - Agendador interno (APScheduler) e comandos HTTP slash para integrações externas (MacroDroid, scripts) — sem cron externo necessário
+- **Etiquetas Gmail aprendidas (por conta):** `nina email sync` ingere metadados da inbox e aplica regras gravadas; `nina email infer-rules` infere regras a partir de etiquetas de utilizador já nas mensagens; ensinar etiquetas com `/emailtag` no Telegram ou `emailtag` / `/emailtag` no `nina console` (o job do daemon corre periodicamente quando o bot está configurado)
 - Todos os segredos ficam locais: tokens, sessões e credenciais em ficheiros; o estado da aplicação fica no PostgreSQL
 
 → **[Referência de Comandos (GUIDE-PT.md)](GUIDE-PT.md)** (tabela completa: [Lista completa de comandos da CLI](GUIDE-PT.md#lista-completa-de-comandos-da-cli)) · **[Skills (SKILL-PT.md)](SKILL-PT.md)** / [SKILL.md](SKILL.md) (domínios em `nina/skills/`) · [AGENTS.md](AGENTS.md) (sincronizar README/GUIDE ao mudar o produto)
@@ -89,14 +90,15 @@ make console     # apenas o console (o daemon precisa estar rodando)
 
 ## Configuração
 
-Copie [`.env.example`](.env.example) para `.env`. O exemplo traz **caminhos canónicos para Docker** (`DATA_DIR=/data/db`, `DATABASE_URL` com host `postgres`, etc.) e variáveis **`*_HOST`** para os mesmos caminhos/URL na sua máquina — `make run` e `make console` exportam os overrides do host automaticamente.
+Copie [`.env.example`](.env.example) para `.env`. O exemplo traz **caminhos canónicos para Docker** (`DATA_DIR=/data/db`, `DATABASE_URL` com host `postgres`, etc.). Ao correr **`nina`** ou **`make run` / `make console`**, o Python carrega o `.env` mais próximo (`load_project_dotenv`) e, **no host** (fora de um contentor), copia **`DATABASE_URL_HOST`** e **`*_HOST`** não vazios para `DATABASE_URL` e os nomes canónicos, para o mesmo ficheiro servir Compose e CLI local.
 
 | Variável | Padrão | Descrição |
 |---|---|---|
-| `DATABASE_URL` | — | URL PostgreSQL para **containers** (ex.: host `postgres`) — obrigatória no daemon/CLI dentro do Compose |
-| `DATABASE_URL_HOST` | — | URL PostgreSQL para **`make run` / `make console`** no host (ex.: `localhost` com a porta do DB publicada) |
+| `DATABASE_URL` | — | URL PostgreSQL (ex.: host `postgres` no Compose) |
+| `DATABASE_URL_HOST` | — | URL para **`nina` no host** (ex. `localhost` com a porta publicada); usada automaticamente fora do Docker |
 | `NINA_IMAGE` | (ver `.env.example`) | Imagem do serviço `nina` no Compose; `make docker-start` sobrescreve com `REGISTRY/IMAGE:<git sha>` e `--build` |
-| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Caminhos canónicos no **container**; use `*_HOST` para `make run` / `make console` no host |
+| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Caminhos no layout Compose |
+| `GOOGLE_CREDENTIALS_FILE_HOST`, `TOKENS_DIR_HOST`, `SESSIONS_DIR_HOST`, `DATA_DIR_HOST` | — | Caminhos opcionais no host; quando definidos, usados **no host** em vez da linha acima (mesma regra que `DATABASE_URL_HOST`) |
 | `NINA_HTTP_HOST` | `0.0.0.0` | Interface para bind/publicação da porta HTTP |
 | `NINA_HTTP_PORT` | `8765` | Porta HTTP |
 | `NINA_API_KEY` | — | Se setada, protege a API HTTP via header `X-Api-Key` |

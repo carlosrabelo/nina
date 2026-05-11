@@ -59,7 +59,7 @@ def _lang(ctx: ContextTypes.DEFAULT_TYPE) -> str:
 _COMMAND_NAMES = [
     "start", "help", "lang", "presence", "health",
     "workdays", "timezone", "context", "profile", "schedule", "notify",
-    "memo", "memos",
+    "memo", "memos", "emailtag",
 ]
 
 
@@ -495,6 +495,39 @@ async def handle_memos(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("\n".join(lines))
 
 
+async def handle_emailtag(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    from nina.core.i18n import t
+    from nina.skills.email_learning.service import (
+        dismiss_pending_by_prefix,
+        format_pending_list,
+        teach_label_for_pending,
+    )
+
+    lang = _lang(ctx)
+    data_dir: Path = ctx.bot_data["data_dir"]
+    tokens_dir: Path = ctx.bot_data["tokens_dir"]
+    args = ctx.args or []
+
+    if not args:
+        text = format_pending_list(data_dir)
+        await update.message.reply_text(text[:_MAX_MSG])
+        return
+    if args[0].lower() == "dismiss":
+        if len(args) < 2:
+            await update.message.reply_text(t("emailtag.usage", lang))
+            return
+        out = dismiss_pending_by_prefix(data_dir, args[1])
+        await update.message.reply_text(out[:_MAX_MSG])
+        return
+    if len(args) < 2:
+        await update.message.reply_text(t("emailtag.usage", lang))
+        return
+    pending_prefix = args[0]
+    label = " ".join(args[1:])
+    out = teach_label_for_pending(tokens_dir, data_dir, pending_prefix, label)
+    await update.message.reply_text(out[:_MAX_MSG])
+
+
 async def handle_lang(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     lang = _lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
@@ -868,6 +901,7 @@ def create_application(token: str, owner_id: int, tokens_dir: Path, data_dir: Pa
     app.add_handler(CommandHandler("notify",    handle_notify,    filters=owner_filter))
     app.add_handler(CommandHandler("memo",      handle_memo,      filters=owner_filter))
     app.add_handler(CommandHandler("memos",     handle_memos,     filters=owner_filter))
+    app.add_handler(CommandHandler("emailtag", handle_emailtag, filters=owner_filter))
     app.add_handler(MessageHandler(owner_filter & filters.TEXT & ~filters.COMMAND, handle_message))
     return app
 

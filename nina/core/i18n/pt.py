@@ -21,6 +21,7 @@ STRINGS: dict[str, str] = {
         "/lang — idioma atual\n"
         "/lang <código> — muda idioma (en|pt)\n"
         "/profile — contas associadas por presença\n"
+        "/emailtag — sugestões remetente → etiqueta\n"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -75,6 +76,36 @@ STRINGS: dict[str, str] = {
     "latest.error":   "Erro: {error}",
     "latest.from":    "De: {sender}",
     "latest.subject": "Assunto: {subject}",
+
+    # ── email label learning (por conta Gmail) ────────────────────────────────
+    "emailtag.suggest_telegram": (
+        "📧 Nina — novo padrão de remetente\n"
+        "Conta: {account}\n"
+        "De: {sender}\n"
+        "Assunto exemplo: {subject}\n"
+        "Visto (~30d): {count}\n\n"
+        "Defina a etiqueta (só nesta conta):\n"
+        "/emailtag {full_id} Sua/Etiqueta\n"
+        "(id curto: {short_id}…)"
+    ),
+    "emailtag.usage": (
+        "/emailtag — lista sugestões abertas\n"
+        "/emailtag <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
+        "/emailtag dismiss <id> — ignora a sugestão\n"
+        "Use pelo menos 8 caracteres do id da sugestão."
+    ),
+    "emailtag.no_pending": "Nenhuma sugestão de remetente aberta.",
+    "emailtag.pending_header": "Sugestões abertas (regras por conta):",
+    "emailtag.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  ocorrências: {hits}  exemplo: {subject}",
+    "emailtag.pending_not_found": "Nenhuma sugestão aberta com esse id.",
+    "emailtag.ambiguous_id": "Esse prefixo de id bate com mais de uma linha — cole mais caracteres.",
+    "emailtag.id_too_short": "Use pelo menos 8 caracteres do id da sugestão.",
+    "emailtag.label_empty": "O nome da etiqueta não pode ser vazio.",
+    "emailtag.dismiss_ok": "Sugestão ignorada para {sender}.",
+    "emailtag.taught_ok": (
+        "✓ Regra gravada: {sender} → [{label}] em {account}.\n"
+        "Aplicada em {applied} mensagem(ns) que a Nina já tinha registado."
+    ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
     "events.no_accounts": "Nenhuma conta autenticada.",
@@ -180,6 +211,7 @@ STRINGS: dict[str, str] = {
     "help.memo":        "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluído\n  memo dismiss <id>        Descartar",
     "cmd.memo":         "Salvar ou listar memos",
     "cmd.memos":        "Listar memos abertos",
+    "cmd.emailtag":   "Ensinar etiquetas Gmail por conta",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "Nenhum chat encontrado.",

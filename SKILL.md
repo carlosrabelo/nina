@@ -30,21 +30,23 @@ Domains resolved early (when patterns match) include **presence**, **memo**, **c
 
 ## Skill catalogue
 
-### `presence` — where you are now
+Alphabetical by domain id (see [AGENTS.md](AGENTS.md)).
 
-- **Purpose:** Track `home` / `work` / `out` / `dnd` plus an optional short `note` (e.g. campus vs office).
-- **Triggers:** Natural language in Telegram/console; HTTP `PUT /presence`, `POST /presence/{status}`; MacroDroid-style integrations.
-- **Code:** [`nina/skills/presence/`](nina/skills/presence/) (`models`, `store`, `interpreter`).
-- **Storage:** PostgreSQL `kv_state` (via `open_db` / KV helpers), not JSON files in production.
+### `activity_log` — structured activity on the calendar
+
+- **Purpose:** Log or query past activities backed by Google Calendar (distinct from generic “list my events”).
+- **Triggers:** Router domain `activity_log`; local signals in [`activity_log/patterns.py`](nina/skills/activity_log/patterns.py).
+- **Code:** [`nina/skills/activity_log/`](nina/skills/activity_log/) (`interpreter`, `google_reader`, `google_writer`, `models`).
+- **Storage:** Reads/writes **Google Calendar**; uses profile calendar accounts like other calendar flows.
 
 ---
 
-### `memo` — notes and reminders
+### `blocking` — put time on the calendar
 
-- **Purpose:** Create, list, close, or dismiss memos; reminders with a resolved date/time.
-- **Triggers:** Phrases like “memo …”, “remind me …”; Layer 1 memo interpreter; router domain `memo`.
-- **Code:** [`nina/skills/memo/`](nina/skills/memo/) (`interpreter`).
-- **Storage:** PostgreSQL tables via [`nina/core/store/repos/memo.py`](nina/core/store/repos/memo.py).
+- **Purpose:** Create a blocking / focus event on Google Calendar when the user gives an explicit time or duration (“block 2pm”, “meeting for 1 hour”).
+- **Triggers:** Router domain `blocking`; second LLM call via [`blocking.py`](nina/skills/calendar/blocking.py); HTTP [`POST /schedule`](nina/core/daemon/http.py) on the daemon.
+- **Code:** [`nina/skills/calendar/blocking.py`](nina/skills/calendar/blocking.py), [`schedule_parser.py`](nina/skills/calendar/schedule_parser.py) where relevant.
+- **Storage:** Writes through **Google Calendar API** (same client stack as read).
 
 ---
 
@@ -58,21 +60,21 @@ Domains resolved early (when patterns match) include **presence**, **memo**, **c
 
 ---
 
-### `blocking` — put time on the calendar
+### `email_learning` — Gmail labels per sender
 
-- **Purpose:** Create a blocking / focus event on Google Calendar when the user gives an explicit time or duration (“block 2pm”, “meeting for 1 hour”).
-- **Triggers:** Router domain `blocking`; second LLM call via [`blocking.py`](nina/skills/calendar/blocking.py); HTTP [`POST /schedule`](nina/core/daemon/http.py) on the daemon.
-- **Code:** [`nina/skills/calendar/blocking.py`](nina/skills/calendar/blocking.py), [`schedule_parser.py`](nina/skills/calendar/schedule_parser.py) where relevant.
-- **Storage:** Writes through **Google Calendar API** (same client stack as read).
+- **Purpose:** Persist per-account rules that map a sender (domain or address) to a Gmail **user** label; ingest recent inbox metadata, apply rules, and optionally surface Telegram prompts for new high-volume senders. Infer rules from messages that already carry a single user label.
+- **Triggers:** **Not** an LLM router domain. Runs from the **scheduler** (`email_learning` job when the Telegram bot is configured), **`nina email sync`** / **`nina email infer-rules`**, **`/emailtag`** on Telegram, and **`emailtag`** / **`/emailtag`** in `nina console`.
+- **Code:** [`nina/skills/email_learning/`](nina/skills/email_learning/) (`service.py`, [`infer_rules.py`](nina/skills/email_learning/infer_rules.py)); Gmail integration in [`nina/integrations/google/gmail/client.py`](nina/integrations/google/gmail/client.py).
+- **Storage:** PostgreSQL tables via [`nina/core/store/repos/email_learning.py`](nina/core/store/repos/email_learning.py) — `email_messages`, `email_sender_rules`, `email_pending_labels` (see schema in [`nina/core/store/db.py`](nina/core/store/db.py)).
 
 ---
 
-### `workdays` — your weekly schedule and timezone
+### `memo` — notes and reminders
 
-- **Purpose:** Define working hours, lunch, days off, and timezone for context (not the same as “I arrived at work” presence).
-- **Triggers:** Router domain `workdays`; phrases about “Monday to Friday 9–5”, timezone changes; dedicated LLM interpreter when needed.
-- **Code:** [`nina/skills/workdays/`](nina/skills/workdays/) (`store`, `interpreter`, `checker`, `models`).
-- **Storage:** PostgreSQL `kv_state`.
+- **Purpose:** Create, list, close, or dismiss memos; reminders with a resolved date/time.
+- **Triggers:** Phrases like “memo …”, “remind me …”; Layer 1 memo interpreter; router domain `memo`.
+- **Code:** [`nina/skills/memo/`](nina/skills/memo/) (`interpreter`).
+- **Storage:** PostgreSQL tables via [`nina/core/store/repos/memo.py`](nina/core/store/repos/memo.py).
 
 ---
 
@@ -85,6 +87,15 @@ Domains resolved early (when patterns match) include **presence**, **memo**, **c
 
 ---
 
+### `presence` — where you are now
+
+- **Purpose:** Track `home` / `work` / `out` / `dnd` plus an optional short `note` (e.g. campus vs office).
+- **Triggers:** Natural language in Telegram/console; HTTP `PUT /presence`, `POST /presence/{status}`; MacroDroid-style integrations.
+- **Code:** [`nina/skills/presence/`](nina/skills/presence/) (`models`, `store`, `interpreter`).
+- **Storage:** PostgreSQL `kv_state` (via `open_db` / KV helpers), not JSON files in production.
+
+---
+
 ### `profile` — which Google accounts match each presence
 
 - **Purpose:** Map Gmail and Calendar account emails per presence status so Nina picks the right account for Gmail/calendar actions.
@@ -94,12 +105,12 @@ Domains resolved early (when patterns match) include **presence**, **memo**, **c
 
 ---
 
-### `activity_log` — structured activity on the calendar
+### `workdays` — your weekly schedule and timezone
 
-- **Purpose:** Log or query past activities backed by Google Calendar (distinct from generic “list my events”).
-- **Triggers:** Router domain `activity_log`; local signals in [`activity_log/patterns.py`](nina/skills/activity_log/patterns.py).
-- **Code:** [`nina/skills/activity_log/`](nina/skills/activity_log/) (`interpreter`, `google_reader`, `google_writer`, `models`).
-- **Storage:** Reads/writes **Google Calendar**; uses profile calendar accounts like other calendar flows.
+- **Purpose:** Define working hours, lunch, days off, and timezone for context (not the same as “I arrived at work” presence).
+- **Triggers:** Router domain `workdays`; phrases about “Monday to Friday 9–5”, timezone changes; dedicated LLM interpreter when needed.
+- **Code:** [`nina/skills/workdays/`](nina/skills/workdays/) (`store`, `interpreter`, `checker`, `models`).
+- **Storage:** PostgreSQL `kv_state`.
 
 ---
 

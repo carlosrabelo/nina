@@ -68,6 +68,12 @@ class TestGmailClientParse:
         msg = client._parse(raw)
         assert msg.sender == "(unknown)"
 
+    def test_parse_thread_id(self, client: GmailClient) -> None:
+        raw = _make_raw_message()
+        raw["threadId"] = "thread-xyz"
+        msg = client._parse(raw)
+        assert msg.thread_id == "thread-xyz"
+
 
 class TestGmailMultiClientFromEnv:
     def test_raises_when_no_accounts_and_no_tokens(

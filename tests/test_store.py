@@ -52,6 +52,9 @@ class TestOpenDb:
             assert {"memos", "actions", "emails", "calendar_events", "kv_state"}.issubset(
                 tables
             )
+            assert "email_messages" in tables
+            assert "email_sender_rules" in tables
+            assert "email_pending_labels" in tables
         finally:
             conn.close()
 

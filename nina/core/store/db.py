@@ -58,6 +58,47 @@ CREATE TABLE IF NOT EXISTS kv_state (
     value       JSONB NOT NULL,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS email_messages (
+    account        TEXT NOT NULL,
+    message_id     TEXT NOT NULL,
+    thread_id      TEXT NOT NULL DEFAULT '',
+    sender_raw     TEXT NOT NULL,
+    sender_norm    TEXT NOT NULL,
+    subject        TEXT NOT NULL,
+    msg_date       TEXT NOT NULL,
+    first_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    tagged_at      TIMESTAMPTZ,
+    label_applied  TEXT,
+    PRIMARY KEY (account, message_id)
+);
+
+CREATE TABLE IF NOT EXISTS email_sender_rules (
+    account        TEXT NOT NULL,
+    sender_norm    TEXT NOT NULL,
+    label_name     TEXT NOT NULL,
+    archive_inbox  BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (account, sender_norm)
+);
+
+CREATE TABLE IF NOT EXISTS email_pending_labels (
+    id              TEXT PRIMARY KEY,
+    account         TEXT NOT NULL,
+    sender_norm     TEXT NOT NULL,
+    sender_raw      TEXT NOT NULL,
+    sample_subject  TEXT NOT NULL DEFAULT '',
+    hit_count       INTEGER NOT NULL DEFAULT 1,
+    notified        BOOLEAN NOT NULL DEFAULT FALSE,
+    status          TEXT NOT NULL DEFAULT 'open',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_pending_open
+    ON email_pending_labels (account, sender_norm) WHERE status = 'open';
+
+CREATE INDEX IF NOT EXISTS idx_email_messages_sender
+    ON email_messages (account, sender_norm, first_seen_at);
 """
 
 

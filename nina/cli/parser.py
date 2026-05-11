@@ -7,6 +7,7 @@ from nina.cli import (
     calendar,
     console,
     daemon,
+    email_learning,
     gmail,
     llm,
     make_aliases,
@@ -14,9 +15,11 @@ from nina.cli import (
     status,
     telegram,
 )
+from nina.cli._env import load_project_dotenv
 
 
 def main() -> None:
+    load_project_dotenv()
     parser = argparse.ArgumentParser(
         prog="nina",
         description="Nina — personal assistant CLI",
@@ -30,6 +33,7 @@ def main() -> None:
     daemon.register(sub)
     make_aliases.register(sub)
     gmail.register(sub)
+    email_learning.register(sub)
     calendar.register(sub)
     telegram.register(sub)
     llm.register(sub)

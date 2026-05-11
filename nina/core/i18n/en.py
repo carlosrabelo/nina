@@ -21,6 +21,7 @@ STRINGS: dict[str, str] = {
         "/lang — current language\n"
         "/lang <code> — change language (en|pt)\n"
         "/profile — account mapping per presence\n"
+        "/emailtag — pending sender → label suggestions\n"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -75,6 +76,36 @@ STRINGS: dict[str, str] = {
     "latest.error":   "Error: {error}",
     "latest.from":    "From: {sender}",
     "latest.subject": "Subject: {subject}",
+
+    # ── email label learning (per Gmail account) ─────────────────────────────
+    "emailtag.suggest_telegram": (
+        "📧 Nina — new sender pattern\n"
+        "Account: {account}\n"
+        "From: {sender}\n"
+        "Sample subject: {subject}\n"
+        "Seen (~30d): {count}\n\n"
+        "Teach a label (this account only):\n"
+        "/emailtag {full_id} Your/Label-Name\n"
+        "(short id: {short_id}…)"
+    ),
+    "emailtag.usage": (
+        "/emailtag — list open suggestions\n"
+        "/emailtag <id> <label> — save label for sender on that account\n"
+        "/emailtag dismiss <id> — ignore a suggestion\n"
+        "Use at least 8 characters of the suggestion id."
+    ),
+    "emailtag.no_pending": "No open sender suggestions.",
+    "emailtag.pending_header": "Open suggestions (account-specific rules):",
+    "emailtag.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  hits: {hits}  sample: {subject}",
+    "emailtag.pending_not_found": "No matching open suggestion (check the id).",
+    "emailtag.ambiguous_id": "That id prefix matches more than one row — paste more characters.",
+    "emailtag.id_too_short": "Use at least 8 characters of the suggestion id.",
+    "emailtag.label_empty": "Label name cannot be empty.",
+    "emailtag.dismiss_ok": "Ignored suggestion for {sender}.",
+    "emailtag.taught_ok": (
+        "✓ Saved rule for {sender} → [{label}] on {account}.\n"
+        "Applied to {applied} message(s) Nina had recorded."
+    ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
     "events.no_accounts": "No authenticated accounts.",
@@ -180,6 +211,7 @@ STRINGS: dict[str, str] = {
     "help.memo":        "  memo <text>          Save a new memo\n  memo <text> due <date>  Save with due date\n  memos                List open memos\n  memo done <id>       Mark as done\n  memo dismiss <id>    Dismiss",
     "cmd.memo":         "Save or list memos",
     "cmd.memos":        "List open memos",
+    "cmd.emailtag":   "Teach Gmail labels per account",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "No chats found.",

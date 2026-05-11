@@ -30,21 +30,23 @@ Domínios frequentemente resolvidos cedo (quando os padrões batem) incluem **pr
 
 ## Catálogo de skills
 
-### `presence` — onde está agora
+Ordem alfabética pelo id do domínio (ver [AGENTS.md](AGENTS.md)).
 
-- **Objetivo:** Estados `home` / `work` / `out` / `dnd` e uma `note` curta opcional (ex.: campus vs escritório).
-- **Acionadores:** Linguagem natural no Telegram/console; HTTP `PUT /presence`, `POST /presence/{status}`; integrações tipo MacroDroid.
-- **Código:** [`nina/skills/presence/`](nina/skills/presence/) (`models`, `store`, `interpreter`).
-- **Armazenamento:** PostgreSQL `kv_state` (via `open_db` / helpers KV), não ficheiros JSON em produção.
+### `activity_log` — atividades estruturadas na agenda
+
+- **Objetivo:** Registar ou consultar atividades passadas apoiadas no Google Calendar (distinto de “listar os meus eventos” genérico).
+- **Acionadores:** Domínio `activity_log` no router; sinais locais em [`activity_log/patterns.py`](nina/skills/activity_log/patterns.py).
+- **Código:** [`nina/skills/activity_log/`](nina/skills/activity_log/) (`interpreter`, `google_reader`, `google_writer`, `models`).
+- **Armazenamento:** Lê/escreve no **Google Calendar**; usa as contas de calendário do perfil como nos outros fluxos de agenda.
 
 ---
 
-### `memo` — notas e lembretes
+### `blocking` — ocupar tempo na agenda
 
-- **Objetivo:** Criar, listar, fechar ou dispensar memos; lembretes com data/hora resolvida.
-- **Acionadores:** Frases tipo “memo …”, “me lembra …”; interpretador memo na camada 1; domínio `memo` no router.
-- **Código:** [`nina/skills/memo/`](nina/skills/memo/) (`interpreter`).
-- **Armazenamento:** Tabelas PostgreSQL em [`nina/core/store/repos/memo.py`](nina/core/store/repos/memo.py).
+- **Objetivo:** Criar um evento de bloqueio / foco no Google Calendar quando há hora ou duração explícita (“bloquear 14h”, “reunião por 1 hora”).
+- **Acionadores:** Domínio `blocking` no router; segunda chamada LLM em [`blocking.py`](nina/skills/calendar/blocking.py); HTTP [`POST /schedule`](nina/core/daemon/http.py) no daemon.
+- **Código:** [`nina/skills/calendar/blocking.py`](nina/skills/calendar/blocking.py), [`schedule_parser.py`](nina/skills/calendar/schedule_parser.py) quando aplicável.
+- **Armazenamento:** Escrita via **API Google Calendar** (mesma stack que a leitura).
 
 ---
 
@@ -58,21 +60,21 @@ Domínios frequentemente resolvidos cedo (quando os padrões batem) incluem **pr
 
 ---
 
-### `blocking` — ocupar tempo na agenda
+### `email_learning` — etiquetas Gmail por remetente
 
-- **Objetivo:** Criar um evento de bloqueio / foco no Google Calendar quando há hora ou duração explícita (“bloquear 14h”, “reunião por 1 hora”).
-- **Acionadores:** Domínio `blocking` no router; segunda chamada LLM em [`blocking.py`](nina/skills/calendar/blocking.py); HTTP [`POST /schedule`](nina/core/daemon/http.py) no daemon.
-- **Código:** [`nina/skills/calendar/blocking.py`](nina/skills/calendar/blocking.py), [`schedule_parser.py`](nina/skills/calendar/schedule_parser.py) quando aplicável.
-- **Armazenamento:** Escrita via **API Google Calendar** (mesma stack que a leitura).
+- **Objetivo:** Manter regras por conta que associam um remetente (domínio ou endereço) a uma etiqueta de **utilizador** do Gmail; ingerir metadados recentes da inbox, aplicar regras e opcionalmente mostrar pedidos no Telegram para remetentes novos de alto volume. Inferir regras a partir de mensagens que já trazem uma única etiqueta de utilizador.
+- **Acionadores:** **Não** é domínio do router LLM. Corre pelo **agendador** (job `email_learning` quando o bot Telegram está configurado), **`nina email sync`** / **`nina email infer-rules`**, **`/emailtag`** no Telegram e **`emailtag`** / **`/emailtag`** no `nina console`.
+- **Código:** [`nina/skills/email_learning/`](nina/skills/email_learning/) (`service.py`, [`infer_rules.py`](nina/skills/email_learning/infer_rules.py)); integração Gmail em [`nina/integrations/google/gmail/client.py`](nina/integrations/google/gmail/client.py).
+- **Armazenamento:** Tabelas PostgreSQL em [`nina/core/store/repos/email_learning.py`](nina/core/store/repos/email_learning.py) — `email_messages`, `email_sender_rules`, `email_pending_labels` (esquema em [`nina/core/store/db.py`](nina/core/store/db.py)).
 
 ---
 
-### `workdays` — horário semanal e fuso
+### `memo` — notas e lembretes
 
-- **Objetivo:** Definir horário de trabalho, almoço, folgas e fuso para contexto (não confundir com “cheguei ao trabalho”, que é `presence`).
-- **Acionadores:** Domínio `workdays`; frases sobre “segunda a sexta 9–18”, mudança de timezone; interpretador LLM dedicado quando necessário.
-- **Código:** [`nina/skills/workdays/`](nina/skills/workdays/) (`store`, `interpreter`, `checker`, `models`).
-- **Armazenamento:** PostgreSQL `kv_state`.
+- **Objetivo:** Criar, listar, fechar ou dispensar memos; lembretes com data/hora resolvida.
+- **Acionadores:** Frases tipo “memo …”, “me lembra …”; interpretador memo na camada 1; domínio `memo` no router.
+- **Código:** [`nina/skills/memo/`](nina/skills/memo/) (`interpreter`).
+- **Armazenamento:** Tabelas PostgreSQL em [`nina/core/store/repos/memo.py`](nina/core/store/repos/memo.py).
 
 ---
 
@@ -85,6 +87,15 @@ Domínios frequentemente resolvidos cedo (quando os padrões batem) incluem **pr
 
 ---
 
+### `presence` — onde está agora
+
+- **Objetivo:** Estados `home` / `work` / `out` / `dnd` e uma `note` curta opcional (ex.: campus vs escritório).
+- **Acionadores:** Linguagem natural no Telegram/console; HTTP `PUT /presence`, `POST /presence/{status}`; integrações tipo MacroDroid.
+- **Código:** [`nina/skills/presence/`](nina/skills/presence/) (`models`, `store`, `interpreter`).
+- **Armazenamento:** PostgreSQL `kv_state` (via `open_db` / helpers KV), não ficheiros JSON em produção.
+
+---
+
 ### `profile` — que contas Google vão com cada presença
 
 - **Objetivo:** Associar emails de Gmail e Calendar a cada estado de presença para a Nina escolher a conta certa nas ações Google.
@@ -94,12 +105,12 @@ Domínios frequentemente resolvidos cedo (quando os padrões batem) incluem **pr
 
 ---
 
-### `activity_log` — atividades estruturadas na agenda
+### `workdays` — horário semanal e fuso
 
-- **Objetivo:** Registar ou consultar atividades passadas apoiadas no Google Calendar (distinto de “listar os meus eventos” genérico).
-- **Acionadores:** Domínio `activity_log` no router; sinais locais em [`activity_log/patterns.py`](nina/skills/activity_log/patterns.py).
-- **Código:** [`nina/skills/activity_log/`](nina/skills/activity_log/) (`interpreter`, `google_reader`, `google_writer`, `models`).
-- **Armazenamento:** Lê/escreve no **Google Calendar**; usa as contas de calendário do perfil como nos outros fluxos de agenda.
+- **Objetivo:** Definir horário de trabalho, almoço, folgas e fuso para contexto (não confundir com “cheguei ao trabalho”, que é `presence`).
+- **Acionadores:** Domínio `workdays`; frases sobre “segunda a sexta 9–18”, mudança de timezone; interpretador LLM dedicado quando necessário.
+- **Código:** [`nina/skills/workdays/`](nina/skills/workdays/) (`store`, `interpreter`, `checker`, `models`).
+- **Armazenamento:** PostgreSQL `kv_state`.
 
 ---
 
