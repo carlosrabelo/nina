@@ -94,12 +94,6 @@ def register(sub: argparse._SubParsersAction) -> None:
     )
     p_process.set_defaults(func=cmd_process)
 
-    p_sync = g.add_parser(
-        "sync",
-        help="Alias for process (same behavior; legacy name).",
-    )
-    p_sync.set_defaults(func=cmd_process)
-
     p_rules = g.add_parser(
         "rules",
         help="List learned sender→label rules stored in PostgreSQL (what Nina applies)",

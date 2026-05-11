@@ -75,7 +75,6 @@ Quando existem duas formas, este guia indica o **alias plano** (ex.: `nina gmail
 | Alias plano | Hierárquico | Função |
 |-------------|-------------|--------|
 | `nina email-process` | `nina email process` | **Correr processamento:** ir buscar à inbox (consulta via env), upsert em **`email_messages`**, aplicar **`email_sender_rules`** existentes no Gmail, sugestões Telegram para remetentes de alto volume desconhecidos quando o fluxo daemon/Telegram está ativo; na **CLI** o Telegram fica desligado. |
-| `nina email-sync` | `nina email sync` | *Igual a* `nina email process` — nome antigo mantido para scripts. |
 | `nina email-rules [--account …]` | `nina email rules …` | **PostgreSQL:** lista as regras **aprendidas** remetente→etiqueta que a Nina aplica (`email_sender_rules`: conta, remetente normalizado, nome da etiqueta de utilizador no Gmail, arquivo na inbox, `created_at`). Não chama a API Gmail. |
 | `nina email-infer-rules` | `nina email infer-rules [--days D] [--max-per-account N] [--min-messages M] [--verbose]` | **Só regras:** varre o Gmail com `newer_than:Dd` e **insere** novas linhas em **`email_sender_rules`** quando uma etiqueta de utilizador aparece sozinha em mensagens suficientes de um remetente (não substitui regra existente). **Não** grava `email_messages` nem altera a inbox — depois corra **`nina email process`** para ingerir e aplicar. **`--verbose`** (`-v`) imprime progresso no stderr. |
 

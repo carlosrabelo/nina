@@ -127,12 +127,6 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.set_defaults(func=email_mod.cmd_process)
 
     p = sub.add_parser(
-        "email-sync",
-        help="Same as email-process (alias: nina email sync — legacy name)",
-    )
-    p.set_defaults(func=email_mod.cmd_process)
-
-    p = sub.add_parser(
         "email-infer-rules",
         help="Infer sender rules from Gmail labels (alias: nina email infer-rules)",
     )

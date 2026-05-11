@@ -75,7 +75,6 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 | Flat alias | Hierarchical | What it does |
 |------------|--------------|--------------|
 | `nina email-process` | `nina email process` | **Processing run:** fetch inbox (query from env), upsert **`email_messages`**, apply existing **`email_sender_rules`** in Gmail, open Telegram suggestions for unknown high-volume senders when the daemon/Telegram path is used; **CLI** runs with Telegram disabled. |
-| `nina email-sync` | `nina email sync` | *Same as* `nina email process` — legacy command name kept for scripts. |
 | `nina email-rules [--account …]` | `nina email rules …` | **PostgreSQL:** lists **learned** sender→label rules Nina will apply (`email_sender_rules`: account, normalized sender, Gmail user label name, archive flag, `created_at`). No Gmail API calls. |
 | `nina email-infer-rules` | `nina email infer-rules [--days D] [--max-per-account N] [--min-messages M] [--verbose]` | **Rules only:** scan Gmail over `newer_than:Dd` and **insert** new **`email_sender_rules`** when one user label appears alone on enough messages from a sender (does not overwrite an existing rule). Does **not** write `email_messages` or change the inbox — run **`nina email process`** afterward to ingest and apply. **`--verbose`** (`-v`) prints progress on stderr. |
 
