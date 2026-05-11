@@ -4,8 +4,10 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 
 ## Destaques
 
+- **PostgreSQL** para estado em tempo de execução (memos, actions, emails, fila de notificações de agenda, presence/workdays/notifications/profile/locale em `kv_state`) — tokens OAuth, sessões e credenciais Google continuam em ficheiros
 - Roteamento de contas por presença — rastreia home/work/out/dnd e mapeia cada status para as contas Google certas (Gmail + Agenda)
 - Console interativo e bot do Telegram com roteador de intenção LLM unificado — uma única chamada classifica o domínio e extrai entidades
+- **Agenda (leitura)** em linguagem natural no Telegram/console — hoje/amanhã/próximos N dias, busca por palavra-chave, intervalos livres; **escritas** (bloquear horário) usam o fluxo **`blocking`** e `POST /schedule`
 - Bloqueio de agenda por texto livre ("estou em reunião por 1h") com resolução de data completa ("segunda-feira às 14h")
 - Memos e lembretes via linguagem natural ("me lembre na segunda às 10h") — criar, listar, fechar e dispensar pelo console ou Telegram
 - Notificações de agenda via Telegram — lembretes, novos eventos, alterações, cancelamentos
@@ -13,9 +15,9 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Autentica qualquer número de contas Google via OAuth — descobertas automaticamente pelos tokens
 - Consulta qualquer provedor de LLM (Groq, OpenAI, Anthropic, Ollama) via interface unificada LiteLLM
 - Agendador interno (APScheduler) e comandos HTTP slash para integrações externas (MacroDroid, scripts) — sem cron externo necessário
-- Todos os segredos ficam locais: tokens, sessões e credenciais são ignorados pelo git
+- Todos os segredos ficam locais: tokens, sessões e credenciais em ficheiros; o estado da aplicação fica no PostgreSQL
 
-→ **[Referência de Comandos (GUIDE-PT.md)](GUIDE-PT.md)**
+→ **[Referência de Comandos (GUIDE-PT.md)](GUIDE-PT.md)** · [AGENTS.md](AGENTS.md) (sincronizar README/GUIDE ao mudar o produto)
 
 ## Sumário
 
@@ -87,17 +89,19 @@ make console     # apenas o console (o daemon precisa estar rodando)
 
 ## Configuração
 
+Copie [`.env.example`](.env.example) para `.env`. O exemplo traz **caminhos canónicos para Docker** (`DATA_DIR=/data/db`, `DATABASE_URL` com host `postgres`, etc.) e variáveis **`*_HOST`** para os mesmos caminhos/URL na sua máquina — `make run` e `make console` exportam os overrides do host automaticamente.
+
 | Variável | Padrão | Descrição |
 |---|---|---|
-| `DATABASE_URL` | — | String de conexão do PostgreSQL (obrigatória) |
-| `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | Credenciais OAuth baixadas do Google Cloud Console |
-| `TOKENS_DIR` | `tokens` | Diretório para todos os tokens e arquivos de sessão (ignorado pelo git) |
-| `DATA_DIR` | `data/db` | Diretório local de dados (host); no container usa `/data/db` via `.env.docker` |
-| `SESSIONS_DIR` | `data/sessions` | Diretório local de sessões (host); no container usa `/data/sessions` via `.env.docker` |
+| `DATABASE_URL` | — | URL PostgreSQL para **containers** (ex.: host `postgres`) — obrigatória no daemon/CLI dentro do Compose |
+| `DATABASE_URL_HOST` | — | URL PostgreSQL para **`make run` / `make console`** no host (ex.: `localhost` com a porta do DB publicada) |
+| `NINA_IMAGE` | (ver `.env.example`) | Imagem do serviço `nina` no Compose; `make docker-start` sobrescreve com `REGISTRY/IMAGE:<git sha>` e `--build` |
+| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Caminhos canónicos no **container**; use `*_HOST` para `make run` / `make console` no host |
 | `NINA_HTTP_HOST` | `0.0.0.0` | Interface para bind/publicação da porta HTTP |
 | `NINA_HTTP_PORT` | `8765` | Porta HTTP |
 | `NINA_API_KEY` | — | Se setada, protege a API HTTP via header `X-Api-Key` |
-| `TZ` | `Etc/GMT+4` | Timezone dos containers |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_PORT` | — | Serviço Postgres no Docker Compose (ver `.env.example`) |
+| `TZ` / `PGTZ` | — | Timezone nos containers e TZ compatível com libpq |
 | `TELEGRAM_BOT_TOKEN` | — | Token do bot fornecido pelo @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Seu chat ID pessoal no Telegram (o bot só responde a este ID) |
 | `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | String do modelo LiteLLM: `<provedor>/<modelo>` |
@@ -119,7 +123,7 @@ nina/
         memo/                # criação, listagem e gerenciamento de lembretes
         presence/            # rastreamento de presença
         workdays/            # horário de trabalho e timezone
-        calendar/            # bloqueio via LLM, interpretador de intenção, parser de agenda
+        calendar/            # execute.py (leitura), blocking (escrita), interpretador, parser de agenda
         notifications/       # configuração e estado das notificações
         profile/             # mapeamento de contas Google por presença
         activity_log/        # log de atividades passadas no Google Calendar
@@ -146,10 +150,11 @@ nina/
             http.py          # API HTTP (presence, workdays, schedule, notifications)
             client.py        # cliente HTTP console → daemon
         console/runner.py    # REPL interativo
+scripts/                     # ex.: migrate_to_postgres.py (SQLite/JSON legado → Postgres)
 .make/                       # setup.sh, test.sh, lint.sh, quality.sh, clean.sh, dev.sh
 credentials/                 # credentials.json (ignorado pelo git)
-tokens/                      # tokens OAuth, locale, profile, workdays, notifications (ignorados pelo git)
-tests/                       # suite de testes pytest (302+ testes)
+tokens/                      # tokens OAuth (ignorados pelo git)
+tests/                       # suite de testes pytest
 ```
 
 ## Desenvolvimento
@@ -164,8 +169,14 @@ make quality    # fmt + lint + typecheck (mypy) em um único alvo
 .venv/bin/python -m nina typecheck   # apenas mypy no pacote nina
 make dev-start  # iniciar daemon + console no tmux (sem Telegram)
 make console    # abrir o console (daemon precisa estar rodando)
-make docker-restart # docker compose down + up
+make run …      # CLI com .env e caminhos do host (ex.: `make run migrate to-postgres`)
+make docker-start   # compose up com imagem etiquetada pelo commit + build
+make docker-stop    # compose down
+make docker-restart # docker-stop depois docker-start
+make docker-migrate # script de migração num container one-off (monta ./scripts)
 ```
+
+Nota para contribuidores: manter a documentação de utilizador alinhada — ver [AGENTS.md](AGENTS.md).
 
 ## Licença
 

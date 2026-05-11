@@ -183,11 +183,33 @@ class TestLocalCalendar:
         r = try_calendar("o que tenho hoje", "pt")
         assert r is not None
         assert r.action == "list"
+        assert r.entities.get("calendar_window") == "today"
 
     def test_my_events_en(self) -> None:
         r = try_calendar("my events today", "en")
         assert r is not None
         assert r.action == "list"
+        assert r.entities.get("calendar_window") == "today"
+
+    def test_free_busy_pt(self) -> None:
+        r = try_calendar("estou livre amanhã à tarde", "pt")
+        assert r is not None
+        assert r.action == "free_busy"
+        assert r.entities.get("calendar_window") == "tomorrow"
+        assert r.entities.get("calendar_period") == "afternoon"
+
+    def test_next_days_pt(self) -> None:
+        r = try_calendar("próximos 3 dias de agenda", "pt")
+        assert r is not None
+        assert r.action == "list"
+        assert r.entities.get("calendar_window") == "days"
+        assert r.entities["calendar_span_days"] == 3
+
+    def test_search_pt(self) -> None:
+        r = try_calendar("eventos com dentista", "pt")
+        assert r is not None
+        assert r.action == "search"
+        assert "dentista" in r.entities.get("calendar_keyword", "").lower()
 
     def test_no_match(self) -> None:
         assert try_calendar("estou em casa", "pt") is None

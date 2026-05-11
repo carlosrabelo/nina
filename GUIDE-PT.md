@@ -1,6 +1,6 @@
 # nina — Guia de Comandos e Integrações
 
-Documento complementar ao [README-PT.md](README-PT.md). Cobre a CLI, a API HTTP, os comandos slash e integrações como atualização automática de presença pelo MacroDroid.
+Documento complementar ao [README-PT.md](README-PT.md). Cobre a CLI, a API HTTP, os comandos slash e integrações como atualização automática de presença pelo MacroDroid. Ao alterar comportamento visível para o utilizador, mantenha este ficheiro e o [README-PT.md](README-PT.md) alinhados com [GUIDE.md](GUIDE.md) / [README.md](README.md) — ver [AGENTS.md](AGENTS.md).
 
 ## Sumário
 
@@ -49,13 +49,14 @@ nina console         # REPL interativo — conversa com o daemon via HTTP
 
 `make dev-start` é um atalho que abre `daemon --dev` e `console` numa sessão tmux.
 
-Docker (modo imagem por padrão; use `docker-compose.override.yml` para build local):
+Docker Compose sobe a aplicação **nina** e o **PostgreSQL** (`docker-compose.yml`). Copie `.env.example` → `.env` e defina `DATABASE_URL` (host `postgres` na stack), `DATABASE_URL_HOST` (para ferramentas no host quando a porta do DB está publicada) e os caminhos como no README.
 
-```bash
-docker compose up -d
-docker compose -f docker-compose.yml -f docker-compose.override.yml up -d --build
-make docker-restart
-```
+- **`make docker-start`** — define `NINA_IMAGE` como `REGISTRY/IMAGE:<git curto>` e executa `docker compose up -d --build` (recomendado para imagem local reproduzível).
+- **`make docker-stop`** — `docker compose down`.
+- **`make docker-restart`** — `docker-stop` e depois `docker-start`.
+- **`make docker-migrate`** — executa `scripts/migrate_to_postgres.py` num container avulso (monta `./scripts` do repositório).
+
+`docker compose up -d` sozinho usa o `NINA_IMAGE` que estiver no `.env` (ver `.env.example`). Use `docker-compose.override.yml` com `build: .` para compilar a imagem a partir deste checkout.
 
 ### Gmail
 
@@ -71,6 +72,10 @@ nina gmail-search "from:chefe is:unread" [--account voce@gmail.com] [--limit 20]
 nina cal-list   [--account voce@gmail.com]
 nina cal-events [--account voce@gmail.com] [--calendar primary] [--limit 10]
 ```
+
+**Linguagem natural (Telegram / console):** dá para pedir a agenda em uma janela (hoje, amanhã, próximos N dias), buscar por palavra-chave ou perguntar se está livre. Esse fluxo é **somente leitura** e usa a conta de calendário do perfil para a presença atual (ou a conta que melhor combina com palavras como “trabalho” vs “pessoal”).
+
+**Criar compromisso / bloquear horário** (dentista às 9h, bloquear 1h, etc.) vai pelo intent **`blocking`** — o mesmo fluxo do `POST /schedule` no daemon — não pelo listador de agenda. Frases com hora ou duração explícitas (“às 15h”, “por 1 hora”) caem aí.
 
 ### Telegram
 
@@ -98,10 +103,10 @@ nina typecheck               # roda mypy no pacote nina (passo do `make quality`
 
 Quando o daemon está rodando, a API HTTP responde na porta `8765`. Padrões:
 
-| Variável          | Padrão        |
-|-------------------|---------------|
-| `NINA_HTTP_HOST`  | `127.0.0.1`   |
-| `NINA_HTTP_PORT`  | `8765`        |
+| Variável          | Valor típico |
+|-------------------|--------------|
+| `NINA_HTTP_HOST`  | `0.0.0.0` (ver `.env` / `.env.example`) |
+| `NINA_HTTP_PORT`  | `8765`       |
 | `NINA_API_KEY`    | vazio (auth desligada) |
 
 Para aceitar conexões de outros aparelhos (celular com MacroDroid, scripts em outra máquina), coloque no `.env`:

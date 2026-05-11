@@ -542,32 +542,6 @@ def _execute_notification_intent_text(
 # Calendar action from natural language
 # ---------------------------------------------------------------------------
 
-def _execute_calendar_intent_text(action: str, lang: str, tokens_dir: Path, data_dir: Path) -> str:
-    from nina.errors import CalendarError
-    from nina.integrations.google.calendar.client import CalendarClient
-    from nina.skills.presence.store import load as load_presence
-    from nina.skills.profile.store import load as load_profile
-    if action == "list":
-        presence = load_presence(data_dir)
-        profile = load_profile(data_dir)
-        cal_accounts = profile.for_presence(presence.status).calendar
-        if not cal_accounts:
-            return t("blocking.no_account", lang)
-        try:
-            client = CalendarClient(cal_accounts[0], tokens_dir)
-            events = client.list_upcoming(max_results=10)
-        except CalendarError as e:
-            return f"✗ {e}"
-        if not events:
-            return t("calendar.no_events", lang)
-        lines = []
-        for ev in events:
-            start = ev.start.strftime("%d/%m %H:%M")
-            lines.append(f"{start}  {ev.title}")
-        return "\n".join(lines)
-    return ""
-
-
 # ---------------------------------------------------------------------------
 # Memo action from natural language (no LLM)
 # ---------------------------------------------------------------------------
@@ -682,6 +656,14 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     data_dir: Path = ctx.bot_data["data_dir"]
     text = update.message.text or ""
 
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from nina.skills.workdays.store import load as load_workdays
+
+    _wd0 = load_workdays(data_dir)
+    now_tz = datetime.now(ZoneInfo(_wd0.timezone))
+
     # Layer 1 — pattern match, zero LLM calls
     from nina.skills.memo.interpreter import try_action as memo_try
     if result := memo_try(text, lang):
@@ -690,10 +672,22 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         )
         return
 
+    from nina.skills.calendar.execute import (
+        execute_calendar_read,
+        request_from_calendar_intent,
+    )
     from nina.skills.calendar.interpreter import try_action as cal_try
-    if cal_result := cal_try(text, lang):
+
+    if cal_result := cal_try(text, lang, now=now_tz):
+        req = request_from_calendar_intent(cal_result)
         await update.message.reply_text(
-            _execute_calendar_intent_text(cal_result.action, lang, tokens_dir, data_dir)
+            execute_calendar_read(
+                tokens_dir=tokens_dir,
+                data_dir=data_dir,
+                user_message=text,
+                lang=lang,
+                req=req,
+            )
         )
         return
 
@@ -705,11 +699,6 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         return
 
     # Layer 2 — unified router: 1 LLM call classifies domain AND extracts entities
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    from nina.skills.workdays.store import load as load_workdays
-
     try:
         from nina.core.llm.client import LLMClient
         llm = LLMClient.from_env()
@@ -717,8 +706,8 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text(t("llm.unavailable", lang))
         return
 
-    _schedule = load_workdays(data_dir)
-    _now = datetime.now(ZoneInfo(_schedule.timezone))
+    _schedule = _wd0
+    _now = now_tz
 
     from nina.core.intent.router import route
     intent = route(text, llm, lang=lang, now=_now)
@@ -747,9 +736,21 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         )
         return
 
-    if intent.domain == "calendar":
+    if intent.domain == "calendar" and intent.action != "none":
+        from nina.skills.calendar.execute import (
+            execute_calendar_read,
+            request_from_router_intent,
+        )
+
+        req = request_from_router_intent(intent)
         await update.message.reply_text(
-            _execute_calendar_intent_text(intent.action, lang, tokens_dir, data_dir)
+            execute_calendar_read(
+                tokens_dir=tokens_dir,
+                data_dir=data_dir,
+                user_message=text,
+                lang=lang,
+                req=req,
+            )
         )
         return
 

@@ -26,32 +26,6 @@ def _lang() -> str:
     return load_locale(_data_dir()).lang
 
 
-def _execute_calendar_intent(action: str, lang: str) -> None:
-    from nina.errors import CalendarError
-    from nina.integrations.google.calendar.client import CalendarClient
-    from nina.skills.presence.store import load as load_presence
-    from nina.skills.profile.store import load as load_profile
-    if action == "list":
-        presence = load_presence(_data_dir())
-        profile = load_profile(_data_dir())
-        cal_accounts = profile.for_presence(presence.status).calendar
-        if not cal_accounts:
-            print(f"  {t('blocking.no_account', lang)}")
-            return
-        try:
-            client = CalendarClient(cal_accounts[0], _tokens_dir())
-            events = client.list_upcoming(max_results=10)
-        except CalendarError as e:
-            print(f"  ✗  {e}")
-            return
-        if not events:
-            print(f"  {t('calendar.no_events', lang)}")
-            return
-        for ev in events:
-            start = ev.start.strftime("%d/%m %H:%M")
-            print(f"  {start}  {ev.title}")
-
-
 def _execute_notification_intent(action: str, minutes: int | None, days: int | None, lang: str) -> None:
     from nina.skills.notifications.store import load as load_notif
     from nina.skills.notifications.store import save as save_notif
@@ -585,6 +559,14 @@ class NinaConsole(cmd.Cmd):
 
         lang = _lang()
 
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from nina.skills.workdays.store import load as load_workdays
+
+        _wd0 = load_workdays(_data_dir())
+        now_tz = datetime.now(ZoneInfo(_wd0.timezone))
+
         # Layer 1 — pattern match, zero LLM calls
         from nina.skills.memo.interpreter import try_action as memo_try
         result = memo_try(line, lang)
@@ -592,9 +574,23 @@ class NinaConsole(cmd.Cmd):
             _execute_memo_intent(result.action, result.subject, lang)
             return
 
+        from nina.skills.calendar.execute import (
+            execute_calendar_read,
+            request_from_calendar_intent,
+        )
         from nina.skills.calendar.interpreter import try_action as cal_try
-        if cal_result := cal_try(line, lang):
-            _execute_calendar_intent(cal_result.action, lang)
+
+        if cal_result := cal_try(line, lang, now=now_tz):
+            req = request_from_calendar_intent(cal_result)
+            out = execute_calendar_read(
+                tokens_dir=_tokens_dir(),
+                data_dir=_data_dir(),
+                user_message=line,
+                lang=lang,
+                req=req,
+            )
+            for part in out.split("\n"):
+                print(f"  {part}")
             return
 
         from nina.skills.notifications.interpreter import try_action as notif_try
@@ -603,11 +599,6 @@ class NinaConsole(cmd.Cmd):
             return
 
         # Layer 2/3 — local pattern match → LLM fallback (unified router)
-        from datetime import datetime
-        from zoneinfo import ZoneInfo
-
-        from nina.skills.workdays.store import load as load_workdays
-
         try:
             from nina.core.llm.client import LLMClient
             llm = LLMClient.from_env()
@@ -615,8 +606,8 @@ class NinaConsole(cmd.Cmd):
             print(f"  {t('llm.unavailable', lang)}")
             return
 
-        _schedule = load_workdays(_data_dir())
-        _now = datetime.now(ZoneInfo(_schedule.timezone))
+        _schedule = _wd0
+        _now = now_tz
 
         from nina.core.intent.router import route
         intent = route(line, llm, lang=lang, now=_now)
@@ -643,8 +634,22 @@ class NinaConsole(cmd.Cmd):
             _execute_memo_intent(intent.action, intent.subject, lang, intent.due_date)
             return
 
-        if intent.domain == "calendar":
-            _execute_calendar_intent(intent.action, lang)
+        if intent.domain == "calendar" and intent.action != "none":
+            from nina.skills.calendar.execute import (
+                execute_calendar_read,
+                request_from_router_intent,
+            )
+
+            req = request_from_router_intent(intent)
+            out = execute_calendar_read(
+                tokens_dir=_tokens_dir(),
+                data_dir=_data_dir(),
+                user_message=line,
+                lang=lang,
+                req=req,
+            )
+            for part in out.split("\n"):
+                print(f"  {part}")
             return
 
         if intent.domain == "notifications" and intent.action != "none":

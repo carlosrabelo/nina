@@ -269,6 +269,13 @@ _CALENDAR_PATTERNS: dict[str, list[tuple[re.Pattern, str]]] = {
             ),
             "list",
         ),
+        (
+            re.compile(
+                r"\b(?:mostre|exiba|exibir|ver)\s+(?:meu|minha)\s+(?:calend[aá]rio|agenda)\b",
+                re.I,
+            ),
+            "list",
+        ),
     ],
     "en": [
         (
@@ -284,16 +291,152 @@ _CALENDAR_PATTERNS: dict[str, list[tuple[re.Pattern, str]]] = {
             ),
             "list",
         ),
+        (
+            re.compile(
+                r"\b(?:show|display)\s+(?:my\s+)?(?:calendar|schedule)\b",
+                re.I,
+            ),
+            "list",
+        ),
     ],
 }
 
+_CALENDAR_DAYS_PT = re.compile(r"\bpr[óo]ximos?\s+(\d+)\s+dias?\b", re.I)
+_CALENDAR_DAYS_EN = re.compile(r"\bnext\s+(\d+)\s+days?\b", re.I)
+_CALENDAR_SEARCH_PT = re.compile(
+    r"\b(?:eventos?|compromissos)\s+(?:com|sobre|contendo)\s+(.+?)(?:\?|$)",
+    re.I,
+)
+_CALENDAR_SEARCH_EN = re.compile(
+    r"\b(?:events?|meetings?)\s+(?:with|named|about)\s+(.+?)(?:\?|$)",
+    re.I,
+)
+_FREE_BUSY_PT = re.compile(
+    r"\b(?:estou\s+)?(?:livre|dispon[ií]vel)\b.*\b(hoje|amanh[ãa])\b"
+    r"|\b(hoje|amanh[ãa])\b.*\b(?:estou\s+)?(?:livre|dispon[ií]vel)\b",
+    re.I,
+)
+_FREE_BUSY_EN = re.compile(
+    r"\b(?:am\s+i\s+)?(?:free|available)\b.*\b(today|tomorrow)\b"
+    r"|\b(today|tomorrow)\b.*\b(?:am\s+i\s+)?(?:free|available)\b",
+    re.I,
+)
 
-def try_calendar(text: str, lang: str = "pt") -> LocalIntent | None:
+
+def _infer_calendar_period(text: str) -> str:
+    low = text.lower()
+    if any(
+        w in low
+        for w in (
+            "à tarde",
+            "a tarde",
+            "tarde",
+            "afternoon",
+        )
+    ):
+        return "afternoon"
+    if any(
+        w in low
+        for w in (
+            "de manhã",
+            "de manha",
+            "manhã",
+            "manha",
+            "morning",
+        )
+    ):
+        return "morning"
+    return "full"
+
+
+def _calendar_day_window_hint(text: str, lang: str) -> str:
+    low = text.lower()
+    if lang == "pt":
+        if re.search(r"\bhoje\b", low):
+            return "today"
+        if re.search(r"\bamanh[ãa]\b|\bamanha\b", low):
+            return "tomorrow"
+        if re.search(r"\b(?:esta\s+)?semana\b", low):
+            return "week"
+    else:
+        if re.search(r"\btoday\b", low):
+            return "today"
+        if re.search(r"\btomorrow\b", low):
+            return "tomorrow"
+        if re.search(r"\bthis\s+week\b", low):
+            return "week"
+    return "upcoming"
+
+
+def try_calendar(
+    text: str, lang: str = "pt", now: datetime | None = None
+) -> LocalIntent | None:
     """Match calendar patterns. Returns LocalIntent or None."""
+    _ = now  # reserved for future relative parsing
+    period = _infer_calendar_period(text)
+
+    if lang == "pt":
+        mfb = _FREE_BUSY_PT.search(text)
+    else:
+        mfb = _FREE_BUSY_EN.search(text)
+    if mfb:
+        win_raw = (mfb.group(1) or mfb.group(2) or "").lower()
+        if win_raw.startswith("hoje") or win_raw == "today":
+            cw = "today"
+        elif "amanh" in win_raw or win_raw == "tomorrow":
+            cw = "tomorrow"
+        else:
+            cw = "today"
+        return LocalIntent(
+            domain="calendar",
+            action="free_busy",
+            entities={"calendar_window": cw, "calendar_period": period},
+        )
+
+    if lang == "pt":
+        mdays = _CALENDAR_DAYS_PT.search(text)
+    else:
+        mdays = _CALENDAR_DAYS_EN.search(text)
+    if mdays:
+        n = int(mdays.group(1))
+        return LocalIntent(
+            domain="calendar",
+            action="list",
+            entities={
+                "calendar_window": "days",
+                "calendar_span_days": max(1, min(n, 30)),
+            },
+        )
+
+    if lang == "pt":
+        msearch = _CALENDAR_SEARCH_PT.search(text)
+    else:
+        msearch = _CALENDAR_SEARCH_EN.search(text)
+    if msearch:
+        kw = msearch.group(1).strip()
+        if len(kw) >= 2:
+            return LocalIntent(
+                domain="calendar",
+                action="search",
+                entities={
+                    "calendar_window": "upcoming",
+                    "calendar_keyword": kw,
+                },
+            )
+
     patterns = _CALENDAR_PATTERNS.get(lang, _CALENDAR_PATTERNS["pt"])
     for pat, action in patterns:
         if pat.search(text):
-            return LocalIntent(domain="calendar", action=action)
+            cw = _calendar_day_window_hint(text, lang)
+            entities: dict[str, Any] = {}
+            if cw == "week":
+                entities["calendar_window"] = "week"
+                entities["calendar_span_days"] = 7
+            elif cw != "upcoming":
+                entities["calendar_window"] = cw
+            if period != "full" and cw in ("today", "tomorrow"):
+                entities["calendar_period"] = period
+            return LocalIntent(domain="calendar", action=action, entities=entities)
     return None
 
 
@@ -488,7 +631,7 @@ def route(
         lambda: try_presence(text, lang),
         lambda: try_activity_log(text, lang, now),
         lambda: try_memo(text, lang, now),
-        lambda: try_calendar(text, lang),
+        lambda: try_calendar(text, lang, now),
         lambda: try_notifications(text, lang),
         lambda: try_blocking(text, lang),
     ]:

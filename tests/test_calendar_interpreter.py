@@ -65,3 +65,11 @@ class TestInterpret:
         llm.complete.return_value = "not json"
         intent = interpret("liste meus eventos", llm, "pt")
         assert intent.action == "none"
+
+
+def test_request_from_entities_list_to_search() -> None:
+    from nina.skills.calendar.execute import request_from_entities
+
+    r = request_from_entities("list", {"calendar_keyword": "dentista"})
+    assert r.action == "search"
+    assert r.keyword == "dentista"

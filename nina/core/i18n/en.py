@@ -85,6 +85,9 @@ STRINGS: dict[str, str] = {
 
     # ── calendar blocking ─────────────────────────────────────────────────────
     "calendar.no_events":  "No upcoming events found.",
+    "calendar.free_busy_header": "Free slots (≥30 min):",
+    "calendar.free_slot": "{start} → {end}",
+    "calendar.no_free_slot": "No continuous free slot of at least 30 minutes in this window.",
     "blocking.created":    "✓ {title}\n{date} · {start} → {end}\nAccount: {account}",
     "blocking.conflict":   "⚠️ Conflict: {titles}",
     "blocking.no_account": "No calendar account configured for current presence. Set it with /profile.",

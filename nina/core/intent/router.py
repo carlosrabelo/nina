@@ -58,7 +58,14 @@ Return ONLY a single JSON object — no explanation, no markdown.
   "days":     <int or null>,
 
   // profile only
-  "updates":  [{"presence": "home|work|out|dnd", "gmail": ["..."], "calendar": ["..."]}]
+  "updates":  [{"presence": "home|work|out|dnd", "gmail": ["..."], "calendar": ["..."]}],
+
+  // calendar only (read — never create events here)
+  "calendar_window": "upcoming|today|tomorrow|week|days",
+  "calendar_span_days": <int or null>,
+  "calendar_keyword": "<substring or null>",
+  "calendar_period": "full|morning|afternoon",
+  "calendar_on_date": "<YYYY-MM-DD or null>"
 }
 
 Fields not relevant to the detected domain must be null / "" / [].
@@ -98,10 +105,19 @@ Fields not relevant to the detected domain must be null / "" / [].
     "descarte o memo compras"              → memo, dismiss, subject="compras"
     "memos" or "quais meus memos"          → memo, list
 
-▸ calendar — listing upcoming events (read-only)
-  action: list
+▸ calendar — read-only: list agenda, search events, or check when you are free (does NOT create events — use blocking for that)
+  action: list | search | free_busy
+  calendar_window: upcoming | today | tomorrow | week | days (default upcoming for list/search)
+  calendar_span_days: int or null — with calendar_window=days (e.g. next 5 days → 5); for week default 7
+  calendar_keyword: string or null — substring search in title/location
+  calendar_period: full | morning | afternoon — narrow today/tomorrow or free_busy questions
+  calendar_on_date: "YYYY-MM-DD" or null — specific calendar day if user names a date
   Examples:
-    "quais meus eventos", "o que tenho hoje", "minha agenda"
+    "quais meus eventos" → calendar, list, calendar_window=upcoming
+    "o que tenho hoje" → calendar, list, calendar_window=today
+    "eventos com dentista" → calendar, search, calendar_keyword=dentist
+    "estou livre amanhã à tarde" → calendar, free_busy, calendar_window=tomorrow, calendar_period=afternoon
+    "am I free tomorrow morning" → calendar, free_busy, calendar_window=tomorrow, calendar_period=morning
 
 ▸ notifications — reminder timing configuration
   action: set_reminder  (minutes before event — populate minutes)
@@ -145,7 +161,8 @@ Fields not relevant to the detected domain must be null / "" / [].
 • "trabalho de segunda a sexta"                 → workdays (schedule change), NOT presence
 • "vou trabalhar de casa hoje"                  → presence home (current status), NOT workdays
 • "em reunião" without explicit time/duration   → presence dnd, NOT blocking
-• "agenda reunião às 15h"                       → blocking (has explicit time)
+• "agenda reunião às 15h" / "marcar na agenda às 15h" / "schedule meeting at 3pm" → blocking (creates calendar time — has explicit time)
+• "estou livre amanhã" / "am I free tomorrow" → calendar free_busy (read-only), NOT blocking
 • When in doubt between blocking and presence: if there's an explicit time → blocking, otherwise → presence dnd
 """
 
@@ -165,8 +182,26 @@ class RouterIntent:
     days: int | None = None
     # profile
     updates: list[dict[str, Any]] = field(default_factory=list)
+    # calendar (read)
+    calendar_window: str = ""
+    calendar_span_days: int | None = None
+    calendar_keyword: str = ""
+    calendar_period: str = ""
+    calendar_on_date: str = ""
     # meta
     resolved_by: str = "llm"  # "local" | "llm" | "none"
+
+
+def _json_int_calendar(v: Any) -> int | None:
+    if v is None or isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, float):
+        return int(v)
+    if isinstance(v, str) and v.strip().lstrip("-").isdigit():
+        return int(v.strip())
+    return None
 
 
 def _local_to_router(local: LocalIntent) -> RouterIntent:
@@ -181,6 +216,11 @@ def _local_to_router(local: LocalIntent) -> RouterIntent:
         due_date=entities.get("due_date", ""),
         minutes=entities.get("minutes"),
         days=entities.get("days"),
+        calendar_window=str(entities.get("calendar_window", "") or ""),
+        calendar_span_days=_json_int_calendar(entities.get("calendar_span_days")),
+        calendar_keyword=str(entities.get("calendar_keyword", "") or ""),
+        calendar_period=str(entities.get("calendar_period", "") or ""),
+        calendar_on_date=str(entities.get("calendar_on_date", "") or ""),
         resolved_by="local",
     )
 
@@ -228,5 +268,10 @@ def route(
         minutes=data.get("minutes"),
         days=data.get("days"),
         updates=list(data.get("updates") or []),
+        calendar_window=str(data.get("calendar_window") or ""),
+        calendar_span_days=_json_int_calendar(data.get("calendar_span_days")),
+        calendar_keyword=str(data.get("calendar_keyword") or ""),
+        calendar_period=str(data.get("calendar_period") or ""),
+        calendar_on_date=str(data.get("calendar_on_date") or ""),
         resolved_by="llm",
     )

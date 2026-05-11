@@ -4,8 +4,10 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 
 ## Highlights
 
+- **PostgreSQL** for runtime state (memos, actions, emails, calendar notification queue, presence/workdays/notifications/profile/locale in `kv_state`) — OAuth tokens, sessions, and Google credentials stay on disk
 - Presence-aware account routing — track home/work/out/dnd and map each status to the right Google accounts (Gmail + Calendar)
 - Interactive console and Telegram bot driven by a unified LLM intent router — one call classifies the domain and extracts entities
+- **Calendar (read)** via natural language in Telegram/console — today/tomorrow/next N days, keyword search, free-busy gaps; **writes** (blocking a slot) use the separate `blocking` flow and `POST /schedule`
 - Calendar blocking via free text ("I'm in a meeting for 1h") with full date resolution ("next Monday at 14:00")
 - Memos and reminders via natural language ("remind me on Monday at 10h") — create, list, close, and dismiss from console or Telegram
 - Calendar notifications via Telegram — reminders, new events, changes, cancellations
@@ -13,9 +15,9 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - Authenticate any number of Google accounts via OAuth — auto-discovered from saved tokens
 - Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface
 - Internal scheduler (APScheduler) plus HTTP slash commands for external integrations (MacroDroid, scripts) — no external cron required
-- All secrets stay local: tokens, session files, and credentials are git-ignored
+- All secrets stay local: tokens, session files, and credentials on disk; application state lives in PostgreSQL
 
-→ **[Command Reference (GUIDE.md)](GUIDE.md)**
+→ **[Command Reference (GUIDE.md)](GUIDE.md)** · [AGENTS.md](AGENTS.md) (keep README/GUIDE pairs updated when the product changes)
 
 ## Table of Contents
 
@@ -87,17 +89,19 @@ make console     # console only (daemon must be running)
 
 ## Configuration
 
+Copy [`.env.example`](.env.example) to `.env`. The example uses **canonical paths for Docker** (`DATA_DIR=/data/db`, `DATABASE_URL` with host `postgres`, etc.) and **`*_HOST` variables** for the same paths/URL on your machine — `make run` and `make console` export the host overrides automatically.
+
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | — | PostgreSQL connection string (required) |
-| `GOOGLE_CREDENTIALS_FILE` | `credentials/credentials.json` | OAuth client credentials downloaded from Google Cloud Console |
-| `TOKENS_DIR` | `tokens` | Directory for all token and session files (git-ignored) |
-| `DATA_DIR` | `data/db` | Local data directory (host); container uses `/data/db` via `.env.docker` |
-| `SESSIONS_DIR` | `data/sessions` | Local sessions directory (host); container uses `/data/sessions` via `.env.docker` |
+| `DATABASE_URL` | — | PostgreSQL URL for **containers** (e.g. host `postgres`) — required for daemon/CLI inside Compose |
+| `DATABASE_URL_HOST` | — | PostgreSQL URL for **`make run` / `make console`** on the host (e.g. `localhost` when the DB port is published) |
+| `NINA_IMAGE` | (see `.env.example`) | Image for Compose service `nina`; `make docker-start` overrides with `REGISTRY/IMAGE:<git sha>` and `--build` |
+| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Canonical **container** paths; pair with `*_HOST` for local `make run` / `make console` |
 | `NINA_HTTP_HOST` | `0.0.0.0` | Host interface to bind/publish the HTTP port |
 | `NINA_HTTP_PORT` | `8765` | HTTP port |
 | `NINA_API_KEY` | — | If set, protects HTTP API via header `X-Api-Key` |
-| `TZ` | `Etc/GMT+4` | Container timezone |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_PORT` | — | Postgres service in Docker Compose (see `.env.example`) |
+| `TZ` / `PGTZ` | — | Timezone for containers and libpq-friendly Postgres client TZ |
 | `TELEGRAM_BOT_TOKEN` | — | Bot token from @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Your personal Telegram chat ID (bot only responds to this) |
 | `LLM_MODEL` | `groq/llama-3.3-70b-versatile` | LiteLLM model string: `<provider>/<model>` |
@@ -119,7 +123,7 @@ nina/
         memo/                # memo creation, listing, and reminder management
         presence/            # presence status tracking
         workdays/            # work schedule and timezone
-        calendar/            # LLM blocking, natural language interpreter, schedule parser
+        calendar/            # execute.py (read), blocking (write), interpreter, schedule parser
         notifications/       # notification config and state
         profile/             # Google account mapping per presence
         activity_log/        # past activity logging to Google Calendar
@@ -146,10 +150,11 @@ nina/
             http.py          # HTTP API (presence, workdays, schedule, notifications)
             client.py        # console → daemon HTTP client
         console/runner.py    # interactive REPL
+scripts/                     # e.g. migrate_to_postgres.py (legacy SQLite/JSON → Postgres)
 .make/                       # setup.sh, test.sh, lint.sh, quality.sh, clean.sh, dev.sh
 credentials/                 # credentials.json (git-ignored)
-tokens/                      # OAuth tokens, locale, profile, workdays, notifications (git-ignored)
-tests/                       # pytest test suite (302+ tests)
+tokens/                      # OAuth tokens (git-ignored)
+tests/                       # pytest test suite
 ```
 
 ## Development
@@ -164,8 +169,14 @@ make quality    # fmt + lint + typecheck (mypy) in one shot
 .venv/bin/python -m nina typecheck   # mypy on the nina package only
 make dev-start  # start daemon + console in tmux (no Telegram)
 make console    # open console (daemon must be running)
-make docker-restart # docker compose down + up
+make run …      # run CLI with .env + host paths (e.g. `make run migrate to-postgres`)
+make docker-start   # compose up with commit-tagged image + build
+make docker-stop    # compose down
+make docker-restart # docker-stop then docker-start
+make docker-migrate # one-off migration script in container (mounts ./scripts)
 ```
+
+Contributor note: keep user-facing docs in sync — see [AGENTS.md](AGENTS.md).
 
 ## License
 
