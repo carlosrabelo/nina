@@ -17,7 +17,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - Internal scheduler (APScheduler) plus HTTP slash commands for external integrations (MacroDroid, scripts) — no external cron required
 - All secrets stay local: tokens, session files, and credentials on disk; application state lives in PostgreSQL
 
-→ **[Command Reference (GUIDE.md)](GUIDE.md)** (full command table: [Full CLI command list](GUIDE.md#full-cli-command-list)) · [AGENTS.md](AGENTS.md) (keep README/GUIDE pairs updated when the product changes)
+→ **[Command Reference (GUIDE.md)](GUIDE.md)** (full command table: [Full CLI command list](GUIDE.md#full-cli-command-list)) · **[Skills (SKILL.md)](SKILL.md)** / [SKILL-PT.md](SKILL-PT.md) (behaviour domains under `nina/skills/`) · [AGENTS.md](AGENTS.md) (keep README/GUIDE pairs updated when the product changes)
 
 ## Table of Contents
 
