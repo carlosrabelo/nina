@@ -5,6 +5,7 @@ Companion to [README.md](README.md). Covers the CLI surface, the HTTP API, slash
 ## Table of Contents
 
 - [CLI commands](#cli-commands)
+- [Full CLI command list](#full-cli-command-list)
 - [HTTP API](#http-api)
 - [Presence states](#presence-states)
 - [MacroDroid: automatic presence by location](#macrodroid-automatic-presence-by-location)
@@ -12,92 +13,116 @@ Companion to [README.md](README.md). Covers the CLI surface, the HTTP API, slash
 
 ## CLI commands
 
-Run from the project root with the venv:
+### How to run `nina`
+
+From the project root with the venv:
 
 ```bash
-.venv/bin/python -m nina <command>
-# or after activating the venv: nina <command>
+.venv/bin/python -m nina <command> [args...]
+# or, after `source .venv/bin/activate` and `pip install -e .`:
+nina <command> [args...]
 ```
 
-If you prefer make targets (loads `.env` automatically):
+**`make run`** loads `.env` and applies host path / database overrides (`*_HOST`, `DATABASE_URL_HOST`, …) so the same CLI works against Postgres and files on your machine:
 
 ```bash
-make console           # open interactive console (daemon must be running)
-make run <command>     # run any nina CLI command
-make run migrate to-postgres
+make run gmail latest --limit 5
+make run migrate to-postgres    # Makefile dispatches to scripts/migrate_to_postgres.py (not a `nina` subcommand)
 ```
 
-Each command has a flat alias (good muscle memory for ex-`make` users) and a hierarchical form. Both are kept in the parser.
+**`make console`** opens the interactive console (the daemon must be running). Prefer `make console` rather than `make run console`.
 
-### Authentication
+Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina gmail-latest`) and the **hierarchical** form (`nina gmail latest`); they are equivalent.
+
+### Built-in help
 
 ```bash
-nina auth-google                         # alias: nina auth google
-nina auth-telegram [--phone +5511...]    # alias: nina auth telegram
-nina status-google                       # alias: nina status google
-nina status-telegram                     # alias: nina status telegram
-nina revoke ACCOUNT                      # remove a stored Google token
+.venv/bin/python -m nina --help
+.venv/bin/python -m nina gmail --help
+.venv/bin/python -m nina gmail latest -h
 ```
 
-### Daemon and console
+## Full CLI command list
 
-```bash
-nina daemon          # production daemon: scheduler + HTTP API + Telegram bot
-nina daemon --dev    # daemon without Telegram (for development)
-nina console         # interactive REPL — talks to a running daemon over HTTP
-```
+### Lifecycle and shell
 
-`make dev-start` is a shortcut that opens both `daemon --dev` and `console` in a tmux session.
+| Command | What it does |
+|---------|----------------|
+| `nina daemon [--dev]` | Long-lived process: internal scheduler (APScheduler), HTTP API, and Telegram bot. **`--dev`** turns off the Telegram bot only (HTTP + scheduler still run). Needs env vars such as `DATABASE_URL`, `NINA_HTTP_HOST`, `NINA_HTTP_PORT` (see README and `.env.example`). |
+| `nina console` | Interactive REPL that talks to an **already running** daemon over HTTP (uses `NINA_HTTP_*`; sends `X-Api-Key` when `NINA_API_KEY` is set). |
 
-Docker Compose runs the **nina** app and **PostgreSQL** (`docker-compose.yml`). Copy `.env.example` → `.env` and set `DATABASE_URL` (host `postgres` inside the stack), `DATABASE_URL_HOST` (for tools on your machine when the DB port is published), plus path variables as documented in the README.
+### Google authentication
 
-- **`make docker-start`** — sets `NINA_IMAGE` to `REGISTRY/IMAGE:<git short sha>` and runs `docker compose up -d --build` (recommended for a reproducible local image).
-- **`make docker-stop`** — `docker compose down`.
-- **`make docker-restart`** — `docker-stop` then `docker-start`.
-- **`make docker-migrate`** — runs `scripts/migrate_to_postgres.py` in a one-off container (repo `./scripts` is bind-mounted).
+| Flat alias | Hierarchical | What it does |
+|------------|--------------|----------------|
+| `nina auth-google` | `nina auth google` | Browser OAuth; stores one Google account under `TOKENS_DIR`. Run again for more accounts. |
+| `nina auth-telegram [--phone +…]` | `nina auth telegram [--phone +…]` | Interactive login for the **Telegram user** API (not the bot); session under `SESSIONS_DIR`. |
+| `nina status-google` | `nina status google` | Lists discovered Google accounts and whether each token looks valid. |
+| `nina status-telegram` | `nina status telegram` | Shows if the Telegram **user** client is authorized. |
+| — | `nina revoke <email>` | Removes the stored Google OAuth token for that account (no flat alias). |
 
-Plain `docker compose up -d` uses whatever `NINA_IMAGE` is in `.env` (see `.env.example`). Add `docker-compose.override.yml` for a local `build: .` when you want to compile the image from this checkout.
+### Gmail (exploratory)
 
-### Gmail
+| Flat alias | Hierarchical | What it does |
+|------------|--------------|----------------|
+| `nina gmail-latest [--account …] [--limit N]` | `nina gmail latest …` | Recent message headers per account (or one account). |
+| `nina gmail-unread [--account …] [--limit N]` | `nina gmail unread …` | Unread messages (all accounts if `--account` omitted). |
+| `nina gmail-search "QUERY" [--account …] [--limit N]` | `nina gmail search "QUERY" …` | Gmail search using [Gmail search operators](https://support.google.com/mail/answer/7190). |
 
-```bash
-nina gmail-latest [--account voce@gmail.com] [--limit 10]
-nina gmail-unread [--account voce@gmail.com] [--limit 20]
-nina gmail-search "from:boss is:unread" [--account voce@gmail.com] [--limit 20]
-```
+### Google Calendar (exploratory CLI)
 
-### Calendar
+| Flat alias | Hierarchical | What it does |
+|------------|--------------|----------------|
+| `nina cal-list [--account …]` | `nina calendar list …` | Lists calendar names and IDs. |
+| `nina cal-events [--account …] [--calendar ID] [--limit N]` | `nina calendar events …` | Upcoming events; `--calendar` defaults to `primary`. |
 
-```bash
-nina cal-list   [--account voce@gmail.com]
-nina cal-events [--account voce@gmail.com] [--calendar primary] [--limit 10]
-```
+**Natural language (Telegram / console):** agenda questions (windows, keyword search, free/busy) go through the bot or `nina console` with the daemon — **read-only**, using the calendar account from your profile / presence (or best match from words like “work” vs “personal”). **Creating** calendar time (blocks, “dentist at 9am”) uses the **`blocking`** intent / `POST /schedule`, not these exploratory commands.
 
-**Natural language (Telegram / console):** you can ask for your agenda in a time window, search events by keyword, or ask when you are free. That path is **read-only** and uses your profile’s calendar account for the current presence (or the account that best matches words like “work” vs “personal”).
+### Telegram user client (exploratory)
 
-**Creating time on the calendar** (blocking a slot, dentist at 9am, etc.) is handled by the **`blocking`** intent — same stack as `POST /schedule` on the daemon — not by the read-only calendar list. Phrases with an explicit time or duration (“às 15h”, “for 1 hour”) route there.
-
-### Telegram
-
-```bash
-nina tg-bot                  # batch mode against the bot API
-nina tg-setup                # discover TELEGRAM_OWNER_ID
-nina tg-dialogs [--limit 20]
-nina tg-messages CHAT [--limit 20]
-nina tg-send CHAT TEXT
-```
+| Flat alias | Hierarchical | What it does |
+|------------|--------------|----------------|
+| `nina tg-bot` | `nina tg bot` | Batch processing of bot-related commands from the environment (scripting / advanced). |
+| `nina tg-setup` | `nina tg setup` | Helps discover `TELEGRAM_OWNER_ID` for the bot. |
+| `nina tg-dialogs [--limit N]` | `nina tg dialogs …` | Lists recent dialogs for the **user** session. |
+| `nina tg-messages CHAT [--limit N]` | `nina tg messages CHAT …` | Recent messages; `CHAT` = numeric id, `@username`, or phone. |
+| `nina tg-send CHAT TEXT` | `nina tg send CHAT TEXT` | Sends a message as the **user** client. |
 
 ### LLM
 
-```bash
-nina llm-ping                # verify connectivity with the configured provider
-```
+| Flat alias | Hierarchical | What it does |
+|------------|--------------|----------------|
+| `nina llm-ping` | `nina llm ping` | Single call to `LLM_MODEL` to verify keys and connectivity. |
 
 ### Code quality
 
+| Command | What it does |
+|---------|----------------|
+| `nina typecheck [paths…]` | Runs `mypy` (default: installed `nina` package). Same role as the mypy step in `make quality`. |
+
+### Docker and Compose
+
+Docker Compose runs **nina** and **PostgreSQL** (`docker-compose.yml`). Copy `.env.example` → `.env` and set `DATABASE_URL`, `DATABASE_URL_HOST`, and paths as in the README.
+
+- **`make docker-start`** — sets `NINA_IMAGE` to `REGISTRY/IMAGE:<git short sha>` and runs `docker compose up -d --build`.
+- **`make docker-stop`** — `docker compose down`.
+- **`make docker-restart`** — `docker-stop` then `docker-start`.
+- **`make docker-migrate`** — runs `scripts/migrate_to_postgres.py` in a one-off container (`./scripts` bind-mounted).
+
+Plain `docker compose up -d` uses `NINA_IMAGE` from `.env`. Use `docker-compose.override.yml` with `build: .` for a local image build.
+
+### Quick examples
+
 ```bash
-nina typecheck               # run mypy on the nina package (alias of `make quality` step)
+nina auth-google && nina status-google
+nina daemon --dev          # terminal A
+make console               # terminal B — host `.env` / *_HOST must point at DB + daemon
+nina gmail-unread --limit 5
+nina cal-events --limit 3
+nina llm-ping
 ```
+
+`make dev-start` opens `daemon --dev` and `console` in one tmux session.
 
 ## HTTP API
 

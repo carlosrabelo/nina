@@ -17,7 +17,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Agendador interno (APScheduler) e comandos HTTP slash para integrações externas (MacroDroid, scripts) — sem cron externo necessário
 - Todos os segredos ficam locais: tokens, sessões e credenciais em ficheiros; o estado da aplicação fica no PostgreSQL
 
-→ **[Referência de Comandos (GUIDE-PT.md)](GUIDE-PT.md)** · [AGENTS.md](AGENTS.md) (sincronizar README/GUIDE ao mudar o produto)
+→ **[Referência de Comandos (GUIDE-PT.md)](GUIDE-PT.md)** (tabela completa: [Lista completa de comandos da CLI](GUIDE-PT.md#lista-completa-de-comandos-da-cli)) · [AGENTS.md](AGENTS.md) (sincronizar README/GUIDE ao mudar o produto)
 
 ## Sumário
 
