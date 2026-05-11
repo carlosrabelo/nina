@@ -109,19 +109,45 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.set_defaults(func=gmail_mod.cmd_search)
 
     p = sub.add_parser(
-        "email-sync",
-        help="Gmail learning sync once (alias: nina email sync)",
+        "gmail-labels",
+        help="List Gmail labels (alias: nina gmail labels)",
     )
-    p.set_defaults(func=email_mod.cmd_sync)
+    p.add_argument("--account", help="Filter to a specific account")
+    p.add_argument(
+        "--user-only",
+        action="store_true",
+        help="Only user-created labels",
+    )
+    p.set_defaults(func=gmail_mod.cmd_labels)
+
+    p = sub.add_parser(
+        "email-process",
+        help="Process inbox + rules once (alias: nina email process)",
+    )
+    p.set_defaults(func=email_mod.cmd_process)
+
+    p = sub.add_parser(
+        "email-sync",
+        help="Same as email-process (alias: nina email sync — legacy name)",
+    )
+    p.set_defaults(func=email_mod.cmd_process)
 
     p = sub.add_parser(
         "email-infer-rules",
-        help="Infer label rules from Gmail (alias: nina email infer-rules)",
+        help="Infer sender rules from Gmail labels (alias: nina email infer-rules)",
     )
     p.add_argument("--max-per-account", type=int, default=500, metavar="N")
     p.add_argument("--days", type=int, default=120, metavar="D")
     p.add_argument("--min-messages", type=int, default=2, metavar="M")
+    p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=email_mod.cmd_infer_rules)
+
+    p = sub.add_parser(
+        "email-rules",
+        help="List learned sender→label rules (alias: nina email rules)",
+    )
+    p.add_argument("--account", help="Filter to one Gmail account email")
+    p.set_defaults(func=email_mod.cmd_list_rules)
 
     p = sub.add_parser(
         "llm-ping",

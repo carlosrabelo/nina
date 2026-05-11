@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 
 import psycopg
 
@@ -13,6 +14,17 @@ class SenderRule:
     sender_norm: str
     label_name: str
     archive_inbox: bool = True
+
+
+@dataclass(frozen=True)
+class ListedSenderRule:
+    """Row from ``email_sender_rules`` including ``created_at``."""
+
+    account: str
+    sender_norm: str
+    label_name: str
+    archive_inbox: bool
+    created_at: datetime
 
 
 @dataclass
@@ -89,6 +101,42 @@ def get_rule(
         (account, sender_norm),
     ).fetchone()
     return _row_rule(row) if row else None
+
+
+def list_rules(
+    conn: psycopg.Connection[dict],
+    *,
+    account: str | None = None,
+) -> list[ListedSenderRule]:
+    """All learned sender→label rules, optionally filtered by Gmail account."""
+    if account is not None:
+        rows = conn.execute(
+            """
+            SELECT account, sender_norm, label_name, archive_inbox, created_at
+            FROM email_sender_rules
+            WHERE account = %s
+            ORDER BY sender_norm
+            """,
+            (account,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT account, sender_norm, label_name, archive_inbox, created_at
+            FROM email_sender_rules
+            ORDER BY account, sender_norm
+            """
+        ).fetchall()
+    return [
+        ListedSenderRule(
+            account=str(r["account"]),
+            sender_norm=str(r["sender_norm"]),
+            label_name=str(r["label_name"]),
+            archive_inbox=bool(r["archive_inbox"]),
+            created_at=r["created_at"],
+        )
+        for r in rows
+    ]
 
 
 def upsert_rule(conn: psycopg.Connection[dict], rule: SenderRule) -> None:

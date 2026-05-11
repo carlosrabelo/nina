@@ -1,4 +1,4 @@
-"""`nina email sync` — run Gmail learning sync once (no Telegram)."""
+"""`nina email process|infer-rules|rules` — Gmail label learning CLI."""
 
 import argparse
 import os
@@ -6,6 +6,32 @@ import sys
 from pathlib import Path
 
 from nina.errors import ConfigError
+
+
+def cmd_list_rules(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    from nina.core.store.db import open_db
+    from nina.core.store.repos import email_learning as el
+
+    conn = open_db(data_dir)
+    try:
+        rules = el.list_rules(conn, account=args.account)
+    finally:
+        conn.close()
+
+    if not rules:
+        print("No learned rules in the database yet.")
+        return
+
+    for r in rules:
+        arch = "archive" if r.archive_inbox else "keep-inbox"
+        ts = r.created_at.isoformat(timespec="seconds") if r.created_at else ""
+        print(f"{r.account}")
+        print(f"  sender_norm : {r.sender_norm}")
+        print(f"  label       : {r.label_name}")
+        print(f"  inbox       : {arch}")
+        print(f"  created_at  : {ts}")
+        print()
 
 
 def cmd_infer_rules(args: argparse.Namespace) -> None:
@@ -20,6 +46,7 @@ def cmd_infer_rules(args: argparse.Namespace) -> None:
             max_per_account=args.max_per_account,
             since_days=args.days,
             min_agreeing_messages=args.min_messages,
+            verbose=getattr(args, "verbose", False),
         )
     except ConfigError as e:
         print(f"Skipped: {e}", file=sys.stderr)
@@ -36,13 +63,13 @@ def cmd_infer_rules(args: argparse.Namespace) -> None:
     )
 
 
-def cmd_sync(_args: argparse.Namespace) -> None:
+def cmd_process(_args: argparse.Namespace) -> None:
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     try:
-        from nina.skills.email_learning.service import run_email_learning_sync
+        from nina.skills.email_learning.service import run_email_learning_process
 
-        run_email_learning_sync(
+        run_email_learning_process(
             tokens_dir, data_dir, bot_token=None, owner_id=None, send_telegram=False
         )
     except ConfigError as e:
@@ -51,24 +78,43 @@ def cmd_sync(_args: argparse.Namespace) -> None:
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-    print("Email learning sync finished.")
+    print("Email learning process finished.")
 
 
 def register(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser("email", help="Gmail label learning (per account)")
     g = p.add_subparsers(dest="action", required=True)
+
+    p_process = g.add_parser(
+        "process",
+        help=(
+            "Fetch inbox messages, upsert email_messages, apply saved rules, "
+            "optional Telegram suggestions (CLI: no Telegram)"
+        ),
+    )
+    p_process.set_defaults(func=cmd_process)
+
     p_sync = g.add_parser(
         "sync",
-        help="Ingest inbox + apply saved rules once (CLI only)",
+        help="Alias for process (same behavior; legacy name).",
     )
-    p_sync.set_defaults(func=cmd_sync)
+    p_sync.set_defaults(func=cmd_process)
+
+    p_rules = g.add_parser(
+        "rules",
+        help="List learned sender→label rules stored in PostgreSQL (what Nina applies)",
+    )
+    p_rules.add_argument(
+        "--account",
+        help="Filter to one Gmail account email",
+    )
+    p_rules.set_defaults(func=cmd_list_rules)
 
     p_infer = g.add_parser(
         "infer-rules",
         help=(
-            "Scan recent mail on all accounts; if a sender already has one user "
-            "label on enough messages, create a matching rule (does not overwrite "
-            "existing rules)"
+            "Scan Gmail for user labels only to insert new sender→label rules "
+            "(does not write email_messages or modify the inbox; use process for that)"
         ),
     )
     p_infer.add_argument(
@@ -91,5 +137,11 @@ def register(sub: argparse._SubParsersAction) -> None:
         default=2,
         metavar="M",
         help="Minimum messages with the same single user label (default: 2)",
+    )
+    p_infer.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Progress messages on stderr (accounts, Gmail fetch batches, DB writes)",
     )
     p_infer.set_defaults(func=cmd_infer_rules)

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
 from nina.errors import ConfigError
-from nina.integrations.google.gmail.client import GmailClient, GmailMultiClient
+from nina.integrations.google.gmail.client import GmailMultiClient
 from nina.integrations.google.gmail.parse_sender import normalize_sender
 
 log = logging.getLogger(__name__)
@@ -28,6 +29,11 @@ def _user_label_names_on_message(
     return sorted(set(names))
 
 
+def _verbose_print(enabled: bool, msg: str) -> None:
+    if enabled:
+        print(msg, file=sys.stderr, flush=True)
+
+
 def run_infer_from_gmail_labels(
     tokens_dir: Path,
     data_dir: Path,
@@ -35,10 +41,14 @@ def run_infer_from_gmail_labels(
     max_per_account: int = 500,
     since_days: int = 120,
     min_agreeing_messages: int = 2,
+    verbose: bool = False,
 ) -> InferSummary:
-    """Scan recent mail per account; when one user-label dominates a sender, upsert a rule.
+    """Scan recent Gmail only to infer new rows in ``email_sender_rules``.
 
-    Does not overwrite an existing rule for ``(account, sender_norm)``.
+    Does **not** write ``email_messages`` or touch the inbox — use
+    ``nina email process`` for that. When one user-label dominates a sender across
+    scanned messages, inserts a rule (does not overwrite an existing rule for
+    ``(account, sender_norm)``).
     """
     from nina.core.store.db import open_db
     from nina.core.store.repos import email_learning as el
@@ -57,14 +67,48 @@ def run_infer_from_gmail_labels(
 
     query = f"newer_than:{since_days}d"
 
+    _verbose_print(
+        verbose,
+        "[infer-rules] "
+        f"query={query!r} max_per_account={max_per_account} "
+        f"min_agreeing_messages={min_agreeing_messages}",
+    )
+    _verbose_print(
+        verbose,
+        f"[infer-rules] Gmail accounts ({len(multi.accounts)}): {', '.join(multi.accounts)}",
+    )
+
     for account in multi.accounts:
         gc = multi.client(account)
+        _verbose_print(verbose, f"[infer-rules] {account} — loading user label map…")
         user_map = gc.list_user_label_map()
+        _verbose_print(
+            verbose,
+            f"[infer-rules] {account} — {len(user_map)} user labels; "
+            "searching messages (metadata fetch per message, can take a while)…",
+        )
+
+        def _on_batch(n: int, acc: str = account) -> None:
+            _verbose_print(
+                verbose,
+                f"[infer-rules] {acc} — fetched {n}/{max_per_account} messages…",
+            )
+
         try:
-            msgs = gc.search_paged(query, max_messages=max_per_account, page_size=100)
+            msgs = gc.search_paged(
+                query,
+                max_messages=max_per_account,
+                page_size=100,
+                on_batch=_on_batch if verbose else None,
+            )
         except Exception as exc:
             log.warning("infer-rules: search failed %s: %s", account, exc)
+            _verbose_print(verbose, f"[infer-rules] {account} — search failed: {exc}")
             continue
+
+        _verbose_print(
+            verbose, f"[infer-rules] {account} — scan done, {len(msgs)} messages"
+        )
 
         for msg in msgs:
             scanned += 1
@@ -79,6 +123,10 @@ def run_infer_from_gmail_labels(
                 continue
             votes[(account, norm)][names[0]] += 1
 
+    _verbose_print(
+        verbose,
+        f"[infer-rules] vote keys (account, sender): {len(votes)} — writing rules to DB…",
+    )
     conn = open_db(data_dir)
     added = 0
     skipped = 0
@@ -102,6 +150,8 @@ def run_infer_from_gmail_labels(
                 ),
             )
             added += 1
+            if verbose and added % 20 == 0:
+                _verbose_print(verbose, f"[infer-rules] … {added} new rules committed")
     finally:
         conn.close()
 

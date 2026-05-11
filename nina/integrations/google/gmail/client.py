@@ -2,6 +2,7 @@
 """Gmail API client supporting multiple accounts."""
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -11,6 +12,15 @@ from googleapiclient.errors import HttpError
 
 from nina.errors import ConfigError, GmailError
 from nina.integrations.google.auth import discover_accounts, get_credentials
+
+
+@dataclass(frozen=True)
+class LabelInfo:
+    """A Gmail label as returned by the labels API."""
+
+    id: str
+    name: str
+    label_type: str  # "system" | "user" (or other strings from the API)
 
 
 @dataclass
@@ -64,14 +74,35 @@ class GmailClient:
                 out[str(lb["id"])] = str(lb["name"])
         return out
 
+    def list_labels(self) -> list[LabelInfo]:
+        """Return every Gmail label (system and user), unsorted."""
+        try:
+            lst = self._svc.users().labels().list(userId="me").execute()
+        except HttpError as e:
+            raise GmailError(self.account, str(e)) from e
+        out: list[LabelInfo] = []
+        for lb in lst.get("labels", []):
+            lid = lb.get("id")
+            name = lb.get("name")
+            if lid is None or name is None:
+                continue
+            typ = str(lb.get("type") or "unknown")
+            out.append(LabelInfo(id=str(lid), name=str(name), label_type=typ))
+        return out
+
     def search_paged(
         self,
         query: str,
         *,
         max_messages: int,
         page_size: int = 100,
+        on_batch: Callable[[int], None] | None = None,
     ) -> list[Message]:
-        """Like :meth:`search`, but follows ``nextPageToken`` until *max_messages*."""
+        """Like :meth:`search`, but follows ``nextPageToken`` until *max_messages*.
+
+        If *on_batch* is set, it is called with the current message count after each
+        list/get batch (useful for CLI progress).
+        """
         messages: list[Message] = []
         page_token: str | None = None
         page_size = max(1, min(500, page_size))
@@ -101,6 +132,9 @@ class GmailClient:
                     messages.append(self._parse(raw))
                 except HttpError:
                     continue
+
+            if on_batch is not None:
+                on_batch(len(messages))
 
             page_token = result.get("nextPageToken")
             if not page_token or not items:

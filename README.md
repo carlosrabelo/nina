@@ -15,7 +15,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - Authenticate any number of Google accounts via OAuth — auto-discovered from saved tokens
 - Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface
 - Internal scheduler (APScheduler) plus HTTP slash commands for external integrations (MacroDroid, scripts) — no external cron required
-- **Gmail label learning (per account):** `nina email sync` ingests inbox metadata and applies saved rules; `nina email infer-rules` derives rules from existing user labels on messages; teach labels via `/emailtag` on Telegram or `emailtag` / `/emailtag` in `nina console` (daemon job runs periodically when the bot is configured)
+- **Gmail label learning (per account):** **`nina email process`** (alias `nina email sync`) fetches inbox mail, records headers in PostgreSQL, applies learned labels in Gmail, and can suggest new senders on Telegram from the daemon; **`nina email infer-rules`** only adds new **`email_sender_rules`** from existing Gmail user labels (no inbox DB writes); **`nina email rules`** lists stored rules; teach labels via `/emailtag` or `emailtag` / `/emailtag` in `nina console`.
 - All secrets stay local: tokens, session files, and credentials on disk; application state lives in PostgreSQL
 
 → **[Command Reference (GUIDE.md)](GUIDE.md)** (full command table: [Full CLI command list](GUIDE.md#full-cli-command-list)) · **[Skills (SKILL.md)](SKILL.md)** / [SKILL-PT.md](SKILL-PT.md) (behaviour domains under `nina/skills/`) · [AGENTS.md](AGENTS.md) (keep README/GUIDE pairs updated when the product changes)

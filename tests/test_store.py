@@ -213,3 +213,43 @@ class TestEventRepo:
         pending = event_repo.list_pending_briefing(conn)
         assert len(pending) == 1
         assert pending[0].event_id == "e1"
+
+
+# ── email learning (sender rules) ─────────────────────────────────────────────
+
+
+class TestEmailLearningListRules:
+    def test_list_rules_and_filter(self, conn) -> None:  # type: ignore[no-untyped-def]
+        from nina.core.store.repos import email_learning as el
+        from nina.core.store.repos.email_learning import SenderRule
+
+        acc = "nina_list_rules_test@example.com"
+        try:
+            el.upsert_rule(
+                conn,
+                SenderRule(
+                    account=acc,
+                    sender_norm="a@merchant.com",
+                    label_name="shop/foo",
+                    archive_inbox=True,
+                ),
+            )
+            el.upsert_rule(
+                conn,
+                SenderRule(
+                    account=acc,
+                    sender_norm="b@other.org",
+                    label_name="lists/bar",
+                    archive_inbox=False,
+                ),
+            )
+            only = el.list_rules(conn, account=acc)
+            assert len(only) == 2
+            norms = {r.sender_norm for r in only}
+            assert norms == {"a@merchant.com", "b@other.org"}
+            for row in only:
+                assert row.account == acc
+                assert row.created_at is not None
+        finally:
+            conn.execute("DELETE FROM email_sender_rules WHERE account = %s", (acc,))
+            conn.commit()

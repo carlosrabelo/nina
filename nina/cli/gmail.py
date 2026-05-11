@@ -1,4 +1,4 @@
-"""`nina gmail latest|unread|search` — exploratory Gmail commands."""
+"""`nina gmail latest|unread|search|labels` — exploratory Gmail commands."""
 
 import argparse
 import sys
@@ -70,6 +70,24 @@ def cmd_search(args: argparse.Namespace) -> None:
         print()
 
 
+def cmd_labels(args: argparse.Namespace) -> None:
+    try:
+        client = GmailMultiClient.from_env()
+        accounts = [args.account] if args.account else client.accounts
+        for account in accounts:
+            labels = client.client(account).list_labels()
+            if args.user_only:
+                labels = [lb for lb in labels if lb.label_type == "user"]
+            print(f"── {account} ({len(labels)} labels)")
+            rows = sorted(labels, key=lambda lb: (lb.label_type, lb.name.lower()))
+            for lb in rows:
+                print(f"  {lb.label_type:8}  {lb.id:22}  {lb.name}")
+            print()
+    except (ConfigError, AuthError, GmailError) as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def register(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser("gmail", help="Exploratory Gmail commands")
     g = p.add_subparsers(dest="action", required=True)
@@ -89,3 +107,15 @@ def register(sub: argparse._SubParsersAction) -> None:
     p_search.add_argument("--account", help="Filter to a specific account")
     p_search.add_argument("--limit", type=int, default=20)
     p_search.set_defaults(func=cmd_search)
+
+    p_labels = g.add_parser(
+        "labels",
+        help="List Gmail labels (system + user; use --user-only for your tags only)",
+    )
+    p_labels.add_argument("--account", help="Filter to a specific account")
+    p_labels.add_argument(
+        "--user-only",
+        action="store_true",
+        help="Show only user-created labels (typical “tags” for learning rules)",
+    )
+    p_labels.set_defaults(func=cmd_labels)

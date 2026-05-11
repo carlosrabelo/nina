@@ -92,7 +92,7 @@ def flush_pending_telegram(
         el.set_pending_notified(conn, row["id"])
 
 
-def run_email_learning_sync(
+def run_email_learning_process(
     tokens_dir: Path,
     data_dir: Path,
     *,
@@ -109,7 +109,7 @@ def run_email_learning_sync(
     try:
         multi = GmailMultiClient.from_env()
     except ConfigError as e:
-        log.info("email learning sync skipped: %s", e)
+        log.info("email learning process skipped: %s", e)
         return
 
     conn = open_db(data_dir)

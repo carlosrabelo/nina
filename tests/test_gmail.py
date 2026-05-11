@@ -8,7 +8,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from nina.errors import ConfigError
-from nina.integrations.google.gmail.client import GmailClient, GmailMultiClient, Message
+from nina.integrations.google.gmail.client import (
+    GmailClient,
+    GmailMultiClient,
+    LabelInfo,
+    Message,
+)
 
 
 def _make_raw_message(
@@ -73,6 +78,30 @@ class TestGmailClientParse:
         raw["threadId"] = "thread-xyz"
         msg = client._parse(raw)
         assert msg.thread_id == "thread-xyz"
+
+
+class TestGmailClientListLabels:
+    @pytest.fixture()
+    def client(self, tmp_path: Path) -> GmailClient:
+        with patch("nina.integrations.google.gmail.client.get_credentials") as mock_creds, \
+             patch("nina.integrations.google.gmail.client.build") as mock_build:
+            mock_creds.return_value = MagicMock()
+            mock_build.return_value = MagicMock()
+            return GmailClient("user@gmail.com", tmp_path / "tokens")
+
+    def test_list_labels(self, client: GmailClient) -> None:
+        client._svc.users.return_value.labels.return_value.list.return_value.execute.return_value = {
+            "labels": [
+                {"id": "INBOX", "name": "INBOX", "type": "system"},
+                {"id": "Label_1", "name": "shop/amazon", "type": "user"},
+            ]
+        }
+        labels = client.list_labels()
+        assert len(labels) == 2
+        assert all(isinstance(lb, LabelInfo) for lb in labels)
+        by_id = {lb.id: lb for lb in labels}
+        assert by_id["INBOX"].label_type == "system"
+        assert by_id["Label_1"].name == "shop/amazon"
 
 
 class TestGmailMultiClientFromEnv:
