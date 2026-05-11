@@ -38,26 +38,7 @@ MANIFEST
 .coverage
 .coverage.*
 
-# ============================================================================
-# AI TOOLS
-# ============================================================================
 
-# Directories
-.claude/
-.gemini/
-.antigravity/
-.opencode/
-.cursor/
-.aider/
-.nexor/
-
-# Files
-CLAUDE.md
-CLAUDE.local.md
-GEMINI.md
-opencode.json
-.aider.conf.yml
-AGENTS.md
 
 # ============================================================================
 # APPLICATION DATA

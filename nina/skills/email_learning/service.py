@@ -5,12 +5,21 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
+import sys
 import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
 
 log = logging.getLogger(__name__)
+
+_NEWER_THAN_RE = re.compile(r"\bnewer_than:\s*\d+\s*d\b", re.IGNORECASE)
+
+
+def _verbose_print(enabled: bool, msg: str) -> None:
+    if enabled:
+        print(msg, file=sys.stderr, flush=True)
 
 
 def _min_hits() -> int:
@@ -23,6 +32,25 @@ def _max_messages() -> int:
 
 def _inbox_query() -> str:
     return os.environ.get("NINA_EMAIL_SYNC_QUERY", "in:inbox newer_than:14d").strip()
+
+
+def _process_gmail_query(days: int | None) -> str:
+    """Effective Gmail search query: env base, optional ``newer_than`` override."""
+    base = _inbox_query()
+    if days is None:
+        return base
+    d = max(1, int(days))
+    token = f"newer_than:{d}d"
+    if _NEWER_THAN_RE.search(base):
+        return _NEWER_THAN_RE.sub(token, base, count=1)
+    return f"{base} {token}".strip()
+
+
+def _process_max_messages(max_per_account: int | None) -> int:
+    """Env default caps at 500; explicit CLI ``max_per_account`` allows up to 5000."""
+    if max_per_account is not None:
+        return max(1, min(5000, int(max_per_account)))
+    return _max_messages()
 
 
 def _send_telegram(bot_token: str, owner_id: int, text: str) -> None:
@@ -99,6 +127,9 @@ def run_email_learning_process(
     bot_token: str | None = None,
     owner_id: int | None = None,
     send_telegram: bool = True,
+    verbose: bool = False,
+    days: int | None = None,
+    max_per_account: int | None = None,
 ) -> None:
     from nina.core.store.db import open_db
     from nina.core.store.repos import email_learning as el
@@ -114,12 +145,25 @@ def run_email_learning_process(
 
     conn = open_db(data_dir)
     min_hits = _min_hits()
-    max_list = _max_messages()
-    query = _inbox_query()
+    max_list = _process_max_messages(max_per_account)
+    query = _process_gmail_query(days)
+    _verbose_print(
+        verbose,
+        f"[email process] query={query!r} max_messages={max_list} "
+        f"min_hits_for_pending={min_hits} telegram={send_telegram}",
+    )
+    _verbose_print(verbose, f"[email process] accounts: {', '.join(multi.accounts)}")
 
     try:
         if send_telegram and bot_token and owner_id is not None:
             flush_pending_telegram(conn, data_dir, bot_token, owner_id)
+            _verbose_print(verbose, "[email process] flush_pending_telegram done")
+        elif verbose:
+            _verbose_print(
+                verbose,
+                "[email process] Telegram flush skipped "
+                "(no bot context or send_telegram=false)",
+            )
 
         for account in multi.accounts:
             gc = multi.client(account)
@@ -127,12 +171,31 @@ def run_email_learning_process(
                 msgs = gc.search(query, max_results=max_list)
             except Exception as exc:
                 log.warning("email learning: list failed %s: %s", account, exc)
+                _verbose_print(
+                    verbose,
+                    f"[email process] {account} — search failed: {exc}",
+                )
                 continue
 
+            _verbose_print(
+                verbose,
+                f"[email process] {account} — fetched {len(msgs)} messages",
+            )
+            n_valid = 0
             for msg in msgs:
+                if el.is_message_tagged(conn, account, msg.id):
+                    continue
+
                 norm = normalize_sender(msg.sender)
                 if not norm or "@" not in norm:
                     continue
+
+                n_valid += 1
+                if verbose and n_valid % 20 == 0:
+                    _verbose_print(
+                        verbose,
+                        f"[email process] {account} … {n_valid} valid-sender messages",
+                    )
 
                 el.upsert_seen_message(
                     conn,
@@ -208,6 +271,11 @@ def run_email_learning_process(
                         )
                         _send_telegram(bot_token, owner_id, text)
                         el.set_pending_notified(conn, pid)
+            _verbose_print(
+                verbose,
+                f"[email process] {account} — done",
+            )
+        _verbose_print(verbose, "[email process] all accounts finished")
     finally:
         conn.close()
 

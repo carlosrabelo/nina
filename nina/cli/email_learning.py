@@ -63,14 +63,21 @@ def cmd_infer_rules(args: argparse.Namespace) -> None:
     )
 
 
-def cmd_process(_args: argparse.Namespace) -> None:
+def cmd_process(args: argparse.Namespace) -> None:
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     try:
         from nina.skills.email_learning.service import run_email_learning_process
 
         run_email_learning_process(
-            tokens_dir, data_dir, bot_token=None, owner_id=None, send_telegram=False
+            tokens_dir,
+            data_dir,
+            bot_token=None,
+            owner_id=None,
+            send_telegram=False,
+            verbose=args.verbose,
+            days=args.days,
+            max_per_account=args.max_per_account,
         )
     except ConfigError as e:
         print(f"Skipped: {e}", file=sys.stderr)
@@ -78,7 +85,7 @@ def cmd_process(_args: argparse.Namespace) -> None:
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-    print("Email learning process finished.")
+    print("Email process finished.")
 
 
 def register(sub: argparse._SubParsersAction) -> None:
@@ -90,6 +97,33 @@ def register(sub: argparse._SubParsersAction) -> None:
         help=(
             "Fetch inbox messages, upsert email_messages, apply saved rules, "
             "optional Telegram suggestions (CLI: no Telegram)"
+        ),
+    )
+    p_process.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help=(
+            "Progress on stderr (query, accounts, Gmail fetch, message batches)"
+        ),
+    )
+    p_process.add_argument(
+        "--days",
+        type=int,
+        default=None,
+        metavar="D",
+        help=(
+            "Set or replace newer_than:Dd in NINA_EMAIL_SYNC_QUERY (backfill window)"
+        ),
+    )
+    p_process.add_argument(
+        "--max-per-account",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Max Gmail list results per account (default: env cap 500; CLI allows "
+            "up to 5000)"
         ),
     )
     p_process.set_defaults(func=cmd_process)

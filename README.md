@@ -15,7 +15,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - Authenticate any number of Google accounts via OAuth — auto-discovered from saved tokens
 - Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface
 - Internal scheduler (APScheduler) plus HTTP slash commands for external integrations (MacroDroid, scripts) — no external cron required
-- **Gmail label learning (per account):** **`nina email process`** fetches inbox mail, records headers in PostgreSQL, applies learned labels in Gmail, and can suggest new senders on Telegram from the daemon; **`nina email infer-rules`** only adds new **`email_sender_rules`** from existing Gmail user labels (no inbox DB writes); **`nina email rules`** lists stored rules; teach labels via `/emailtag` or `emailtag` / `/emailtag` in `nina console`.
+- **Gmail label learning (per account):** **`nina email process`** fetches inbox mail, records headers in PostgreSQL, applies learned labels in Gmail, and can suggest new senders on Telegram from the daemon; optional **`--days`** and **`--max-per-account`** widen the Gmail query and raise the per-account fetch cap (up to 5000); messages already marked **`tagged_at`** in **`email_messages`** are skipped early (no header upsert); **`nina email infer-rules`** only adds new **`email_sender_rules`** from existing Gmail user labels (no inbox DB writes); both commands accept **`-v` / `--verbose`** for progress on stderr; **`nina email rules`** lists stored rules; teach labels via `/emailtag` or `emailtag` / `/emailtag` in `nina console`.
 - All secrets stay local: tokens, session files, and credentials on disk; application state lives in PostgreSQL
 
 → **[Command Reference (GUIDE.md)](GUIDE.md)** (full command table: [Full CLI command list](GUIDE.md#full-cli-command-list)) · **[HTTP API (API.md)](API.md)** / [API-PT.md](API-PT.md) · **[Skills (SKILL.md)](SKILL.md)** / [SKILL-PT.md](SKILL-PT.md) (behaviour domains under `nina/skills/`) · [AGENTS.md](AGENTS.md) (keep docs updated when the product changes)
@@ -90,19 +90,20 @@ make console     # console only (daemon must be running)
 
 ## Configuration
 
-Copy [`.env.example`](.env.example) to `.env`. The example uses **canonical paths for Docker** (`DATA_DIR=/data/db`, `DATABASE_URL` with host `postgres`, etc.). When you run **`nina`** or **`make run` / `make console`**, Python loads the nearest `.env` (`load_project_dotenv`) and, **on the host** (not inside a container), copies non-empty **`DATABASE_URL_HOST`** and **`*_HOST`** path variables over `DATABASE_URL` / the canonical names so local CLI matches Compose-oriented values in the same file.
+Copy [`.env.example`](.env.example) to `.env`. **Recommended:** set `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, and `POSTGRES_PORT` only; `nina` builds `DATABASE_URL` after loading `.env` (host `127.0.0.1` on the machine, host `postgres` inside a container). Set `DATABASE_URL` yourself only if you need extra URL options (e.g. `?sslmode=require`). Use **repo-relative paths** (`DATA_DIR=data/db`, …) for local CLI; inside Docker, `load_project_dotenv` adds a leading `/` to those same values when they are not already absolute (so `data/db` becomes `/data/db` on the `./data:/data` volume).
+
+When you run **`nina`** or **`make run` / `make console`**, Python loads the nearest `.env` (`load_project_dotenv` in `nina/cli/_env.py`). There are no separate `*_HOST` variables.
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | — | PostgreSQL URL (e.g. host `postgres` in Compose) |
-| `DATABASE_URL_HOST` | — | URL for **`nina` on the host** (e.g. `localhost` when the DB port is published); used automatically outside Docker |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_PORT` | — | **Primary:** Postgres credentials; `DATABASE_URL` is derived when unset (see above). |
+| `POSTGRES_HOST` | — | Optional DB hostname override (otherwise `127.0.0.1` on the host, `postgres` in Docker). |
+| `DATABASE_URL` | (built from `POSTGRES_*`) | Optional explicit PostgreSQL URL if you need non-default query params. |
 | `NINA_IMAGE` | (see `.env.example`) | Image for Compose service `nina`; `make docker-start` overrides with `REGISTRY/IMAGE:<git sha>` and `--build` |
-| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Paths for credentials, tokens, sessions, app state (Compose layout) |
-| `GOOGLE_CREDENTIALS_FILE_HOST`, `TOKENS_DIR_HOST`, `SESSIONS_DIR_HOST`, `DATA_DIR_HOST` | — | Optional host paths; when set, used **on the host** instead of the row above (same rule as `DATABASE_URL_HOST`) |
+| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Paths: repo-relative on the host; in Docker, a leading `/` is added when the value is not already absolute (see above). |
 | `NINA_HTTP_HOST` | `0.0.0.0` | Host interface to bind/publish the HTTP port |
 | `NINA_HTTP_PORT` | `8765` | HTTP port |
 | `NINA_API_KEY` | — | If set, protects HTTP API via header `X-Api-Key` |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_PORT` | — | Postgres service in Docker Compose (see `.env.example`) |
 | `TZ` / `PGTZ` | — | Timezone for containers and libpq-friendly Postgres client TZ |
 | `TELEGRAM_BOT_TOKEN` | — | Bot token from @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Your personal Telegram chat ID (bot only responds to this) |
@@ -134,7 +135,12 @@ nina/
             auth.py          # Google OAuth flow, token caching, auto-discovery
             gmail/client.py
             calendar/client.py  # CalendarClient (list, create events)
-        telegram/bot.py      # Telegram Bot (daemon mode)
+        telegram/
+            bot.py               # app factory, slash commands, batch runner
+            command_registry.py  # /setMyCommands + bot_lang(ctx)
+            constants.py         # MAX_MSG
+            free_text_handler.py # natural language + LLM router (non-command messages)
+            offset_store.py        # batch getUpdates offset persistence
     core/
         intent/
             router.py          # unified LLM router (4 layers)
@@ -151,7 +157,11 @@ nina/
             runner.py        # daemon with APScheduler + HTTP server
             http.py          # HTTP API (presence, workdays, schedule, notifications)
             client.py        # console → daemon HTTP client
-        console/runner.py    # interactive REPL
+        console/
+            runner.py              # interactive REPL (cmd.Cmd)
+            paths.py               # DATA_DIR, TOKENS_DIR, console language
+            intent_executors.py    # memo / notifications / activity_log → print
+            freeform_dispatch.py   # natural language + LLM router for unknown lines
 scripts/                     # e.g. migrate_to_postgres.py (legacy SQLite/JSON → Postgres)
 .make/                       # setup.sh, test.sh, lint.sh, quality.sh, clean.sh, dev.sh
 credentials/                 # credentials.json (git-ignored)

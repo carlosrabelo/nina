@@ -106,6 +106,13 @@ STRINGS: dict[str, str] = {
         "✓ Regra gravada: {sender} → [{label}] em {account}.\n"
         "Aplicada em {applied} mensagem(ns) que a Nina já tinha registado."
     ),
+    "help.emailtag": (
+        "  emailtag | /emailtag         Listar sugestões remetente → etiqueta\n"
+        "  emailtag <id> <etiqueta>     Ensinar etiqueta Gmail para esse remetente (por conta)\n"
+        "  emailtag dismiss <id>        Ignorar uma sugestão\n"
+        "\n"
+        "  Use pelo menos 8 caracteres do id da sugestão (igual ao /emailtag no Telegram)."
+    ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
     "events.no_accounts": "Nenhuma conta autenticada.",

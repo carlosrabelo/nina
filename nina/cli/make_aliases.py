@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 import nina
-
 from nina.cli import auth as auth_mod
 from nina.cli import calendar as cal_mod
 from nina.cli import email_learning as email_mod
@@ -124,6 +123,9 @@ def register(sub: argparse._SubParsersAction) -> None:
         "email-process",
         help="Process inbox + rules once (alias: nina email process)",
     )
+    p.add_argument("--days", type=int, default=None, metavar="D")
+    p.add_argument("--max-per-account", type=int, default=None, metavar="N")
+    p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=email_mod.cmd_process)
 
     p = sub.add_parser(

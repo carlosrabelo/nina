@@ -106,6 +106,13 @@ STRINGS: dict[str, str] = {
         "✓ Saved rule for {sender} → [{label}] on {account}.\n"
         "Applied to {applied} message(s) Nina had recorded."
     ),
+    "help.emailtag": (
+        "  emailtag | /emailtag         List open sender → label suggestions\n"
+        "  emailtag <id> <label>        Teach Gmail label for that sender (per account)\n"
+        "  emailtag dismiss <id>        Ignore a suggestion\n"
+        "\n"
+        "  Use at least 8 characters of the suggestion id (same as /emailtag on Telegram)."
+    ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
     "events.no_accounts": "No authenticated accounts.",

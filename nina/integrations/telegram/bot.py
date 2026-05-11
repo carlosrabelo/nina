@@ -1,4 +1,3 @@
-# nina/telegram/bot.py
 """Telegram Bot — persistent and batch mode."""
 
 import asyncio
@@ -6,7 +5,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from telegram import BotCommand, Update
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -24,49 +23,20 @@ from nina.integrations.google.auth import discover_accounts
 from nina.integrations.google.calendar.client import CalendarClient
 from nina.integrations.google.gmail.client import GmailMultiClient
 from nina.integrations.telegram.client import TgClient
+from nina.integrations.telegram.command_registry import bot_lang, set_bot_commands
+from nina.integrations.telegram.constants import MAX_MSG
+from nina.integrations.telegram.free_text_handler import handle_message
+from nina.integrations.telegram.offset_store import load_offset, save_offset
 
-_MAX_MSG = 4000  # Telegram hard limit is 4096 chars; stay under to be safe
-
-
-# ---------------------------------------------------------------------------
-# Offset persistence
-# ---------------------------------------------------------------------------
-
-def _offset_file(sessions_dir: Path) -> Path:
-    return sessions_dir / "bot_offset.txt"
-
-
-def load_offset(sessions_dir: Path) -> int:
-    """Return the stored update offset, or 0 if not yet set."""
-    f = _offset_file(sessions_dir)
-    return int(f.read_text().strip()) if f.exists() else 0
-
-
-def save_offset(sessions_dir: Path, offset: int) -> None:
-    """Persist the next offset so the next run skips already-processed updates."""
-    sessions_dir.mkdir(parents=True, exist_ok=True)
-    _offset_file(sessions_dir).write_text(str(offset))
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _lang(ctx: ContextTypes.DEFAULT_TYPE) -> str:
-    return ctx.bot_data.get("lang", "pt")
-
-
-_COMMAND_NAMES = [
-    "start", "help", "lang", "presence", "health",
-    "workdays", "timezone", "context", "profile", "schedule", "notify",
-    "memo", "memos", "emailtag",
+# Re-export for tests and backwards compatibility
+__all__ = [
+    "create_application",
+    "load_offset",
+    "run_batch",
+    "run_batch_from_env",
+    "save_offset",
+    "setup_from_env",
 ]
-
-
-async def _set_commands(app: Application, lang: str) -> None:
-    """Register localized command descriptions with Telegram."""
-    commands = [BotCommand(name, t(f"cmd.{name}", lang)) for name in _COMMAND_NAMES]
-    await app.bot.set_my_commands(commands)
 
 
 # ---------------------------------------------------------------------------
@@ -86,18 +56,18 @@ async def handle_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             save_locale(locale, data_dir)
             ctx.bot_data["lang"] = detected
 
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     await update.message.reply_text(
         t("start.greeting", lang, chat_id=update.message.chat_id)
     )
 
 
 async def handle_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(t("help.text", _lang(ctx)))
+    await update.message.reply_text(t("help.text", bot_lang(ctx)))
 
 
 async def handle_unread(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     try:
         nina = GmailMultiClient.from_env()
         messages = nina.list_unread(max_results=10)
@@ -117,11 +87,11 @@ async def handle_unread(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
           snippet=msg.snippet[:80])
         for msg in messages
     ]
-    await update.message.reply_text("\n".join(lines)[:_MAX_MSG])
+    await update.message.reply_text("\n".join(lines)[:MAX_MSG])
 
 
 async def handle_latest(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     try:
         nina = GmailMultiClient.from_env()
     except (ConfigError, GmailError) as e:
@@ -140,12 +110,12 @@ async def handle_latest(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             lines.append("")
 
     await update.message.reply_text(
-        "\n".join(lines)[:_MAX_MSG] or t("latest.none", lang)
+        "\n".join(lines)[:MAX_MSG] or t("latest.none", lang)
     )
 
 
 async def handle_events(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     accounts = discover_accounts(tokens_dir)
 
@@ -170,12 +140,12 @@ async def handle_events(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             lines.append(t("events.error", lang, account=account, error=e))
 
     await update.message.reply_text(
-        "\n".join(lines)[:_MAX_MSG] or t("events.not_found", lang)
+        "\n".join(lines)[:MAX_MSG] or t("events.not_found", lang)
     )
 
 
 async def handle_dialogs(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     try:
         with TgClient.from_env() as tg:
             dialogs = tg.list_dialogs(max_results=15)
@@ -189,7 +159,7 @@ async def handle_dialogs(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
         lines.append(f"[{d.kind}] {d.name}{unread}")
 
     await update.message.reply_text(
-        "\n".join(lines)[:_MAX_MSG] or t("dialogs.none", lang)
+        "\n".join(lines)[:MAX_MSG] or t("dialogs.none", lang)
     )
 
 
@@ -201,7 +171,7 @@ async def handle_presence(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
     from nina.skills.presence.models import PresenceState, PresenceStatus
     from nina.skills.presence.store import load as load_presence
     from nina.skills.presence.store import save as save_presence
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
 
     if not ctx.args:
@@ -232,7 +202,7 @@ async def handle_presence(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def handle_health(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     import time as _time
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     start_time: float = ctx.bot_data["start_time"]
     uptime = int(_time.time() - start_time)
     hours, remainder = divmod(uptime, 3600)
@@ -243,7 +213,7 @@ async def handle_health(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_workdays(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     from nina.skills.workdays.store import load as load_workdays
     schedule = load_workdays(data_dir)
@@ -263,7 +233,7 @@ async def handle_timezone(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
 
     from nina.skills.workdays.store import load as load_workdays
     from nina.skills.workdays.store import save as save_workdays
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
 
     if not ctx.args:
@@ -288,7 +258,7 @@ async def handle_context(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     from nina.skills.presence.store import load as load_presence
     from nina.skills.workdays.checker import get_context
     from nina.skills.workdays.store import load as load_workdays
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     context = get_context(load_workdays(data_dir), load_presence(data_dir), lang)
     flags = []
@@ -304,7 +274,7 @@ async def handle_context(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
 async def handle_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     from nina.skills.presence.models import PresenceStatus
     from nina.skills.profile.store import load as load_profile
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     profile = load_profile(data_dir)
 
@@ -338,7 +308,7 @@ async def handle_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
 async def handle_notify(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     from nina.skills.notifications.store import load as load_notif
     from nina.skills.notifications.store import save as save_notif
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     args = ctx.args or []
 
@@ -384,7 +354,7 @@ async def handle_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
     from nina.skills.presence.store import load as load_presence
     from nina.skills.profile.store import load as load_profile
     from nina.skills.workdays.store import load as load_workdays
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     tokens_dir: Path = ctx.bot_data["tokens_dir"]
     data_dir: Path = ctx.bot_data["data_dir"]
     arg = " ".join(ctx.args) if ctx.args else ""
@@ -438,7 +408,7 @@ async def handle_memo(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     from nina.core.store.db import open_db
     from nina.core.store.models import Memo
     from nina.core.store.repos import memo as memo_repo
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     args = ctx.args or []
 
@@ -480,7 +450,7 @@ async def handle_memo(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 async def handle_memos(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     from nina.core.store.db import open_db
     from nina.core.store.repos import memo as memo_repo
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     conn = open_db(data_dir)
     memos = memo_repo.list_open(conn)
@@ -503,21 +473,21 @@ async def handle_emailtag(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
         teach_label_for_pending,
     )
 
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     tokens_dir: Path = ctx.bot_data["tokens_dir"]
     args = ctx.args or []
 
     if not args:
         text = format_pending_list(data_dir)
-        await update.message.reply_text(text[:_MAX_MSG])
+        await update.message.reply_text(text[:MAX_MSG])
         return
     if args[0].lower() == "dismiss":
         if len(args) < 2:
             await update.message.reply_text(t("emailtag.usage", lang))
             return
         out = dismiss_pending_by_prefix(data_dir, args[1])
-        await update.message.reply_text(out[:_MAX_MSG])
+        await update.message.reply_text(out[:MAX_MSG])
         return
     if len(args) < 2:
         await update.message.reply_text(t("emailtag.usage", lang))
@@ -525,11 +495,11 @@ async def handle_emailtag(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
     pending_prefix = args[0]
     label = " ".join(args[1:])
     out = teach_label_for_pending(tokens_dir, data_dir, pending_prefix, label)
-    await update.message.reply_text(out[:_MAX_MSG])
+    await update.message.reply_text(out[:MAX_MSG])
 
 
 async def handle_lang(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = _lang(ctx)
+    lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
 
     if not ctx.args:
@@ -544,328 +514,8 @@ async def handle_lang(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
     save_locale(LocaleConfig(lang=new_lang), data_dir)
     ctx.bot_data["lang"] = new_lang
-    await _set_commands(ctx.application, new_lang)
+    await set_bot_commands(ctx.application, new_lang)
     await update.message.reply_text(t("lang.set_ok", new_lang, code=new_lang))
-
-
-# ---------------------------------------------------------------------------
-# Notification action from natural language
-# ---------------------------------------------------------------------------
-
-def _execute_notification_intent_text(
-    action: str, minutes: int | None, days: int | None, lang: str, data_dir: Path
-) -> str:
-    from nina.skills.notifications.store import load as load_notif
-    from nina.skills.notifications.store import save as save_notif
-    state = load_notif(data_dir)
-    if action == "get":
-        return t("notify.config", lang, reminder_minutes=state.config.reminder_minutes, watch_days=state.config.watch_days)
-    if action == "set_reminder" and minutes is not None:
-        state.config.reminder_minutes = minutes
-        save_notif(state, data_dir)
-        return t("notify.reminder_set", lang, minutes=minutes)
-    if action == "set_days" and days is not None:
-        state.config.watch_days = days
-        save_notif(state, data_dir)
-        return t("notify.days_set", lang, days=days)
-    return t("notify.usage", lang)
-
-
-# ---------------------------------------------------------------------------
-# Calendar action from natural language
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Memo action from natural language (no LLM)
-# ---------------------------------------------------------------------------
-
-def _execute_memo_intent_text(
-    action: str, subject: str, lang: str, data_dir: Path, due_date: str = ""
-) -> str:
-    from nina.core.store.db import open_db
-    from nina.core.store.models import Memo
-    from nina.core.store.repos import memo as memo_repo
-    conn = open_db(data_dir)
-    if action == "list":
-        memos = memo_repo.list_open(conn)
-        if not memos:
-            return t("memo.none_open", lang)
-        lines = []
-        for m in memos:
-            due = t("memo.due", lang, date=m.due_date) if m.due_date else ""
-            lines.append(f"[{m.id[:8]}] {m.text}{due}")
-        return "\n".join(lines)
-    if action == "remind":
-        memo_repo.add(conn, Memo(text=subject, due_date=due_date or None))
-        if due_date:
-            return t("memo.remind_set", lang, date=due_date, subject=subject)
-        return t("memo.saved", lang)
-    matches = [m for m in memo_repo.list_open(conn) if subject.lower() in m.text.lower()]
-    if not matches:
-        return t("memo.not_found", lang)
-    lines = []
-    for m in matches:
-        if action == "close":
-            memo_repo.done(conn, m.id)
-            lines.append(f"{t('memo.done', lang)} — {m.text}")
-        elif action == "dismiss":
-            memo_repo.dismiss(conn, m.id)
-            lines.append(f"{t('memo.dismissed', lang)} — {m.text}")
-    return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# Activity log action (log or query past activities)
-# ---------------------------------------------------------------------------
-
-def _execute_activity_log_text(
-    intent, lang: str, tokens_dir: Path, data_dir: Path, tz_name: str,
-) -> str:
-    from nina.skills.activity_log.google_reader import (
-        get_summary,
-        query_activities,
-        query_by_keyword,
-    )
-    from nina.skills.activity_log.google_writer import log_activity
-    from nina.skills.activity_log.models import ActivityIntent as AI
-    from nina.skills.presence.store import load as load_presence
-    from nina.skills.profile.store import load as load_profile
-
-    presence = load_presence(data_dir)
-    profile = load_profile(data_dir)
-    cal_accounts = profile.for_presence(presence.status).calendar
-    if not cal_accounts:
-        return "Nenhuma conta de calendar configurada."
-
-    action = intent.entities.get("query_type", "") or intent.action
-
-    # ── Log activity ────────────────────────────────────────────────────
-    if action == "log":
-        ai = AI(
-            action="log",
-            title=intent.entities.get("title", ""),
-            duration_minutes=intent.entities.get("duration_minutes", 60),
-        )
-        result = log_activity(ai, cal_accounts[0], tokens_dir, tz_name)
-        return result.message
-
-    # ── Query/summary ──────────────────────────────────────────────────
-    if action in ("query", "summary"):
-        keyword = intent.entities.get("query_keyword", "")
-        if action == "summary":
-            summary = get_summary(cal_accounts[0], tokens_dir)
-            lines = [summary.period_label, f"Total: {summary.total_minutes} min"]
-            for kw, mins in sorted(summary.by_keyword.items(), key=lambda x: -x[1]):
-                lines.append(f"  {kw}: {mins} min")
-            return "\n".join(lines)
-
-        if keyword:
-            entries = query_by_keyword(cal_accounts[0], tokens_dir, keyword)
-        else:
-            entries = query_activities(cal_accounts[0], tokens_dir)
-
-        if not entries:
-            return "Nenhuma atividade encontrada."
-        lines = []
-        for e in entries:
-            start_label = e.start.strftime("%d/%m %H:%M")
-            end_label = e.end.strftime("%H:%M")
-            lines.append(f"{start_label} → {end_label}  {e.title}")
-        return "\n".join(lines)
-
-    return "Não entendi a atividade."
-
-
-# ---------------------------------------------------------------------------
-# Free-text handler (LLM interpreter)
-# ---------------------------------------------------------------------------
-
-async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    from nina.errors import CalendarError, LLMError
-
-    lang = _lang(ctx)
-    tokens_dir: Path = ctx.bot_data["tokens_dir"]
-    data_dir: Path = ctx.bot_data["data_dir"]
-    text = update.message.text or ""
-
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
-
-    from nina.skills.workdays.store import load as load_workdays
-
-    _wd0 = load_workdays(data_dir)
-    now_tz = datetime.now(ZoneInfo(_wd0.timezone))
-
-    # Layer 1 — pattern match, zero LLM calls
-    from nina.skills.memo.interpreter import try_action as memo_try
-    if result := memo_try(text, lang):
-        await update.message.reply_text(
-            _execute_memo_intent_text(result.action, result.subject, lang, data_dir)
-        )
-        return
-
-    from nina.skills.calendar.execute import (
-        execute_calendar_read,
-        request_from_calendar_intent,
-    )
-    from nina.skills.calendar.interpreter import try_action as cal_try
-
-    if cal_result := cal_try(text, lang, now=now_tz):
-        req = request_from_calendar_intent(cal_result)
-        await update.message.reply_text(
-            execute_calendar_read(
-                tokens_dir=tokens_dir,
-                data_dir=data_dir,
-                user_message=text,
-                lang=lang,
-                req=req,
-            )
-        )
-        return
-
-    from nina.skills.notifications.interpreter import try_action as notif_try
-    if notif_result := notif_try(text, lang):
-        await update.message.reply_text(
-            _execute_notification_intent_text(notif_result.action, notif_result.minutes, notif_result.days, lang, data_dir)
-        )
-        return
-
-    # Layer 2 — unified router: 1 LLM call classifies domain AND extracts entities
-    try:
-        from nina.core.llm.client import LLMClient
-        llm = LLMClient.from_env()
-    except (LLMError, Exception):
-        await update.message.reply_text(t("llm.unavailable", lang))
-        return
-
-    _schedule = _wd0
-    _now = now_tz
-
-    from nina.core.intent.router import route
-    intent = route(text, llm, lang=lang, now=_now)
-
-    if intent.domain == "none":
-        await update.message.reply_text(t("llm.not_understood", lang))
-        return
-
-    # Simple domains — executed directly from router output (no extra LLM call)
-    if intent.domain == "presence" and intent.status:
-        from nina.skills.presence.models import PresenceState, PresenceStatus
-        from nina.skills.presence.store import save as save_presence
-        try:
-            status = PresenceStatus(intent.status)
-        except ValueError:
-            await update.message.reply_text(t("llm.not_understood", lang))
-            return
-        save_presence(PresenceState(status=status, note=intent.note), data_dir)
-        label = t(f"presence.label.{status.value}", lang)
-        await update.message.reply_text(t("llm.presence_set", lang, status=status.value, label=label))
-        return
-
-    if intent.domain == "memo" and intent.action != "none":
-        await update.message.reply_text(
-            _execute_memo_intent_text(intent.action, intent.subject, lang, data_dir, intent.due_date)
-        )
-        return
-
-    if intent.domain == "calendar" and intent.action != "none":
-        from nina.skills.calendar.execute import (
-            execute_calendar_read,
-            request_from_router_intent,
-        )
-
-        req = request_from_router_intent(intent)
-        await update.message.reply_text(
-            execute_calendar_read(
-                tokens_dir=tokens_dir,
-                data_dir=data_dir,
-                user_message=text,
-                lang=lang,
-                req=req,
-            )
-        )
-        return
-
-    if intent.domain == "notifications" and intent.action != "none":
-        await update.message.reply_text(
-            _execute_notification_intent_text(intent.action, intent.minutes, intent.days, lang, data_dir)
-        )
-        return
-
-    if intent.domain == "profile" and intent.updates:
-        from nina.skills.profile.interpreter import ProfileIntent, ProfileUpdate
-        from nina.skills.profile.interpreter import apply as apply_profile
-        from nina.skills.profile.store import load as load_profile
-        from nina.skills.profile.store import save as save_profile
-        updates = [
-            ProfileUpdate(
-                presence=u["presence"],
-                gmail=list(u.get("gmail", [])),
-                calendar=list(u.get("calendar", [])),
-            )
-            for u in intent.updates
-            if u.get("presence")
-        ]
-        if updates:
-            profile = load_profile(data_dir)
-            save_profile(apply_profile(ProfileIntent(action="update_profile", updates=updates), profile), data_dir)
-            await update.message.reply_text(t("profile.set_ok", lang))
-        return
-
-    # Activity log — log past activities or query calendar
-    if intent.domain == "activity_log":
-        await update.message.reply_text(
-            _execute_activity_log_text(intent, lang, tokens_dir, data_dir, _schedule.timezone)
-        )
-        return
-
-    # Complex domains — need a second dedicated LLM call
-    if intent.domain == "blocking":
-        from nina.skills.calendar.blocking import execute as execute_blocking
-        from nina.skills.calendar.blocking import interpret as interpret_blocking
-        from nina.skills.presence.store import load as load_presence
-        from nina.skills.profile.store import load as load_profile
-        blocking_intents = interpret_blocking(text, llm, now=_now)
-        if blocking_intents:
-            presence = load_presence(data_dir)
-            profile = load_profile(data_dir)
-            cal_accounts = profile.best_calendar_accounts(text, presence.status)
-            if not cal_accounts:
-                await update.message.reply_text(t("blocking.no_account", lang))
-                return
-            _WEEKDAY_PT = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
-            _WEEKDAY_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-            time_fmt = "%H:%M"
-            for bi in blocking_intents:
-                try:
-                    res = execute_blocking(bi, account=cal_accounts[0], tokens_dir=tokens_dir, tz_name=_schedule.timezone)
-                except CalendarError as e:
-                    await update.message.reply_text(f"✗ {e}")
-                    continue
-                wd = res.start.weekday()
-                day_abbr = (_WEEKDAY_PT[wd] if lang == "pt" else _WEEKDAY_EN[wd])
-                date_label = f"{day_abbr}, {res.start.strftime('%d/%m')}"
-                reply = t("blocking.created", lang,
-                          title=res.event_title, date=date_label,
-                          start=res.start.strftime(time_fmt), end=res.end.strftime(time_fmt),
-                          account=cal_accounts[0])
-                if res.conflicts:
-                    reply += "\n" + t("blocking.conflict", lang, titles=", ".join(res.conflicts))
-                await update.message.reply_text(reply)
-        return
-
-    if intent.domain == "workdays":
-        from nina.skills.workdays.interpreter import apply as apply_schedule
-        from nina.skills.workdays.interpreter import interpret as interpret_schedule
-        from nina.skills.workdays.store import save as save_workdays
-        schedule_intent = interpret_schedule(text, llm)
-        if schedule_intent.action == "update_schedule":
-            save_workdays(apply_schedule(schedule_intent, _schedule), data_dir)
-            await update.message.reply_text(t("llm.schedule_set", lang))
-        return
-
-    await update.message.reply_text(t("llm.not_understood", lang))
 
 
 # ---------------------------------------------------------------------------
@@ -878,7 +528,7 @@ def create_application(token: str, owner_id: int, tokens_dir: Path, data_dir: Pa
     owner_filter = filters.Chat(owner_id)
 
     async def _post_init(application: Application) -> None:
-        await _set_commands(application, application.bot_data["lang"])
+        await set_bot_commands(application, application.bot_data["lang"])
 
     app = Application.builder().token(token).post_init(_post_init).build()
     app.bot_data["tokens_dir"] = tokens_dir

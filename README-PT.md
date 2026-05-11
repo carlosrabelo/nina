@@ -15,7 +15,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Autentica qualquer número de contas Google via OAuth — descobertas automaticamente pelos tokens
 - Consulta qualquer provedor de LLM (Groq, OpenAI, Anthropic, Ollama) via interface unificada LiteLLM
 - Agendador interno (APScheduler) e comandos HTTP slash para integrações externas (MacroDroid, scripts) — sem cron externo necessário
-- **Etiquetas Gmail aprendidas (por conta):** **`nina email process`** vai à inbox, grava cabeçalhos na PostgreSQL, aplica etiquetas aprendidas no Gmail e pode sugerir remetentes novos no Telegram pelo daemon; **`nina email infer-rules`** só acrescenta **`email_sender_rules`** a partir de etiquetas de utilizador já no Gmail (sem gravar `email_messages`); **`nina email rules`** lista as regras gravadas; ensinar com `/emailtag` ou `emailtag` / `/emailtag` no `nina console`.
+- **Etiquetas Gmail aprendidas (por conta):** **`nina email process`** vai à inbox, grava cabeçalhos na PostgreSQL, aplica etiquetas aprendidas no Gmail e pode sugerir remetentes novos no Telegram pelo daemon; opcionalmente **`--days`** e **`--max-per-account`** alargam a consulta Gmail e sobem o limite por conta (até 5000); mensagens com **`tagged_at`** já definido em **`email_messages`** são ignoradas cedo (sem upsert de cabeçalho); **`nina email infer-rules`** só acrescenta **`email_sender_rules`** a partir de etiquetas de utilizador já no Gmail (sem gravar `email_messages`); ambos aceitam **`-v` / `--verbose`** para progresso no stderr; **`nina email rules`** lista as regras gravadas; ensinar com `/emailtag` ou `emailtag` / `/emailtag` no `nina console`.
 - Todos os segredos ficam locais: tokens, sessões e credenciais em ficheiros; o estado da aplicação fica no PostgreSQL
 
 → **[Referência de Comandos (GUIDE-PT.md)](GUIDE-PT.md)** (tabela completa: [Lista completa de comandos da CLI](GUIDE-PT.md#lista-completa-de-comandos-da-cli)) · **[API HTTP (API-PT.md)](API-PT.md)** / [API.md](API.md) · **[Skills (SKILL-PT.md)](SKILL-PT.md)** / [SKILL.md](SKILL.md) (domínios em `nina/skills/`) · [AGENTS.md](AGENTS.md) (manter docs em sync ao mudar o produto)
@@ -90,19 +90,20 @@ make console     # apenas o console (o daemon precisa estar rodando)
 
 ## Configuração
 
-Copie [`.env.example`](.env.example) para `.env`. O exemplo traz **caminhos canónicos para Docker** (`DATA_DIR=/data/db`, `DATABASE_URL` com host `postgres`, etc.). Ao correr **`nina`** ou **`make run` / `make console`**, o Python carrega o `.env` mais próximo (`load_project_dotenv`) e, **no host** (fora de um contentor), copia **`DATABASE_URL_HOST`** e **`*_HOST`** não vazios para `DATABASE_URL` e os nomes canónicos, para o mesmo ficheiro servir Compose e CLI local.
+Copie [`.env.example`](.env.example) para `.env`. **Recomendado:** defina só `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` e `POSTGRES_PORT`; o `nina` monta `DATABASE_URL` depois de carregar o `.env` (host `127.0.0.1` na máquina, host `postgres` dentro do contentor). Defina `DATABASE_URL` manualmente só se precisar de opções extra na URL (ex.: `?sslmode=require`). Use **caminhos relativos ao repositório** (`DATA_DIR=data/db`, …) para a CLI local; dentro do Docker, o `load_project_dotenv` acrescenta um `/` inicial a esses valores quando ainda não são absolutos (ex.: `data/db` passa a `/data/db` no volume `./data:/data`).
+
+Ao correr **`nina`** ou **`make run` / `make console`**, o Python carrega o `.env` mais próximo (`load_project_dotenv` em `nina/cli/_env.py`). Não há variáveis separadas `*_HOST`.
 
 | Variável | Padrão | Descrição |
 |---|---|---|
-| `DATABASE_URL` | — | URL PostgreSQL (ex.: host `postgres` no Compose) |
-| `DATABASE_URL_HOST` | — | URL para **`nina` no host** (ex. `localhost` com a porta publicada); usada automaticamente fora do Docker |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_PORT` | — | **Principal:** credenciais Postgres; `DATABASE_URL` é derivada quando vazia (ver acima). |
+| `POSTGRES_HOST` | — | Hostname opcional da BD (senão `127.0.0.1` no host, `postgres` no Docker). |
+| `DATABASE_URL` | (derivada de `POSTGRES_*`) | URL PostgreSQL explícita opcional (parâmetros não padrão). |
 | `NINA_IMAGE` | (ver `.env.example`) | Imagem do serviço `nina` no Compose; `make docker-start` sobrescreve com `REGISTRY/IMAGE:<git sha>` e `--build` |
-| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Caminhos no layout Compose |
-| `GOOGLE_CREDENTIALS_FILE_HOST`, `TOKENS_DIR_HOST`, `SESSIONS_DIR_HOST`, `DATA_DIR_HOST` | — | Caminhos opcionais no host; quando definidos, usados **no host** em vez da linha acima (mesma regra que `DATABASE_URL_HOST`) |
+| `GOOGLE_CREDENTIALS_FILE`, `TOKENS_DIR`, `SESSIONS_DIR`, `DATA_DIR` | — | Caminhos: relativos ao repo no host; no Docker, acrescenta-se `/` no início se o valor não for já absoluto (ver acima). |
 | `NINA_HTTP_HOST` | `0.0.0.0` | Interface para bind/publicação da porta HTTP |
 | `NINA_HTTP_PORT` | `8765` | Porta HTTP |
 | `NINA_API_KEY` | — | Se setada, protege a API HTTP via header `X-Api-Key` |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_PORT` | — | Serviço Postgres no Docker Compose (ver `.env.example`) |
 | `TZ` / `PGTZ` | — | Timezone nos containers e TZ compatível com libpq |
 | `TELEGRAM_BOT_TOKEN` | — | Token do bot fornecido pelo @BotFather |
 | `TELEGRAM_OWNER_ID` | — | Seu chat ID pessoal no Telegram (o bot só responde a este ID) |
@@ -134,7 +135,12 @@ nina/
             auth.py          # fluxo OAuth, cache de tokens, descoberta automática
             gmail/client.py
             calendar/client.py  # CalendarClient (listar, criar eventos)
-        telegram/bot.py      # Bot do Telegram (modo daemon)
+        telegram/
+            bot.py                 # fábrica da app, comandos com /, runner em batch
+            command_registry.py    # /setMyCommands + bot_lang(ctx)
+            constants.py           # MAX_MSG
+            free_text_handler.py   # linguagem natural + router LLM (mensagens sem comando)
+            offset_store.py        # persistência do offset do getUpdates (batch)
     core/
         intent/
             router.py          # roteador LLM unificado (4 camadas)
@@ -151,7 +157,11 @@ nina/
             runner.py        # daemon com APScheduler + servidor HTTP
             http.py          # API HTTP (presence, workdays, schedule, notifications)
             client.py        # cliente HTTP console → daemon
-        console/runner.py    # REPL interativo
+        console/
+            runner.py              # REPL interativo (cmd.Cmd)
+            paths.py               # DATA_DIR, TOKENS_DIR, idioma do console
+            intent_executors.py    # memo / notificações / activity_log → print
+            freeform_dispatch.py   # linguagem natural + router LLM para linhas livres
 scripts/                     # ex.: migrate_to_postgres.py (SQLite/JSON legado → Postgres)
 .make/                       # setup.sh, test.sh, lint.sh, quality.sh, clean.sh, dev.sh
 credentials/                 # credentials.json (ignorado pelo git)

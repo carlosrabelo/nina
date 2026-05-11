@@ -23,7 +23,7 @@ From the project root with the venv:
 nina <command> [args...]
 ```
 
-**`make run`** and **`make console`** invoke Python the same way as `python -m nina …`; Python loads the nearest `.env` (`load_project_dotenv` in `nina/cli/parser.py`). Outside Docker, non-empty **`DATABASE_URL_HOST`** and **`*_HOST`** path variables override the Compose-oriented names so one `.env` can serve both.
+**`make run`** and **`make console`** invoke Python the same way as `python -m nina …`; Python loads the nearest `.env` (`load_project_dotenv` in `nina/cli/parser.py`). If `DATABASE_URL` is unset, it is built from `POSTGRES_*` (see README). Inside Docker, relative `DATA_DIR` / `TOKENS_DIR` / `SESSIONS_DIR` / `GOOGLE_CREDENTIALS_FILE` values get a leading `/` so the same paths work as on the host.
 
 ```bash
 make run gmail latest --limit 5
@@ -48,7 +48,7 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 
 | Command | What it does |
 |---------|----------------|
-| `nina daemon [--dev]` | Long-lived process: internal scheduler (APScheduler), HTTP API, and Telegram bot. **`--dev`** turns off the Telegram bot only (HTTP + scheduler still run). Needs env vars such as `DATABASE_URL`, `NINA_HTTP_HOST`, `NINA_HTTP_PORT` (see README and `.env.example`). |
+| `nina daemon [--dev]` | Long-lived process: internal scheduler (APScheduler), HTTP API, and Telegram bot. **`--dev`** turns off the Telegram bot only (HTTP + scheduler still run). Needs env such as Postgres credentials (or `DATABASE_URL`), `NINA_HTTP_HOST`, `NINA_HTTP_PORT` (see README and `.env.example`). |
 | `nina console` | Interactive REPL that talks to an **already running** daemon over HTTP (uses `NINA_HTTP_*`; sends `X-Api-Key` when `NINA_API_KEY` is set). |
 
 ### Google authentication
@@ -74,11 +74,11 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 
 | Flat alias | Hierarchical | What it does |
 |------------|--------------|--------------|
-| `nina email-process` | `nina email process` | **Processing run:** fetch inbox (query from env), upsert **`email_messages`**, apply existing **`email_sender_rules`** in Gmail, open Telegram suggestions for unknown high-volume senders when the daemon/Telegram path is used; **CLI** runs with Telegram disabled. |
+| `nina email-process [--verbose] [--days D] [--max-per-account N]` | `nina email process [--verbose] [--days D] [--max-per-account N]` | **Processing run:** fetch via **`NINA_EMAIL_SYNC_QUERY`**, upsert **`email_messages`**, apply **`email_sender_rules`** in Gmail, Telegram suggestions when the daemon path is used; **CLI** runs with Telegram disabled. Messages that already have **`tagged_at`** in **`email_messages`** are skipped early (no header upsert, no rule/pending work). **`--days`** sets or replaces the first `newer_than:Dd` in the query (wide backfill). **`--max-per-account`** caps Gmail list size per account (env default max 500; CLI allows up to **5000**). **`--verbose`** (`-v`) prints progress on stderr. |
 | `nina email-rules [--account …]` | `nina email rules …` | **PostgreSQL:** lists **learned** sender→label rules Nina will apply (`email_sender_rules`: account, normalized sender, Gmail user label name, archive flag, `created_at`). No Gmail API calls. |
 | `nina email-infer-rules` | `nina email infer-rules [--days D] [--max-per-account N] [--min-messages M] [--verbose]` | **Rules only:** scan Gmail over `newer_than:Dd` and **insert** new **`email_sender_rules`** when one user label appears alone on enough messages from a sender (does not overwrite an existing rule). Does **not** write `email_messages` or change the inbox — run **`nina email process`** afterward to ingest and apply. **`--verbose`** (`-v`) prints progress on stderr. |
 
-Teach or list pending labels from **Telegram** (`/emailtag`) or **`nina console`** (`emailtag` or `/emailtag` — hidden from the console `help` listing). Requires `gmail.modify` OAuth scope.
+Teach or list pending labels from **Telegram** (`/emailtag`) or **`nina console`** (`emailtag` or `/emailtag`; see `help` / `help emailtag` in the console). Requires `gmail.modify` OAuth scope.
 
 ### Google Calendar (exploratory CLI)
 
@@ -113,7 +113,7 @@ Teach or list pending labels from **Telegram** (`/emailtag`) or **`nina console`
 
 ### Docker and Compose
 
-Docker Compose runs **nina** and **PostgreSQL** (`docker-compose.yml`). Copy `.env.example` → `.env` and set `DATABASE_URL` and paths as in the README.
+Docker Compose runs **nina** and **PostgreSQL** (`docker-compose.yml`). Copy `.env.example` → `.env`, set `POSTGRES_*` (and paths as in the README); `DATABASE_URL` is optional.
 
 - **`make docker-start`** — sets `NINA_IMAGE` to `REGISTRY/IMAGE:<git short sha>` and runs `docker compose up -d --build`.
 - **`make docker-stop`** — `docker compose down`.
@@ -131,6 +131,8 @@ make console               # terminal B — host `.env` must point at DB + daemo
 nina gmail-unread --limit 5
 nina gmail labels --user-only
 nina email process
+# optional: wide window, more messages; already-tagged rows are skipped early
+nina email process --days 365 --max-per-account 2000 -v
 nina email rules
 nina cal-events --limit 3
 nina llm-ping
