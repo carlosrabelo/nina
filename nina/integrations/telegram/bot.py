@@ -63,7 +63,20 @@ async def handle_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(t("help.text", bot_lang(ctx)))
+    if update.message is None:
+        return
+    lang = bot_lang(ctx)
+    topic = (ctx.args[0].lower() if ctx.args else "").strip()
+    if topic:
+        key = f"help.{topic}"
+        from nina.core.i18n import t as _t
+        text = _t(key, lang)
+        if text == key:
+            await update.message.reply_text(t("help.text", lang))
+        else:
+            await update.message.reply_text(text)
+        return
+    await update.message.reply_text(t("help.text", lang))
 
 
 async def handle_unread(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:

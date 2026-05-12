@@ -147,6 +147,8 @@ def format_activity_log_reply(
 
 
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.errors import CalendarError, LLMError
     from nina.integrations.telegram.command_registry import bot_lang
 
