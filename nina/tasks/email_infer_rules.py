@@ -25,7 +25,11 @@ class InferSummary(NamedTuple):
 def _user_label_names_on_message(
     label_ids: list[str], user_id_to_name: dict[str, str]
 ) -> list[str]:
-    names = [user_id_to_name[lid] for lid in label_ids if lid in user_id_to_name]
+    names = [
+        user_id_to_name[lid]
+        for lid in label_ids
+        if lid in user_id_to_name and user_id_to_name[lid].startswith("@")
+    ]
     return sorted(set(names))
 
 
@@ -40,7 +44,7 @@ def run_infer_from_gmail_labels(
     *,
     max_per_account: int = 500,
     since_days: int = 120,
-    min_agreeing_messages: int = 2,
+    min_agreeing_messages: int = 3,
     verbose: bool = False,
 ) -> InferSummary:
     """Scan recent Gmail only to infer new rows in ``email_sender_rules``.
@@ -51,8 +55,8 @@ def run_infer_from_gmail_labels(
     ``(account, sender_norm)``).
     """
     from nina.core.store.db import open_db
-    from nina.core.store.repos import email_learning as el
-    from nina.core.store.repos.email_learning import SenderRule
+    from nina.core.store.repos import email_label as el
+    from nina.core.store.repos.email_label import SenderRule
 
     try:
         multi = GmailMultiClient.from_env()

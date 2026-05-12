@@ -99,6 +99,13 @@ CREATE INDEX IF NOT EXISTS idx_email_pending_open
 
 CREATE INDEX IF NOT EXISTS idx_email_messages_sender
     ON email_messages (account, sender_norm, first_seen_at);
+
+CREATE TABLE IF NOT EXISTS email_ignored_senders (
+    account        TEXT NOT NULL,
+    sender_norm    TEXT NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (account, sender_norm)
+);
 """
 
 

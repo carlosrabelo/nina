@@ -11,7 +11,7 @@ from nina.errors import ConfigError
 def cmd_list_rules(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     from nina.core.store.db import open_db
-    from nina.core.store.repos import email_learning as el
+    from nina.core.store.repos import email_label as el
 
     conn = open_db(data_dir)
     try:
@@ -38,7 +38,7 @@ def cmd_infer_rules(args: argparse.Namespace) -> None:
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     try:
-        from nina.skills.email_learning.infer_rules import run_infer_from_gmail_labels
+        from nina.tasks.email_infer_rules import run_infer_from_gmail_labels
 
         summary = run_infer_from_gmail_labels(
             tokens_dir,
@@ -67,9 +67,9 @@ def cmd_process(args: argparse.Namespace) -> None:
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     try:
-        from nina.skills.email_learning.service import run_email_learning_process
+        from nina.tasks.email_process import run_email_label_process
 
-        run_email_learning_process(
+        run_email_label_process(
             tokens_dir,
             data_dir,
             bot_token=None,
@@ -86,6 +86,27 @@ def cmd_process(args: argparse.Namespace) -> None:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     print("Email process finished.")
+
+
+def cmd_list_ignored(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    from nina.skills.email_label.execute import format_ignored_list
+
+    print(format_ignored_list(data_dir, account=args.account))
+
+
+def cmd_ignore_add(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    from nina.skills.email_label.execute import add_ignored
+
+    print(add_ignored(data_dir, args.account, args.sender))
+
+
+def cmd_ignore_remove(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    from nina.skills.email_label.execute import remove_ignored
+
+    print(remove_ignored(data_dir, args.account, args.sender))
 
 
 def register(sub: argparse._SubParsersAction) -> None:
@@ -155,16 +176,16 @@ def register(sub: argparse._SubParsersAction) -> None:
     p_infer.add_argument(
         "--days",
         type=int,
-        default=120,
+        default=int(os.environ.get("NINA_EMAIL_LABEL_WINDOW_DAYS", "120")),
         metavar="D",
         help="Gmail newer_than:Dd window (default: 120)",
     )
     p_infer.add_argument(
         "--min-messages",
         type=int,
-        default=2,
+        default=int(os.environ.get("NINA_EMAIL_LABEL_MIN_HITS", "3")),
         metavar="M",
-        help="Minimum messages with the same single user label (default: 2)",
+        help="Minimum messages with the same single user label (default: 3)",
     )
     p_infer.add_argument(
         "-v",
@@ -173,3 +194,35 @@ def register(sub: argparse._SubParsersAction) -> None:
         help="Progress messages on stderr (accounts, Gmail fetch batches, DB writes)",
     )
     p_infer.set_defaults(func=cmd_infer_rules)
+
+    p_ignore = g.add_parser(
+        "ignore",
+        help="Manage ignored senders (won't generate label suggestions)",
+    )
+    ig_sub = p_ignore.add_subparsers(dest="ignore_action", required=True)
+
+    ig_list = ig_sub.add_parser(
+        "list",
+        help="List ignored senders",
+    )
+    ig_list.add_argument(
+        "--account",
+        help="Filter to one Gmail account email",
+    )
+    ig_list.set_defaults(func=cmd_list_ignored)
+
+    ig_add = ig_sub.add_parser(
+        "add",
+        help="Add sender to ignored list",
+    )
+    ig_add.add_argument("account", help="Gmail account email")
+    ig_add.add_argument("sender", help="Normalized sender email")
+    ig_add.set_defaults(func=cmd_ignore_add)
+
+    ig_remove = ig_sub.add_parser(
+        "remove",
+        help="Remove sender from ignored list",
+    )
+    ig_remove.add_argument("account", help="Gmail account email")
+    ig_remove.add_argument("sender", help="Normalized sender email")
+    ig_remove.set_defaults(func=cmd_ignore_remove)

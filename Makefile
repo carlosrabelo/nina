@@ -65,6 +65,9 @@ docker-push: docker-build ## Build and push image to Docker Hub
 	docker push $(TAG_COMMIT)
 	docker push $(TAG_LATEST)
 
+docker-retention: ## Delete old Docker Hub tags (keep latest 3). Set DOCKERHUB_USER and DOCKERHUB_TOKEN.
+	@./scripts/docker-retention.sh $(IMAGE) 3
+
 docker-start: ## Start docker compose stack (detached)
 	NINA_IMAGE="$(TAG_COMMIT)" docker compose up -d --build
 

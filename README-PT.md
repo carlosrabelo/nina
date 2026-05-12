@@ -15,7 +15,7 @@ Assistente pessoal via CLI para gerenciar Gmail, Google Agenda e Telegram — pr
 - Autentica qualquer número de contas Google via OAuth — descobertas automaticamente pelos tokens
 - Consulta qualquer provedor de LLM (Groq, OpenAI, Anthropic, Ollama) via interface unificada LiteLLM
 - Agendador interno (APScheduler) e comandos HTTP slash para integrações externas (MacroDroid, scripts) — sem cron externo necessário
-- **Etiquetas Gmail aprendidas (por conta):** **`nina email process`** vai à inbox, grava cabeçalhos na PostgreSQL, aplica etiquetas aprendidas no Gmail e pode sugerir remetentes novos no Telegram pelo daemon; opcionalmente **`--days`** e **`--max-per-account`** alargam a consulta Gmail e sobem o limite por conta (até 5000); mensagens com **`tagged_at`** já definido em **`email_messages`** são ignoradas cedo (sem upsert de cabeçalho); **`nina email infer-rules`** só acrescenta **`email_sender_rules`** a partir de etiquetas de utilizador já no Gmail (sem gravar `email_messages`); ambos aceitam **`-v` / `--verbose`** para progresso no stderr; **`nina email rules`** lista as regras gravadas; ensinar com `/emailtag` ou `emailtag` / `/emailtag` no `nina console`.
+- **Etiquetas Gmail aprendidas (por conta):** **`nina email process`** vai à inbox, grava cabeçalhos na PostgreSQL, aplica etiquetas aprendidas no Gmail e pode sugerir remetentes novos no Telegram pelo daemon; opcionalmente **`--days`** e **`--max-per-account`** alargam a consulta Gmail e sobem o limite por conta (até 5000); mensagens com **`tagged_at`** já definido em **`email_messages`** são ignoradas cedo (sem upsert de cabeçalho); **`nina email infer-rules`** só acrescenta **`email_sender_rules`** a partir de etiquetas de utilizador já no Gmail (sem gravar `email_messages`); ambos aceitam **`-v` / `--verbose`** para progresso no stderr; **`nina email rules`** lista as regras gravadas; ensinar com `/email_label` ou `email_label` / `/email_label` no `nina console`; remetentes ignorados (**`nina email ignore …`**) ficam excluídos permanentemente das sugestões.
 - Todos os segredos ficam locais: tokens, sessões e credenciais em ficheiros; o estado da aplicação fica no PostgreSQL
 
 → **[Referência de Comandos (GUIDE-PT.md)](GUIDE-PT.md)** (tabela completa: [Lista completa de comandos da CLI](GUIDE-PT.md#lista-completa-de-comandos-da-cli)) · **[API HTTP (API-PT.md)](API-PT.md)** / [API.md](API.md) · **[Skills (SKILL-PT.md)](SKILL-PT.md)** / [SKILL.md](SKILL.md) (domínios em `nina/skills/`) · [AGENTS.md](AGENTS.md) (manter docs em sync ao mudar o produto)
@@ -122,6 +122,9 @@ nina/
     errors.py                # exceções compartilhadas
     cli/                     # parser + handlers da CLI (auth, status, daemon,
                              # console, gmail, calendar, tg, llm)
+    tasks/
+        email_process.py         # ingestão da inbox, aplicar regras, sugestões Telegram
+        email_infer_rules.py     # varrer etiquetas Gmail → inserir regras de remetente
     skills/
         memo/                # criação, listagem e gerenciamento de lembretes
         presence/            # rastreamento de presença
@@ -130,6 +133,7 @@ nina/
         notifications/       # configuração e estado das notificações
         profile/             # mapeamento de contas Google por presença
         activity_log/        # log de atividades passadas no Google Calendar
+        email_label/         # ensinar/descartar etiquetas, ignorados, execute + interpreter
     integrations/
         google/
             auth.py          # fluxo OAuth, cache de tokens, descoberta automática

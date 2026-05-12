@@ -21,7 +21,7 @@ STRINGS: dict[str, str] = {
         "/lang — current language\n"
         "/lang <code> — change language (en|pt)\n"
         "/profile — account mapping per presence\n"
-        "/emailtag — pending sender → label suggestions\n"
+        "/email_label — pending sender → label suggestions\n"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -78,40 +78,67 @@ STRINGS: dict[str, str] = {
     "latest.subject": "Subject: {subject}",
 
     # ── email label learning (per Gmail account) ─────────────────────────────
-    "emailtag.suggest_telegram": (
-        "📧 Nina — new sender pattern\n"
+    "email_label.suggest_telegram": (
+        "Nina -- new sender pattern\n"
         "Account: {account}\n"
         "From: {sender}\n"
         "Sample subject: {subject}\n"
         "Seen (~30d): {count}\n\n"
         "Teach a label (this account only):\n"
-        "/emailtag {full_id} Your/Label-Name\n"
-        "(short id: {short_id}…)"
+        "/email_label {full_id} Your/Label-Name\n"
+        "Ignore this sender forever:\n"
+        "/email_label dismiss {full_id}\n"
+        "(short id: {short_id}...)"
     ),
-    "emailtag.usage": (
-        "/emailtag — list open suggestions\n"
-        "/emailtag <id> <label> — save label for sender on that account\n"
-        "/emailtag dismiss <id> — ignore a suggestion\n"
+    "email_label.usage": (
+        "/email_label — list open suggestions\n"
+        "/email_label <id> <label> — save label for sender on that account\n"
+        "/email_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
+        "/email_label ignore list — list ignored senders\n"
+        "/email_label ignore add <account> <sender> — add to ignored list\n"
+        "/email_label ignore remove <account> <sender> — remove from ignored list\n"
         "Use at least 8 characters of the suggestion id."
     ),
-    "emailtag.no_pending": "No open sender suggestions.",
-    "emailtag.pending_header": "Open suggestions (account-specific rules):",
-    "emailtag.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  hits: {hits}  sample: {subject}",
-    "emailtag.pending_not_found": "No matching open suggestion (check the id).",
-    "emailtag.ambiguous_id": "That id prefix matches more than one row — paste more characters.",
-    "emailtag.id_too_short": "Use at least 8 characters of the suggestion id.",
-    "emailtag.label_empty": "Label name cannot be empty.",
-    "emailtag.dismiss_ok": "Ignored suggestion for {sender}.",
-    "emailtag.taught_ok": (
+    "email_label.no_pending": "No open sender suggestions.",
+    "email_label.pending_header": "Open suggestions (account-specific rules):",
+    "email_label.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  hits: {hits}  sample: {subject}",
+    "email_label.pending_not_found": "No matching open suggestion (check the id).",
+    "email_label.ambiguous_id": "That id prefix matches more than one row — paste more characters.",
+    "email_label.id_too_short": "Use at least 8 characters of the suggestion id.",
+    "email_label.label_empty": "Label name cannot be empty.",
+    "email_label.dismiss_ok": (
+        "Ignored suggestion for {sender}.\n"
+        "Future emails from this sender won't generate suggestions."
+    ),
+    "email_label.ignore_added": (
+        "Ignored sender added: [{account}] {sender}."
+    ),
+    "email_label.ignore_removed": (
+        "Removed from ignored list: [{account}] {sender}."
+    ),
+    "email_label.ignore_not_found": (
+        "Sender not found in ignored list."
+    ),
+    "email_label.ignore_header": "Ignored senders (won't generate suggestions):",
+    "email_label.ignore_empty": "No ignored senders.",
+    "email_label.ignore_usage": (
+        "/email_label ignore list — list ignored senders\n"
+        "/email_label ignore add <account> <sender> — add to ignored list\n"
+        "/email_label ignore remove <account> <sender> — remove from ignored list"
+    ),
+    "email_label.taught_ok": (
         "✓ Saved rule for {sender} → [{label}] on {account}.\n"
         "Applied to {applied} message(s) Nina had recorded."
     ),
-    "help.emailtag": (
-        "  emailtag | /emailtag         List open sender → label suggestions\n"
-        "  emailtag <id> <label>        Teach Gmail label for that sender (per account)\n"
-        "  emailtag dismiss <id>        Ignore a suggestion\n"
+    "help.email_label": (
+        "  email_label | /email_label         List open sender -> label suggestions\n"
+        "  email_label <id> <label>        Teach Gmail label for that sender (per account)\n"
+        "  email_label dismiss <id>        Ignore a suggestion (adds to ignored list)\n"
+        "  email_label ignore list         List ignored senders\n"
+        "  email_label ignore add <acct> <sender>   Add to ignored list\n"
+        "  email_label ignore remove <acct> <sender>   Remove from ignored list\n"
         "\n"
-        "  Use at least 8 characters of the suggestion id (same as /emailtag on Telegram)."
+        "  Use at least 8 characters of the suggestion id (same as /email_label on Telegram)."
     ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
@@ -218,7 +245,7 @@ STRINGS: dict[str, str] = {
     "help.memo":        "  memo <text>          Save a new memo\n  memo <text> due <date>  Save with due date\n  memos                List open memos\n  memo done <id>       Mark as done\n  memo dismiss <id>    Dismiss",
     "cmd.memo":         "Save or list memos",
     "cmd.memos":        "List open memos",
-    "cmd.emailtag":   "Teach Gmail labels per account",
+    "cmd.email_label":   "Teach Gmail labels per account",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "No chats found.",

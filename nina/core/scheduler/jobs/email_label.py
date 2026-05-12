@@ -13,9 +13,9 @@ def make_job(tokens_dir: Path, data_dir: Path, bot_token: str, owner_id: int):  
 
     def job() -> None:
         try:
-            from nina.skills.email_learning.service import run_email_learning_process
+            from nina.tasks.email_process import run_email_label_process
 
-            run_email_learning_process(
+            run_email_label_process(
                 tokens_dir,
                 data_dir,
                 bot_token=bot_token,

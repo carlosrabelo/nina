@@ -465,11 +465,14 @@ async def handle_memos(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("\n".join(lines))
 
 
-async def handle_emailtag(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_email_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     from nina.core.i18n import t
-    from nina.skills.email_learning.service import (
+    from nina.skills.email_label.interpreter import (
+        add_ignored,
         dismiss_pending_by_prefix,
+        format_ignored_list,
         format_pending_list,
+        remove_ignored,
         teach_label_for_pending,
     )
 
@@ -484,13 +487,37 @@ async def handle_emailtag(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
         return
     if args[0].lower() == "dismiss":
         if len(args) < 2:
-            await update.message.reply_text(t("emailtag.usage", lang))
+            await update.message.reply_text(t("email_label.usage", lang))
             return
         out = dismiss_pending_by_prefix(data_dir, args[1])
         await update.message.reply_text(out[:MAX_MSG])
         return
+    if args[0].lower() == "ignore":
+        if len(args) < 2 or args[1].lower() not in ("list", "add", "remove"):
+            await update.message.reply_text(t("email_label.ignore_usage", lang))
+            return
+        sub = args[1].lower()
+        if sub == "list":
+            acct = args[2] if len(args) > 2 else None
+            out = format_ignored_list(data_dir, account=acct)
+            await update.message.reply_text(out[:MAX_MSG])
+            return
+        if sub == "add":
+            if len(args) < 4:
+                await update.message.reply_text(t("email_label.ignore_usage", lang))
+                return
+            out = add_ignored(data_dir, args[2], args[3])
+            await update.message.reply_text(out[:MAX_MSG])
+            return
+        if sub == "remove":
+            if len(args) < 4:
+                await update.message.reply_text(t("email_label.ignore_usage", lang))
+                return
+            out = remove_ignored(data_dir, args[2], args[3])
+            await update.message.reply_text(out[:MAX_MSG])
+            return
     if len(args) < 2:
-        await update.message.reply_text(t("emailtag.usage", lang))
+        await update.message.reply_text(t("email_label.usage", lang))
         return
     pending_prefix = args[0]
     label = " ".join(args[1:])
@@ -551,7 +578,7 @@ def create_application(token: str, owner_id: int, tokens_dir: Path, data_dir: Pa
     app.add_handler(CommandHandler("notify",    handle_notify,    filters=owner_filter))
     app.add_handler(CommandHandler("memo",      handle_memo,      filters=owner_filter))
     app.add_handler(CommandHandler("memos",     handle_memos,     filters=owner_filter))
-    app.add_handler(CommandHandler("emailtag", handle_emailtag, filters=owner_filter))
+    app.add_handler(CommandHandler("email_label", handle_email_label, filters=owner_filter))
     app.add_handler(MessageHandler(owner_filter & filters.TEXT & ~filters.COMMAND, handle_message))
     return app
 

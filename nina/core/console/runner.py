@@ -363,10 +363,10 @@ class NinaConsole(cmd.Cmd):
     def help_memos(self) -> None:
         print(t("help.memo", console_lang()))
 
-    # ── emailtag (Telegram parity; same behaviour as /emailtag on the bot) ─────
+    # ── email_label (Telegram parity; same behaviour as /email_label on the bot) ─────
 
-    def do_emailtag(self, arg: str) -> None:
-        from nina.skills.email_learning.service import (
+    def do_email_label(self, arg: str) -> None:
+        from nina.skills.email_label.interpreter import (
             dismiss_pending_by_prefix,
             format_pending_list,
             teach_label_for_pending,
@@ -384,21 +384,21 @@ class NinaConsole(cmd.Cmd):
             return
         if parts[0].lower() == "dismiss":
             if len(parts) < 2:
-                print(f"  {t('emailtag.usage', lang)}")
+                print(f"  {t('email_label.usage', lang)}")
                 return
             out = dismiss_pending_by_prefix(dd, parts[1])
             print(f"  {out}")
             return
         if len(parts) < 2:
-            print(f"  {t('emailtag.usage', lang)}")
+            print(f"  {t('email_label.usage', lang)}")
             return
         pending_prefix = parts[0]
         label = " ".join(parts[1:])
         out = teach_label_for_pending(td, dd, pending_prefix, label)
         print(f"  {out}")
 
-    def help_emailtag(self) -> None:
-        print(t("help.emailtag", console_lang()))
+    def help_email_label(self) -> None:
+        print(t("help.email_label", console_lang()))
 
     # ── exit ──────────────────────────────────────────────────────────────────
 
@@ -424,10 +424,10 @@ class NinaConsole(cmd.Cmd):
             return
 
         stripped = line.strip()
-        if stripped.startswith("emailtag"):
+        if stripped.startswith("email_label"):
             parts = shlex.split(stripped)
-            if parts and parts[0] == "emailtag":
-                self.do_emailtag(" ".join(parts[1:]))
+            if parts and parts[0] == "email_label":
+                self.do_email_label(" ".join(parts[1:]))
                 return
 
         dispatch_natural_language_line(line)

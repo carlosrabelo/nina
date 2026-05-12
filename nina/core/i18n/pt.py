@@ -21,7 +21,7 @@ STRINGS: dict[str, str] = {
         "/lang — idioma atual\n"
         "/lang <código> — muda idioma (en|pt)\n"
         "/profile — contas associadas por presença\n"
-        "/emailtag — sugestões remetente → etiqueta\n"
+        "/email_label — sugestões remetente → etiqueta\n"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -78,40 +78,67 @@ STRINGS: dict[str, str] = {
     "latest.subject": "Assunto: {subject}",
 
     # ── email label learning (por conta Gmail) ────────────────────────────────
-    "emailtag.suggest_telegram": (
-        "📧 Nina — novo padrão de remetente\n"
+    "email_label.suggest_telegram": (
+        "Nina -- novo padrao de remetente\n"
         "Conta: {account}\n"
         "De: {sender}\n"
         "Assunto exemplo: {subject}\n"
         "Visto (~30d): {count}\n\n"
-        "Defina a etiqueta (só nesta conta):\n"
-        "/emailtag {full_id} Sua/Etiqueta\n"
-        "(id curto: {short_id}…)"
+        "Defina a etiqueta (so nesta conta):\n"
+        "/email_label {full_id} Sua/Etiqueta\n"
+        "Ignorar esse remetente para sempre:\n"
+        "/email_label dismiss {full_id}\n"
+        "(id curto: {short_id}...)"
     ),
-    "emailtag.usage": (
-        "/emailtag — lista sugestões abertas\n"
-        "/emailtag <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
-        "/emailtag dismiss <id> — ignora a sugestão\n"
+    "email_label.usage": (
+        "/email_label — lista sugestões abertas\n"
+        "/email_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
+        "/email_label dismiss <id> — ignora a sugestão (adiciona remetente à lista de ignorados)\n"
+        "/email_label ignore list — listar remetentes ignorados\n"
+        "/email_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
+        "/email_label ignore remove <conta> <remetente> — remover da lista de ignorados\n"
         "Use pelo menos 8 caracteres do id da sugestão."
     ),
-    "emailtag.no_pending": "Nenhuma sugestão de remetente aberta.",
-    "emailtag.pending_header": "Sugestões abertas (regras por conta):",
-    "emailtag.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  ocorrências: {hits}  exemplo: {subject}",
-    "emailtag.pending_not_found": "Nenhuma sugestão aberta com esse id.",
-    "emailtag.ambiguous_id": "Esse prefixo de id bate com mais de uma linha — cole mais caracteres.",
-    "emailtag.id_too_short": "Use pelo menos 8 caracteres do id da sugestão.",
-    "emailtag.label_empty": "O nome da etiqueta não pode ser vazio.",
-    "emailtag.dismiss_ok": "Sugestão ignorada para {sender}.",
-    "emailtag.taught_ok": (
+    "email_label.no_pending": "Nenhuma sugestão de remetente aberta.",
+    "email_label.pending_header": "Sugestões abertas (regras por conta):",
+    "email_label.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  ocorrências: {hits}  exemplo: {subject}",
+    "email_label.pending_not_found": "Nenhuma sugestão aberta com esse id.",
+    "email_label.ambiguous_id": "Esse prefixo de id bate com mais de uma linha — cole mais caracteres.",
+    "email_label.id_too_short": "Use pelo menos 8 caracteres do id da sugestão.",
+    "email_label.label_empty": "O nome da etiqueta não pode ser vazio.",
+    "email_label.dismiss_ok": (
+        "Sugestão ignorada para {sender}.\n"
+        "Emails futuros desse remetente não vão gerar sugestões."
+    ),
+    "email_label.ignore_added": (
+        "Remetente ignorado adicionado: [{account}] {sender}."
+    ),
+    "email_label.ignore_removed": (
+        "Removido da lista de ignorados: [{account}] {sender}."
+    ),
+    "email_label.ignore_not_found": (
+        "Remetente não encontrado na lista de ignorados."
+    ),
+    "email_label.ignore_header": "Remetentes ignorados (não vão gerar sugestões):",
+    "email_label.ignore_empty": "Nenhum remetente ignorado.",
+    "email_label.ignore_usage": (
+        "/email_label ignore list — listar remetentes ignorados\n"
+        "/email_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
+        "/email_label ignore remove <conta> <remetente> — remover da lista de ignorados"
+    ),
+    "email_label.taught_ok": (
         "✓ Regra gravada: {sender} → [{label}] em {account}.\n"
         "Aplicada em {applied} mensagem(ns) que a Nina já tinha registado."
     ),
-    "help.emailtag": (
-        "  emailtag | /emailtag         Listar sugestões remetente → etiqueta\n"
-        "  emailtag <id> <etiqueta>     Ensinar etiqueta Gmail para esse remetente (por conta)\n"
-        "  emailtag dismiss <id>        Ignorar uma sugestão\n"
+    "help.email_label": (
+        "  email_label | /email_label         Listar sugestões remetente → etiqueta\n"
+        "  email_label <id> <etiqueta>     Ensinar etiqueta Gmail para esse remetente (por conta)\n"
+        "  email_label dismiss <id>        Ignorar uma sugestão (adiciona à lista de ignorados)\n"
+        "  email_label ignore list         Listar remetentes ignorados\n"
+        "  email_label ignore add <conta> <remetente>   Adicionar à lista de ignorados\n"
+        "  email_label ignore remove <conta> <remetente>   Remover da lista de ignorados\n"
         "\n"
-        "  Use pelo menos 8 caracteres do id da sugestão (igual ao /emailtag no Telegram)."
+        "  Use pelo menos 8 caracteres do id da sugestão (igual ao /email_label no Telegram)."
     ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
@@ -218,7 +245,7 @@ STRINGS: dict[str, str] = {
     "help.memo":        "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluído\n  memo dismiss <id>        Descartar",
     "cmd.memo":         "Salvar ou listar memos",
     "cmd.memos":        "Listar memos abertos",
-    "cmd.emailtag":   "Ensinar etiquetas Gmail por conta",
+    "cmd.email_label":   "Ensinar etiquetas Gmail por conta",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "Nenhum chat encontrado.",

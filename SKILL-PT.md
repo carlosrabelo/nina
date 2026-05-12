@@ -60,12 +60,12 @@ Ordem alfabética pelo id do domínio (ver [AGENTS.md](AGENTS.md)).
 
 ---
 
-### `email_learning` — etiquetas Gmail por remetente
+### `email_label` — etiquetas Gmail por remetente
 
 - **Objetivo:** Manter regras por conta que associam um remetente (domínio ou endereço) a uma etiqueta de **utilizador** do Gmail; **`nina email process`** ingere metadados da inbox em **`email_messages`**, aplica essas regras no Gmail e pode mostrar pedidos no Telegram para remetentes novos de alto volume. O **`nina email infer-rules`** só varre o correio para inserir novas **`email_sender_rules`** a partir de etiquetas de utilizador no Gmail (sem escrita em `email_messages`). Na CLI, **`process`** e **`infer-rules`** aceitam **`-v` / `--verbose`** (progresso no stderr); o **`process`** também aceita **`--days`** e **`--max-per-account`** para backfill. Linhas com **`tagged_at`** definido são ignoradas cedo (sem upsert de cabeçalho).
-- **Acionadores:** **Não** é domínio do router LLM. Corre pelo **agendador** (job `email_learning` quando o bot Telegram está configurado), **`nina email process`** (CLI ou daemon), **`nina email infer-rules`**, **`nina email rules`** (listar regras gravadas), **`/emailtag`** no Telegram e **`emailtag`** / **`/emailtag`** no `nina console`.
-- **Código:** [`nina/skills/email_learning/`](nina/skills/email_learning/) (`service.py`, [`infer_rules.py`](nina/skills/email_learning/infer_rules.py)); integração Gmail em [`nina/integrations/google/gmail/client.py`](nina/integrations/google/gmail/client.py).
-- **Armazenamento:** Tabelas PostgreSQL em [`nina/core/store/repos/email_learning.py`](nina/core/store/repos/email_learning.py) — `email_messages`, `email_sender_rules`, `email_pending_labels` (esquema em [`nina/core/store/db.py`](nina/core/store/db.py)).
+- **Acionadores:** **Não** é domínio do router LLM. Corre pelo **agendador** (job `email_label` quando o bot Telegram está configurado), **`nina email process`** (CLI ou daemon), **`nina email infer-rules`**, **`nina email rules`** (listar regras gravadas), **`/email_label`** no Telegram e **`email_label`** / **`/email_label`** no `nina console`.
+- **Código:** [`nina/skills/email_label/`](nina/skills/email_label/) (`execute.py`, [`interpreter.py`](nina/skills/email_label/interpreter.py)); tarefas em [`nina/tasks/`](nina/tasks/) ([`email_process.py`](nina/tasks/email_process.py), [`email_infer_rules.py`](nina/tasks/email_infer_rules.py)); integração Gmail em [`nina/integrations/google/gmail/client.py`](nina/integrations/google/gmail/client.py).
+- **Armazenamento:** Tabelas PostgreSQL em [`nina/core/store/repos/email_label.py`](nina/core/store/repos/email_label.py) — `email_messages`, `email_sender_rules`, `email_pending_labels`, `email_ignored_senders` (esquema em [`nina/core/store/db.py`](nina/core/store/db.py)).
 
 ---
 

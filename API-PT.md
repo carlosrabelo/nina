@@ -204,7 +204,7 @@ Comandos suportados:
 | `/memo <texto>`                  | Cria um memo                                 |
 | `/activity <texto>`              | Registra atividade passada                   |
 
-Comandos como **`/emailtag`** estão disponíveis no **bot Telegram** e no **`nina console`**; **não** são tratados por `POST /command` (subconjunto acima).
+Comandos como **`/email_label`** estão disponíveis no **bot Telegram** e no **`nina console`**; **não** são tratados por `POST /command` (subconjunto acima).
 
 Os mesmos comandos da tabela funcionam no bot do Telegram — basta enviar como mensagem normal.
 

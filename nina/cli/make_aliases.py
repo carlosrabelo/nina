@@ -10,7 +10,7 @@ from pathlib import Path
 import nina
 from nina.cli import auth as auth_mod
 from nina.cli import calendar as cal_mod
-from nina.cli import email_learning as email_mod
+from nina.cli import email_label as email_mod
 from nina.cli import gmail as gmail_mod
 from nina.cli import llm as llm_mod
 from nina.cli import status as status_mod

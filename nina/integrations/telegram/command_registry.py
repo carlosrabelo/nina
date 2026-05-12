@@ -19,7 +19,7 @@ COMMAND_NAMES = [
     "notify",
     "memo",
     "memos",
-    "emailtag",
+    "email_label",
 ]
 
 

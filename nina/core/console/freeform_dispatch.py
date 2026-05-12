@@ -10,7 +10,7 @@ from nina.core.i18n import t
 
 
 def dispatch_natural_language_line(line: str) -> None:
-    """Handle a line that is not a registered ``cmd`` command (after ``/`` and ``emailtag`` shortcuts)."""
+    """Handle a line that is not a registered ``cmd`` command (after ``/`` and ``email_label`` shortcuts)."""
     lang = console_lang()
     ddir = data_dir()
     tdir = tokens_dir()

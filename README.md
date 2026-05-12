@@ -15,7 +15,7 @@ Personal assistant CLI for managing Gmail, Google Calendar, and Telegram — bui
 - Authenticate any number of Google accounts via OAuth — auto-discovered from saved tokens
 - Query any LLM provider (Groq, OpenAI, Anthropic, Ollama) through a single LiteLLM interface
 - Internal scheduler (APScheduler) plus HTTP slash commands for external integrations (MacroDroid, scripts) — no external cron required
-- **Gmail label learning (per account):** **`nina email process`** fetches inbox mail, records headers in PostgreSQL, applies learned labels in Gmail, and can suggest new senders on Telegram from the daemon; optional **`--days`** and **`--max-per-account`** widen the Gmail query and raise the per-account fetch cap (up to 5000); messages already marked **`tagged_at`** in **`email_messages`** are skipped early (no header upsert); **`nina email infer-rules`** only adds new **`email_sender_rules`** from existing Gmail user labels (no inbox DB writes); both commands accept **`-v` / `--verbose`** for progress on stderr; **`nina email rules`** lists stored rules; teach labels via `/emailtag` or `emailtag` / `/emailtag` in `nina console`.
+- **Gmail label learning (per account):** **`nina email process`** fetches inbox mail, records headers in PostgreSQL, applies learned labels in Gmail, and can suggest new senders on Telegram from the daemon; optional **`--days`** and **`--max-per-account`** widen the Gmail query and raise the per-account fetch cap (up to 5000); messages already marked **`tagged_at`** in **`email_messages`** are skipped early (no header upsert); **`nina email infer-rules`** only adds new **`email_sender_rules`** from existing Gmail user labels (no inbox DB writes); both commands accept **`-v` / `--verbose`** for progress on stderr; **`nina email rules`** lists stored rules; teach labels via `/email_label` or `email_label` / `/email_label` in `nina console`; ignored senders (**`nina email ignore …`**) are permanently excluded from suggestions.
 - All secrets stay local: tokens, session files, and credentials on disk; application state lives in PostgreSQL
 
 → **[Command Reference (GUIDE.md)](GUIDE.md)** (full command table: [Full CLI command list](GUIDE.md#full-cli-command-list)) · **[HTTP API (API.md)](API.md)** / [API-PT.md](API-PT.md) · **[Skills (SKILL.md)](SKILL.md)** / [SKILL-PT.md](SKILL-PT.md) (behaviour domains under `nina/skills/`) · [AGENTS.md](AGENTS.md) (keep docs updated when the product changes)
@@ -122,6 +122,9 @@ nina/
     errors.py                # shared exceptions
     cli/                     # CLI parser + command handlers (auth, status, daemon,
                              # console, gmail, calendar, tg, llm)
+    tasks/
+        email_process.py         # inbox ingest, apply rules, Telegram suggestions
+        email_infer_rules.py     # scan Gmail user labels → insert sender rules
     skills/
         memo/                # memo creation, listing, and reminder management
         presence/            # presence status tracking
@@ -130,6 +133,7 @@ nina/
         notifications/       # notification config and state
         profile/             # Google account mapping per presence
         activity_log/        # past activity logging to Google Calendar
+        email_label/         # teach/dismiss labels, ignored senders, execute + interpreter
     integrations/
         google/
             auth.py          # Google OAuth flow, token caching, auto-discovery

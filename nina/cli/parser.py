@@ -7,7 +7,7 @@ from nina.cli import (
     calendar,
     console,
     daemon,
-    email_learning,
+    email_label,
     gmail,
     llm,
     make_aliases,
@@ -64,7 +64,7 @@ def main() -> None:
     daemon.register(sub)
     make_aliases.register(sub)
     gmail.register(sub)
-    email_learning.register(sub)
+    email_label.register(sub)
     calendar.register(sub)
     telegram.register(sub)
     llm.register(sub)

@@ -27,6 +27,13 @@ class ListedSenderRule:
     created_at: datetime
 
 
+@dataclass(frozen=True)
+class IgnoredSender:
+    account: str
+    sender_norm: str
+    created_at: datetime
+
+
 @dataclass
 class PendingLabel:
     id: str
@@ -341,3 +348,77 @@ def is_message_tagged(
         (account, message_id),
     ).fetchone()
     return bool(row and row.get("tagged_at"))
+
+
+def is_sender_ignored(
+    conn: psycopg.Connection[dict], account: str, sender_norm: str
+) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1 FROM email_ignored_senders
+        WHERE account = %s AND sender_norm = %s
+        """,
+        (account, sender_norm),
+    ).fetchone()
+    return row is not None
+
+
+def add_ignored_sender(
+    conn: psycopg.Connection[dict], account: str, sender_norm: str
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO email_ignored_senders (account, sender_norm, created_at)
+        VALUES (%s, %s, now())
+        ON CONFLICT (account, sender_norm) DO NOTHING
+        """,
+        (account, sender_norm),
+    )
+    conn.commit()
+
+
+def remove_ignored_sender(
+    conn: psycopg.Connection[dict], account: str, sender_norm: str
+) -> bool:
+    cur = conn.execute(
+        """
+        DELETE FROM email_ignored_senders
+        WHERE account = %s AND sender_norm = %s
+        """,
+        (account, sender_norm),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def list_ignored_senders(
+    conn: psycopg.Connection[dict],
+    *,
+    account: str | None = None,
+) -> list[IgnoredSender]:
+    if account is not None:
+        rows = conn.execute(
+            """
+            SELECT account, sender_norm, created_at
+            FROM email_ignored_senders
+            WHERE account = %s
+            ORDER BY sender_norm
+            """,
+            (account,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT account, sender_norm, created_at
+            FROM email_ignored_senders
+            ORDER BY account, sender_norm
+            """
+        ).fetchall()
+    return [
+        IgnoredSender(
+            account=str(r["account"]),
+            sender_norm=str(r["sender_norm"]),
+            created_at=r["created_at"],
+        )
+        for r in rows
+    ]

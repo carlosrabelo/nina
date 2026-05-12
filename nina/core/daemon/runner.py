@@ -115,7 +115,7 @@ def run(dev: bool = False) -> None:
             except Exception as e:
                 logging.warning("calendar notifications job not registered: %s", e)
             try:
-                from nina.core.scheduler.jobs.email_learning import make_job as make_email_job
+                from nina.core.scheduler.jobs.email_label import make_job as make_email_job
 
                 scheduler.add_job(
                     make_email_job(tokens_dir, data_dir, _bot_token, int(_owner_raw)),
