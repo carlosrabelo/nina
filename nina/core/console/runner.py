@@ -366,9 +366,12 @@ class NinaConsole(cmd.Cmd):
     # ── email_label (Telegram parity; same behaviour as /email_label on the bot) ─────
 
     def do_email_label(self, arg: str) -> None:
-        from nina.skills.email_label.interpreter import (
+        from nina.skills.email_label.execute import (
+            add_ignored,
             dismiss_pending_by_prefix,
+            format_ignored_list,
             format_pending_list,
+            remove_ignored,
             teach_label_for_pending,
         )
 
@@ -389,6 +392,31 @@ class NinaConsole(cmd.Cmd):
             out = dismiss_pending_by_prefix(dd, parts[1])
             print(f"  {out}")
             return
+        if parts[0].lower() == "ignore":
+            if len(parts) < 2 or parts[1].lower() not in ("list", "add", "remove"):
+                print(f"  {t('email_label.ignore_usage', lang)}")
+                return
+            sub = parts[1].lower()
+            if sub == "list":
+                acct = parts[2] if len(parts) > 2 else None
+                text = format_ignored_list(dd, account=acct)
+                for part in text.split("\n"):
+                    print(f"  {part}")
+                return
+            if sub == "add":
+                if len(parts) < 4:
+                    print(f"  {t('email_label.ignore_usage', lang)}")
+                    return
+                out = add_ignored(dd, parts[2], parts[3])
+                print(f"  {out}")
+                return
+            if sub == "remove":
+                if len(parts) < 4:
+                    print(f"  {t('email_label.ignore_usage', lang)}")
+                    return
+                out = remove_ignored(dd, parts[2], parts[3])
+                print(f"  {out}")
+                return
         if len(parts) < 2:
             print(f"  {t('email_label.usage', lang)}")
             return

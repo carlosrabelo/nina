@@ -145,6 +145,32 @@ def execute_activity_log_intent(
     print("  Não entendi a atividade.")
 
 
+def execute_email_label_intent(
+    action: str, target_id: str, label_name: str, lang: str, *, data_dir: Path, tokens_dir: Path
+) -> None:
+    from nina.skills.email_label.execute import (
+        dismiss_pending_by_prefix,
+        format_pending_list,
+        teach_label_for_pending,
+    )
+
+    if action == "list":
+        text = format_pending_list(data_dir)
+        for part in text.split("\n"):
+            print(f"  {part}")
+        return
+    if action == "dismiss" and target_id:
+        out = dismiss_pending_by_prefix(data_dir, target_id)
+        print(f"  {out}")
+        return
+    if action == "teach" and target_id and label_name:
+        out = teach_label_for_pending(tokens_dir, data_dir, target_id, label_name)
+        print(f"  {out}")
+        return
+    from nina.core.i18n import t as _t
+    print(f"  {_t('email_label.usage', lang)}")
+
+
 def execute_memo_intent(
     action: str, subject: str, lang: str, *, data_dir: Path, due_date: str = ""
 ) -> None:

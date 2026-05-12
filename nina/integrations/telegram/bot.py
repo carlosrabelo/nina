@@ -467,7 +467,7 @@ async def handle_memos(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def handle_email_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     from nina.core.i18n import t
-    from nina.skills.email_label.interpreter import (
+    from nina.skills.email_label.execute import (
         add_ignored,
         dismiss_pending_by_prefix,
         format_ignored_list,
