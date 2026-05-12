@@ -149,6 +149,7 @@ def execute_email_label_intent(
     action: str, target_id: str, label_name: str, lang: str, *, data_dir: Path, tokens_dir: Path
 ) -> None:
     from nina.skills.email_label.execute import (
+        dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_pending_list,
         teach_label_for_pending,
@@ -158,6 +159,10 @@ def execute_email_label_intent(
         text = format_pending_list(data_dir)
         for part in text.split("\n"):
             print(f"  {part}")
+        return
+    if action == "dismiss_all":
+        out = dismiss_all_pending_labels(data_dir)
+        print(f"  {out}")
         return
     if action == "dismiss" and target_id:
         out = dismiss_pending_by_prefix(data_dir, target_id)

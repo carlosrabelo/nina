@@ -37,6 +37,7 @@ def format_email_label_reply(
     action: str, target_id: str, label_name: str, lang: str, data_dir: Path, tokens_dir: Path
 ) -> str:
     from nina.skills.email_label.execute import (
+        dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_pending_list,
         teach_label_for_pending,
@@ -44,6 +45,8 @@ def format_email_label_reply(
 
     if action == "list":
         return format_pending_list(data_dir)
+    if action == "dismiss_all":
+        return dismiss_all_pending_labels(data_dir)
     if action == "dismiss" and target_id:
         return dismiss_pending_by_prefix(data_dir, target_id)
     if action == "teach" and target_id and label_name:

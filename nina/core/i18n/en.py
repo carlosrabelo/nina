@@ -94,9 +94,11 @@ STRINGS: dict[str, str] = {
         "/email_label — list open suggestions\n"
         "/email_label <id> <label> — save label for sender on that account\n"
         "/email_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
+        "/email_label dismiss-all — ignore all open suggestions\n"
         "/email_label ignore list — list ignored senders\n"
         "/email_label ignore add <account> <sender> — add to ignored list\n"
         "/email_label ignore remove <account> <sender> — remove from ignored list\n"
+        "Label must start with @ (e.g. @Finance).\n"
         "Use at least 8 characters of the suggestion id."
     ),
     "email_label.no_pending": "No open sender suggestions.",
@@ -109,6 +111,12 @@ STRINGS: dict[str, str] = {
     "email_label.dismiss_ok": (
         "Ignored suggestion for {sender}.\n"
         "Future emails from this sender won't generate suggestions."
+    ),
+    "email_label.dismiss_all_ok": (
+        "{count} suggestion(s) dismissed."
+    ),
+    "email_label.label_must_at": (
+        "Label must start with @ (e.g. @Finance)."
     ),
     "email_label.ignore_added": (
         "Ignored sender added: [{account}] {sender}."
@@ -134,6 +142,7 @@ STRINGS: dict[str, str] = {
         "  email_label | /email_label         List open sender -> label suggestions\n"
         "  email_label <id> <label>        Teach Gmail label for that sender (per account)\n"
         "  email_label dismiss <id>        Ignore a suggestion (adds to ignored list)\n"
+        "  email_label dismiss-all         Ignore all open suggestions\n"
         "  email_label ignore list         List ignored senders\n"
         "  email_label ignore add <acct> <sender>   Add to ignored list\n"
         "  email_label ignore remove <acct> <sender>   Remove from ignored list\n"

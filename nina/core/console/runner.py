@@ -368,6 +368,7 @@ class NinaConsole(cmd.Cmd):
     def do_email_label(self, arg: str) -> None:
         from nina.skills.email_label.execute import (
             add_ignored,
+            dismiss_all_pending_labels,
             dismiss_pending_by_prefix,
             format_ignored_list,
             format_pending_list,
@@ -390,6 +391,10 @@ class NinaConsole(cmd.Cmd):
                 print(f"  {t('email_label.usage', lang)}")
                 return
             out = dismiss_pending_by_prefix(dd, parts[1])
+            print(f"  {out}")
+            return
+        if parts[0].lower() == "dismiss-all":
+            out = dismiss_all_pending_labels(dd)
             print(f"  {out}")
             return
         if parts[0].lower() == "ignore":

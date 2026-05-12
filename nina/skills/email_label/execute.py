@@ -25,6 +25,8 @@ def teach_label_for_pending(
     label_name = label_name.strip()
     if not label_name:
         return t("email_label.label_empty", lang)
+    if not label_name.startswith("@"):
+        return t("email_label.label_must_at", lang)
 
     conn = open_db(data_dir)
     try:
@@ -71,6 +73,21 @@ def teach_label_for_pending(
             account=pending.account,
             applied=len(applied_ids),
         )
+    finally:
+        conn.close()
+
+
+def dismiss_all_pending_labels(data_dir: Path) -> str:
+    from nina.core.i18n import t
+    from nina.core.locale.store import load as load_locale
+    from nina.core.store.db import open_db
+    from nina.core.store.repos import email_label as el
+
+    lang = load_locale(data_dir).lang
+    conn = open_db(data_dir)
+    try:
+        count = el.dismiss_all_pending(conn)
+        return t("email_label.dismiss_all_ok", lang, count=count)
     finally:
         conn.close()
 

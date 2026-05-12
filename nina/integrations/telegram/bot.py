@@ -469,6 +469,7 @@ async def handle_email_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
     from nina.core.i18n import t
     from nina.skills.email_label.execute import (
         add_ignored,
+        dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_ignored_list,
         format_pending_list,
@@ -490,6 +491,10 @@ async def handle_email_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text(t("email_label.usage", lang))
             return
         out = dismiss_pending_by_prefix(data_dir, args[1])
+        await update.message.reply_text(out[:MAX_MSG])
+        return
+    if args[0].lower() == "dismiss-all":
+        out = dismiss_all_pending_labels(data_dir)
         await update.message.reply_text(out[:MAX_MSG])
         return
     if args[0].lower() == "ignore":

@@ -94,9 +94,11 @@ STRINGS: dict[str, str] = {
         "/email_label — lista sugestões abertas\n"
         "/email_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
         "/email_label dismiss <id> — ignora a sugestão (adiciona remetente à lista de ignorados)\n"
+        "/email_label dismiss-all — ignora todas as sugestões abertas\n"
         "/email_label ignore list — listar remetentes ignorados\n"
         "/email_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
         "/email_label ignore remove <conta> <remetente> — remover da lista de ignorados\n"
+        "A etiqueta deve começar com @ (ex.: @Financeiro).\n"
         "Use pelo menos 8 caracteres do id da sugestão."
     ),
     "email_label.no_pending": "Nenhuma sugestão de remetente aberta.",
@@ -109,6 +111,12 @@ STRINGS: dict[str, str] = {
     "email_label.dismiss_ok": (
         "Sugestão ignorada para {sender}.\n"
         "Emails futuros desse remetente não vão gerar sugestões."
+    ),
+    "email_label.dismiss_all_ok": (
+        "{count} sugestão(ões) ignorada(s)."
+    ),
+    "email_label.label_must_at": (
+        "A etiqueta deve começar com @ (ex.: @Financeiro)."
     ),
     "email_label.ignore_added": (
         "Remetente ignorado adicionado: [{account}] {sender}."
@@ -134,6 +142,7 @@ STRINGS: dict[str, str] = {
         "  email_label | /email_label         Listar sugestões remetente → etiqueta\n"
         "  email_label <id> <etiqueta>     Ensinar etiqueta Gmail para esse remetente (por conta)\n"
         "  email_label dismiss <id>        Ignorar uma sugestão (adiciona à lista de ignorados)\n"
+        "  email_label dismiss-all         Ignorar todas as sugestões abertas\n"
         "  email_label ignore list         Listar remetentes ignorados\n"
         "  email_label ignore add <conta> <remetente>   Adicionar à lista de ignorados\n"
         "  email_label ignore remove <conta> <remetente>   Remover da lista de ignorados\n"
