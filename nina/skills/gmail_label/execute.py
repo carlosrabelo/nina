@@ -21,22 +21,22 @@ def teach_label_for_pending(
     lang = load_locale(data_dir).lang
     id_prefix = id_prefix.strip()
     if len(id_prefix) < 8:
-        return t("email_label.id_too_short", lang)
+        return t("gmail_label.id_too_short", lang)
     label_name = label_name.strip()
     if not label_name:
-        return t("email_label.label_empty", lang)
+        return t("gmail_label.label_empty", lang)
     if not label_name.startswith("@"):
-        return t("email_label.label_must_at", lang)
+        return t("gmail_label.label_must_at", lang)
 
     conn = open_db(data_dir)
     try:
         try:
             pending = el.get_pending_by_id_prefix(conn, id_prefix)
         except ValueError:
-            return t("email_label.ambiguous_id", lang)
+            return t("gmail_label.ambiguous_id", lang)
 
         if pending is None:
-            return t("email_label.pending_not_found", lang)
+            return t("gmail_label.pending_not_found", lang)
 
         rule = SenderRule(
             account=pending.account,
@@ -66,7 +66,7 @@ def teach_label_for_pending(
             )
 
         return t(
-            "email_label.taught_ok",
+            "gmail_label.taught_ok",
             lang,
             sender=pending.sender_norm,
             label=label_name,
@@ -87,7 +87,7 @@ def dismiss_all_pending_labels(data_dir: Path) -> str:
     conn = open_db(data_dir)
     try:
         count = el.dismiss_all_pending(conn)
-        return t("email_label.dismiss_all_ok", lang, count=count)
+        return t("gmail_label.dismiss_all_ok", lang, count=count)
     finally:
         conn.close()
 
@@ -101,19 +101,19 @@ def dismiss_pending_by_prefix(data_dir: Path, id_prefix: str) -> str:
     lang = load_locale(data_dir).lang
     id_prefix = id_prefix.strip()
     if len(id_prefix) < 8:
-        return t("email_label.id_too_short", lang)
+        return t("gmail_label.id_too_short", lang)
     conn = open_db(data_dir)
     try:
         try:
             pending = el.get_pending_by_id_prefix(conn, id_prefix)
         except ValueError:
-            return t("email_label.ambiguous_id", lang)
+            return t("gmail_label.ambiguous_id", lang)
         if pending is None:
-            return t("email_label.pending_not_found", lang)
+            return t("gmail_label.pending_not_found", lang)
         if not el.dismiss_pending(conn, pending.id):
-            return t("email_label.pending_not_found", lang)
+            return t("gmail_label.pending_not_found", lang)
         el.add_ignored_sender(conn, pending.account, pending.sender_norm)
-        return t("email_label.dismiss_ok", lang, sender=pending.sender_norm)
+        return t("gmail_label.dismiss_ok", lang, sender=pending.sender_norm)
     finally:
         conn.close()
 
@@ -129,12 +129,12 @@ def format_pending_list(data_dir: Path) -> str:
     try:
         rows = el.list_open_pending(conn)
         if not rows:
-            return t("email_label.no_pending", lang)
-        lines = [t("email_label.pending_header", lang)]
+            return t("gmail_label.no_pending", lang)
+        lines = [t("gmail_label.pending_header", lang)]
         for p in rows:
             lines.append(
                 t(
-                    "email_label.pending_line",
+                    "gmail_label.pending_line",
                     lang,
                     short_id=p.id[:12],
                     full_id=p.id,
@@ -160,8 +160,8 @@ def format_ignored_list(data_dir: Path, *, account: str | None = None) -> str:
     try:
         rows = el.list_ignored_senders(conn, account=account)
         if not rows:
-            return t("email_label.ignore_empty", lang)
-        lines = [t("email_label.ignore_header", lang)]
+            return t("gmail_label.ignore_empty", lang)
+        lines = [t("gmail_label.ignore_header", lang)]
         for ig in rows:
             lines.append(f"· [{ig.account}] {ig.sender_norm}")
         return "\n".join(lines)
@@ -180,7 +180,7 @@ def add_ignored(data_dir: Path, account: str, sender: str) -> str:
     try:
         el.add_ignored_sender(conn, account.strip(), sender.strip())
         return t(
-            "email_label.ignore_added",
+            "gmail_label.ignore_added",
             lang,
             account=account.strip(),
             sender=sender.strip(),
@@ -200,9 +200,9 @@ def remove_ignored(data_dir: Path, account: str, sender: str) -> str:
     try:
         removed = el.remove_ignored_sender(conn, account.strip(), sender.strip())
         if not removed:
-            return t("email_label.ignore_not_found", lang)
+            return t("gmail_label.ignore_not_found", lang)
         return t(
-            "email_label.ignore_removed",
+            "gmail_label.ignore_removed",
             lang,
             account=account.strip(),
             sender=sender.strip(),

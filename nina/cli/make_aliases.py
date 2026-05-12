@@ -10,7 +10,7 @@ from pathlib import Path
 import nina
 from nina.cli import auth as auth_mod
 from nina.cli import calendar as cal_mod
-from nina.cli import email_label as email_mod
+from nina.cli import gmail_label as email_mod
 from nina.cli import gmail as gmail_mod
 from nina.cli import llm as llm_mod
 from nina.cli import status as status_mod
@@ -121,7 +121,7 @@ def register(sub: argparse._SubParsersAction) -> None:
 
     p = sub.add_parser(
         "email-process",
-        help="Process inbox + rules once (alias: nina email process)",
+        help="Process inbox + rules once (alias: nina gmail_label process)",
     )
     p.add_argument("--days", type=int, default=None, metavar="D")
     p.add_argument("--max-per-account", type=int, default=None, metavar="N")
@@ -130,7 +130,7 @@ def register(sub: argparse._SubParsersAction) -> None:
 
     p = sub.add_parser(
         "email-infer-rules",
-        help="Infer sender rules from Gmail labels (alias: nina email infer-rules)",
+        help="Infer sender rules from Gmail labels (alias: nina gmail_label infer-rules)",
     )
     p.add_argument("--max-per-account", type=int, default=500, metavar="N")
     p.add_argument("--days", type=int, default=120, metavar="D")
@@ -140,7 +140,7 @@ def register(sub: argparse._SubParsersAction) -> None:
 
     p = sub.add_parser(
         "email-rules",
-        help="List learned sender→label rules (alias: nina email rules)",
+        help="List learned sender→label rules (alias: nina gmail_label rules)",
     )
     p.add_argument("--account", help="Filter to one Gmail account email")
     p.set_defaults(func=email_mod.cmd_list_rules)

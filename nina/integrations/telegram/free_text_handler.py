@@ -33,10 +33,10 @@ def format_notification_intent_reply(
     return t("notify.usage", lang)
 
 
-def format_email_label_reply(
+def format_gmail_label_reply(
     action: str, target_id: str, label_name: str, lang: str, data_dir: Path, tokens_dir: Path
 ) -> str:
-    from nina.skills.email_label.execute import (
+    from nina.skills.gmail_label.execute import (
         dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_pending_list,
@@ -51,7 +51,7 @@ def format_email_label_reply(
         return dismiss_pending_by_prefix(data_dir, target_id)
     if action == "teach" and target_id and label_name:
         return teach_label_for_pending(tokens_dir, data_dir, target_id, label_name)
-    return t("email_label.usage", lang)
+    return t("gmail_label.usage", lang)
 
 
 def format_memo_intent_reply(
@@ -163,11 +163,11 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
     _wd0 = load_workdays(data_dir)
     now_tz = datetime.now(ZoneInfo(_wd0.timezone))
 
-    from nina.skills.email_label.interpreter import try_action as el_try
+    from nina.skills.gmail_label.interpreter import try_action as el_try
 
     if el_result := el_try(text, lang):
         await update.message.reply_text(
-            format_email_label_reply(
+            format_gmail_label_reply(
                 el_result.action, el_result.target_id, el_result.label_name,
                 lang, data_dir, tokens_dir,
             )
@@ -363,12 +363,12 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
                 await update.message.reply_text(reply)
         return
 
-    if intent.domain == "email_label" and intent.action != "none":
-        from nina.skills.email_label.interpreter import interpret as el_interpret
+    if intent.domain == "gmail_label" and intent.action != "none":
+        from nina.skills.gmail_label.interpreter import interpret as el_interpret
 
         el_intent = el_interpret(text, llm, lang=lang)
         await update.message.reply_text(
-            format_email_label_reply(
+            format_gmail_label_reply(
                 el_intent.action, el_intent.target_id, el_intent.label_name,
                 lang, data_dir, tokens_dir,
             )

@@ -9,6 +9,7 @@ def cmd_daemon(args: argparse.Namespace) -> None:
         level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s"
     )
     logging.getLogger("google.oauth2").setLevel(logging.WARNING)
+    logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.WARNING)
     from nina.core.daemon.runner import run
     run(dev=args.dev)
 

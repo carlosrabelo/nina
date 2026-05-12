@@ -81,7 +81,7 @@ Quando existem duas formas, este guia indica o **alias plano** (ex.: `nina gmail
 | `nina email ignore add <conta> <remetente>` | (mesmo) | Adiciona um remetente à lista de ignorados. Também acontece automaticamente ao **descartar** uma sugestão pendente. |
 | `nina email ignore remove <conta> <remetente>` | (mesmo) | Remove um remetente da lista de ignorados para que as sugestões possam aparecer novamente. |
 
-Ensinar ou listar etiquetas pendentes no **Telegram** (`/email_label`) ou no **`nina console`** (`email_label` ou `/email_label`; ver `help` / `help email_label` no console). Descartar uma sugestão adiciona automaticamente o remetente à **lista de ignorados** (`email_ignored_senders`), impedindo sugestões futuras. Gerir os ignorados com **`/email_label ignore list|add|remove`** ou **`nina email ignore …`**. Requer o scope OAuth `gmail.modify`.
+Ensinar ou listar etiquetas pendentes no **Telegram** (`/gmail_label`) ou no **`nina console`** (`gmail_label`; ver `help` / `help gmail_label` no console). Descartar uma sugestao adiciona automaticamente o remetente a **lista de ignorados** (`email_ignored_senders`), impedindo sugestoes futuras. **`/gmail_label dismiss-all`** limpa todas as sugestoes abertas de uma vez. Etiquetas devem comecar com **`@`** (ex.: `@Financeiro`). Gerir os ignorados com **`/gmail_label ignore list|add|remove`** ou **`nina gmail_label ignore ...`**. Requer o scope OAuth `gmail.modify`.
 
 ### Google Agenda (CLI exploratório)
 

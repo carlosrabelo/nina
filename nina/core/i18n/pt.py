@@ -21,7 +21,7 @@ STRINGS: dict[str, str] = {
         "/lang — idioma atual\n"
         "/lang <código> — muda idioma (en|pt)\n"
         "/profile — contas associadas por presença\n"
-        "/email_label — sugestões remetente → etiqueta\n"
+        "/gmail_label — sugestões remetente → etiqueta\n"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -77,77 +77,77 @@ STRINGS: dict[str, str] = {
     "latest.from":    "De: {sender}",
     "latest.subject": "Assunto: {subject}",
 
-    # ── email label learning (por conta Gmail) ────────────────────────────────
-    "email_label.suggest_telegram": (
+    # ── gmail label learning (por conta Gmail) ────────────────────────────────
+    "gmail_label.suggest_telegram": (
         "Nina -- novo padrao de remetente\n"
         "Conta: {account}\n"
         "De: {sender}\n"
         "Assunto exemplo: {subject}\n"
         "Visto (~30d): {count}\n\n"
         "Defina a etiqueta (so nesta conta):\n"
-        "/email_label {full_id} Sua/Etiqueta\n"
+        "/gmail_label {full_id} Sua/Etiqueta\n"
         "Ignorar esse remetente para sempre:\n"
-        "/email_label dismiss {full_id}\n"
+        "/gmail_label dismiss {full_id}\n"
         "(id curto: {short_id}...)"
     ),
-    "email_label.usage": (
-        "/email_label — lista sugestões abertas\n"
-        "/email_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
-        "/email_label dismiss <id> — ignora a sugestão (adiciona remetente à lista de ignorados)\n"
-        "/email_label dismiss-all — ignora todas as sugestões abertas\n"
-        "/email_label ignore list — listar remetentes ignorados\n"
-        "/email_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
-        "/email_label ignore remove <conta> <remetente> — remover da lista de ignorados\n"
+    "gmail_label.usage": (
+        "/gmail_label — lista sugestões abertas\n"
+        "/gmail_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
+        "/gmail_label dismiss <id> — ignora a sugestão (adiciona remetente à lista de ignorados)\n"
+        "/gmail_label dismiss-all — ignora todas as sugestões abertas\n"
+        "/gmail_label ignore list — listar remetentes ignorados\n"
+        "/gmail_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
+        "/gmail_label ignore remove <conta> <remetente> — remover da lista de ignorados\n"
         "A etiqueta deve começar com @ (ex.: @Financeiro).\n"
         "Use pelo menos 8 caracteres do id da sugestão."
     ),
-    "email_label.no_pending": "Nenhuma sugestão de remetente aberta.",
-    "email_label.pending_header": "Sugestões abertas (regras por conta):",
-    "email_label.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  ocorrências: {hits}  exemplo: {subject}",
-    "email_label.pending_not_found": "Nenhuma sugestão aberta com esse id.",
-    "email_label.ambiguous_id": "Esse prefixo de id bate com mais de uma linha — cole mais caracteres.",
-    "email_label.id_too_short": "Use pelo menos 8 caracteres do id da sugestão.",
-    "email_label.label_empty": "O nome da etiqueta não pode ser vazio.",
-    "email_label.dismiss_ok": (
+    "gmail_label.no_pending": "Nenhuma sugestão de remetente aberta.",
+    "gmail_label.pending_header": "Sugestões abertas (regras por conta):",
+    "gmail_label.pending_line": "· [{account}] {sender}\n  id: {full_id}\n  ocorrências: {hits}  exemplo: {subject}",
+    "gmail_label.pending_not_found": "Nenhuma sugestão aberta com esse id.",
+    "gmail_label.ambiguous_id": "Esse prefixo de id bate com mais de uma linha — cole mais caracteres.",
+    "gmail_label.id_too_short": "Use pelo menos 8 caracteres do id da sugestão.",
+    "gmail_label.label_empty": "O nome da etiqueta não pode ser vazio.",
+    "gmail_label.dismiss_ok": (
         "Sugestão ignorada para {sender}.\n"
         "Emails futuros desse remetente não vão gerar sugestões."
     ),
-    "email_label.dismiss_all_ok": (
+    "gmail_label.dismiss_all_ok": (
         "{count} sugestão(ões) ignorada(s)."
     ),
-    "email_label.label_must_at": (
+    "gmail_label.label_must_at": (
         "A etiqueta deve começar com @ (ex.: @Financeiro)."
     ),
-    "email_label.ignore_added": (
+    "gmail_label.ignore_added": (
         "Remetente ignorado adicionado: [{account}] {sender}."
     ),
-    "email_label.ignore_removed": (
+    "gmail_label.ignore_removed": (
         "Removido da lista de ignorados: [{account}] {sender}."
     ),
-    "email_label.ignore_not_found": (
+    "gmail_label.ignore_not_found": (
         "Remetente não encontrado na lista de ignorados."
     ),
-    "email_label.ignore_header": "Remetentes ignorados (não vão gerar sugestões):",
-    "email_label.ignore_empty": "Nenhum remetente ignorado.",
-    "email_label.ignore_usage": (
-        "/email_label ignore list — listar remetentes ignorados\n"
-        "/email_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
-        "/email_label ignore remove <conta> <remetente> — remover da lista de ignorados"
+    "gmail_label.ignore_header": "Remetentes ignorados (não vão gerar sugestões):",
+    "gmail_label.ignore_empty": "Nenhum remetente ignorado.",
+    "gmail_label.ignore_usage": (
+        "/gmail_label ignore list — listar remetentes ignorados\n"
+        "/gmail_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
+        "/gmail_label ignore remove <conta> <remetente> — remover da lista de ignorados"
     ),
-    "email_label.taught_ok": (
+    "gmail_label.taught_ok": (
         "✓ Regra gravada: {sender} → [{label}] em {account}.\n"
         "Aplicada em {applied} mensagem(ns) que a Nina já tinha registado."
     ),
-    "help.email_label": (
-        "  email_label | /email_label         Listar sugestões remetente → etiqueta\n"
-        "  email_label <id> <etiqueta>     Ensinar etiqueta Gmail para esse remetente (por conta)\n"
-        "  email_label dismiss <id>        Ignorar uma sugestão (adiciona à lista de ignorados)\n"
-        "  email_label dismiss-all         Ignorar todas as sugestões abertas\n"
-        "  email_label ignore list         Listar remetentes ignorados\n"
-        "  email_label ignore add <conta> <remetente>   Adicionar à lista de ignorados\n"
-        "  email_label ignore remove <conta> <remetente>   Remover da lista de ignorados\n"
+    "help.gmail_label": (
+        "  gmail_label | /gmail_label         Listar sugestões remetente → etiqueta\n"
+        "  gmail_label <id> <etiqueta>     Ensinar etiqueta Gmail para esse remetente (por conta)\n"
+        "  gmail_label dismiss <id>        Ignorar uma sugestão (adiciona à lista de ignorados)\n"
+        "  gmail_label dismiss-all         Ignorar todas as sugestões abertas\n"
+        "  gmail_label ignore list         Listar remetentes ignorados\n"
+        "  gmail_label ignore add <conta> <remetente>   Adicionar à lista de ignorados\n"
+        "  gmail_label ignore remove <conta> <remetente>   Remover da lista de ignorados\n"
         "\n"
-        "  Use pelo menos 8 caracteres do id da sugestão (igual ao /email_label no Telegram)."
+        "  Use pelo menos 8 caracteres do id da sugestão (igual ao /gmail_label no Telegram)."
     ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
@@ -254,7 +254,7 @@ STRINGS: dict[str, str] = {
     "help.memo":        "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluído\n  memo dismiss <id>        Descartar",
     "cmd.memo":         "Salvar ou listar memos",
     "cmd.memos":        "Listar memos abertos",
-    "cmd.email_label":   "Ensinar etiquetas Gmail por conta",
+    "cmd.gmail_label":   "Ensinar etiquetas Gmail por conta",
 
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "Nenhum chat encontrado.",

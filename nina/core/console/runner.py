@@ -363,10 +363,10 @@ class NinaConsole(cmd.Cmd):
     def help_memos(self) -> None:
         print(t("help.memo", console_lang()))
 
-    # ── email_label (Telegram parity; same behaviour as /email_label on the bot) ─────
+    # ── gmail_label (Telegram parity; same behaviour as /gmail_label on the bot) ─────
 
-    def do_email_label(self, arg: str) -> None:
-        from nina.skills.email_label.execute import (
+    def do_gmail_label(self, arg: str) -> None:
+        from nina.skills.gmail_label.execute import (
             add_ignored,
             dismiss_all_pending_labels,
             dismiss_pending_by_prefix,
@@ -388,7 +388,7 @@ class NinaConsole(cmd.Cmd):
             return
         if parts[0].lower() == "dismiss":
             if len(parts) < 2:
-                print(f"  {t('email_label.usage', lang)}")
+                print(f"  {t('gmail_label.usage', lang)}")
                 return
             out = dismiss_pending_by_prefix(dd, parts[1])
             print(f"  {out}")
@@ -399,7 +399,7 @@ class NinaConsole(cmd.Cmd):
             return
         if parts[0].lower() == "ignore":
             if len(parts) < 2 or parts[1].lower() not in ("list", "add", "remove"):
-                print(f"  {t('email_label.ignore_usage', lang)}")
+                print(f"  {t('gmail_label.ignore_usage', lang)}")
                 return
             sub = parts[1].lower()
             if sub == "list":
@@ -410,28 +410,28 @@ class NinaConsole(cmd.Cmd):
                 return
             if sub == "add":
                 if len(parts) < 4:
-                    print(f"  {t('email_label.ignore_usage', lang)}")
+                    print(f"  {t('gmail_label.ignore_usage', lang)}")
                     return
                 out = add_ignored(dd, parts[2], parts[3])
                 print(f"  {out}")
                 return
             if sub == "remove":
                 if len(parts) < 4:
-                    print(f"  {t('email_label.ignore_usage', lang)}")
+                    print(f"  {t('gmail_label.ignore_usage', lang)}")
                     return
                 out = remove_ignored(dd, parts[2], parts[3])
                 print(f"  {out}")
                 return
         if len(parts) < 2:
-            print(f"  {t('email_label.usage', lang)}")
+            print(f"  {t('gmail_label.usage', lang)}")
             return
         pending_prefix = parts[0]
         label = " ".join(parts[1:])
         out = teach_label_for_pending(td, dd, pending_prefix, label)
         print(f"  {out}")
 
-    def help_email_label(self) -> None:
-        print(t("help.email_label", console_lang()))
+    def help_gmail_label(self) -> None:
+        print(t("help.gmail_label", console_lang()))
 
     # ── exit ──────────────────────────────────────────────────────────────────
 
@@ -457,10 +457,10 @@ class NinaConsole(cmd.Cmd):
             return
 
         stripped = line.strip()
-        if stripped.startswith("email_label"):
+        if stripped.startswith("gmail_label"):
             parts = shlex.split(stripped)
-            if parts and parts[0] == "email_label":
-                self.do_email_label(" ".join(parts[1:]))
+            if parts and parts[0] == "gmail_label":
+                self.do_gmail_label(" ".join(parts[1:]))
                 return
 
         dispatch_natural_language_line(line)

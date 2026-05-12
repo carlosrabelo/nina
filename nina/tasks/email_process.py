@@ -111,7 +111,7 @@ def flush_pending_telegram(
     ).fetchall()
     for row in rows:
         text = t(
-            "email_label.suggest_telegram",
+            "gmail_label.suggest_telegram",
             lang,
             account=row["account"],
             sender=row["sender_norm"],
@@ -267,7 +267,7 @@ def run_email_label_process(
 
                         lang = load_locale(data_dir).lang
                         text = t(
-                            "email_label.suggest_telegram",
+                            "gmail_label.suggest_telegram",
                             lang,
                             account=account,
                             sender=norm,

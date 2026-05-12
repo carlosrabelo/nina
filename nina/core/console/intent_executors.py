@@ -145,10 +145,10 @@ def execute_activity_log_intent(
     print("  Não entendi a atividade.")
 
 
-def execute_email_label_intent(
+def execute_gmail_label_intent(
     action: str, target_id: str, label_name: str, lang: str, *, data_dir: Path, tokens_dir: Path
 ) -> None:
-    from nina.skills.email_label.execute import (
+    from nina.skills.gmail_label.execute import (
         dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_pending_list,
@@ -173,7 +173,7 @@ def execute_email_label_intent(
         print(f"  {out}")
         return
     from nina.core.i18n import t as _t
-    print(f"  {_t('email_label.usage', lang)}")
+    print(f"  {_t('gmail_label.usage', lang)}")
 
 
 def execute_memo_intent(

@@ -2,7 +2,7 @@
 
 from nina.core.console.intent_executors import (
     execute_activity_log_intent,
-    execute_email_label_intent,
+    execute_gmail_label_intent,
     execute_memo_intent,
     execute_notification_intent,
 )
@@ -11,7 +11,7 @@ from nina.core.i18n import t
 
 
 def dispatch_natural_language_line(line: str) -> None:
-    """Handle a line that is not a registered ``cmd`` command (after ``/`` and ``email_label`` shortcuts)."""
+    """Handle a line that is not a registered ``cmd`` command (after ``/`` and ``gmail_label`` shortcuts)."""
     lang = console_lang()
     ddir = data_dir()
     tdir = tokens_dir()
@@ -24,10 +24,10 @@ def dispatch_natural_language_line(line: str) -> None:
     _wd0 = load_workdays(ddir)
     now_tz = datetime.now(ZoneInfo(_wd0.timezone))
 
-    from nina.skills.email_label.interpreter import try_action as el_try
+    from nina.skills.gmail_label.interpreter import try_action as el_try
 
     if el_result := el_try(line, lang):
-        execute_email_label_intent(
+        execute_gmail_label_intent(
             el_result.action, el_result.target_id, el_result.label_name,
             lang, data_dir=ddir, tokens_dir=tdir,
         )
@@ -205,11 +205,11 @@ def dispatch_natural_language_line(line: str) -> None:
                     )
         return
 
-    if intent.domain == "email_label" and intent.action != "none":
-        from nina.skills.email_label.interpreter import interpret as el_interpret
+    if intent.domain == "gmail_label" and intent.action != "none":
+        from nina.skills.gmail_label.interpreter import interpret as el_interpret
 
         el_intent = el_interpret(line, llm, lang=lang)
-        execute_email_label_intent(
+        execute_gmail_label_intent(
             el_intent.action, el_intent.target_id, el_intent.label_name,
             lang, data_dir=ddir, tokens_dir=tdir,
         )

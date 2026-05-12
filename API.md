@@ -204,7 +204,7 @@ Supported commands:
 | `/memo <text>`            | Create a memo                                     |
 | `/activity <text>`        | Log past activity                                 |
 
-Commands such as **`/email_label`** are available in the **Telegram bot** and **`nina console`**; they are **not** handled by `POST /command` (subset above).
+Commands such as **`/gmail_label`** are available in the **Telegram bot** and **`nina console`**; they are **not** handled by `POST /command` (subset above).
 
 The table above works in the Telegram bot too — send them as a normal message.
 

@@ -81,7 +81,7 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 | `nina email ignore add <account> <sender>` | (same) | Add a sender to the ignore list. Also happens automatically when you **dismiss** a pending suggestion. |
 | `nina email ignore remove <account> <sender>` | (same) | Remove a sender from the ignore list so suggestions can appear again. |
 
-Teach or list pending labels from **Telegram** (`/email_label`) or **`nina console`** (`email_label` or `/email_label`; see `help` / `help email_label` in the console). Dismissing a suggestion automatically adds the sender to the **ignored list** (`email_ignored_senders`), preventing future suggestions. Manage ignored senders with **`/email_label ignore list|add|remove`** or **`nina email ignore …`**. Requires `gmail.modify` OAuth scope.
+Teach or list pending labels from **Telegram** (`/gmail_label`) or **`nina console`** (`gmail_label`; see `help` / `help gmail_label` in the console). Dismissing a suggestion automatically adds the sender to the **ignored list** (`email_ignored_senders`), preventing future suggestions. **`/gmail_label dismiss-all`** clears all open suggestions at once. Labels must start with **`@`** (e.g. `@Finance`). Manage ignored senders with **`/gmail_label ignore list|add|remove`** or **`nina gmail_label ignore ...`**. Requires `gmail.modify` OAuth scope.
 
 ### Google Calendar (exploratory CLI)
 

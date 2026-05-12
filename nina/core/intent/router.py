@@ -32,7 +32,7 @@ _VALID_DOMAINS = {
     "profile",
     "notifications",
     "activity_log",
-    "email_label",
+    "gmail_label",
     "none",
 }
 
@@ -43,7 +43,7 @@ Return ONLY a single JSON object — no explanation, no markdown.
 
 ━━━ OUTPUT SCHEMA ━━━
 {
-  "domain":   "presence|memo|calendar|notifications|profile|blocking|workdays|email_label|none",
+  "domain":   "presence|memo|calendar|notifications|profile|blocking|workdays|gmail_label|none",
   "action":   "<domain-specific action — see below>",
 
   // presence only
@@ -68,7 +68,7 @@ Return ONLY a single JSON object — no explanation, no markdown.
   "calendar_period": "full|morning|afternoon",
   "calendar_on_date": "<YYYY-MM-DD or null>",
 
-  // email_label only
+  // gmail_label only
   "target_id": "<suggestion id prefix or empty>",
   "label_name": "<Gmail label to assign or empty>"
 }
@@ -161,19 +161,19 @@ Fields not relevant to the detected domain must be null / "" / [].
 ▸ none — not recognized or out of scope
   Examples: "qual é o tempo?", "conta uma piada", "o que é machine learning"
 
-▸ email_label — managing Gmail label learning (listing suggestions, teaching labels, ignoring senders)
+▸ gmail_label — managing Gmail label learning (listing suggestions, teaching labels, ignoring senders)
   action: list   (show open sender→label suggestions)
           teach  (assign a Gmail label to a pending sender)
           dismiss (ignore a suggestion and block future suggestions for that sender)
   target_id: the suggestion id prefix (8+ hex chars) or empty for list
   label_name: the Gmail label to assign (teach only), e.g. "@Financeiro", "Trabalho"
   Examples:
-    "quais sugestoes de email"                    → email_label, list
-    "listar etiquetas pendentes"                  → email_label, list
-    "mostra as sugestoes de remetente"            → email_label, list
-    "ensina a etiqueta @Financeiro para abc12345" → email_label, teach, target_id="abc12345", label_name="@Financeiro"
-    "ignora a sugestao abc12345"                  → email_label, dismiss, target_id="abc12345"
-    "descarta o remetente abc12345"               → email_label, dismiss, target_id="abc12345"
+    "quais sugestoes de email"                    → gmail_label, list
+    "listar etiquetas pendentes"                  → gmail_label, list
+    "mostra as sugestoes de remetente"            → gmail_label, list
+    "ensina a etiqueta @Financeiro para abc12345" → gmail_label, teach, target_id="abc12345", label_name="@Financeiro"
+    "ignora a sugestao abc12345"                  → gmail_label, dismiss, target_id="abc12345"
+    "descarta o remetente abc12345"               → gmail_label, dismiss, target_id="abc12345"
 
 ━━━ DISAMBIGUATION RULES ━━━
 • "estou no trabalho" / "cheguei no trabalho"  → presence (current status), NOT workdays
@@ -207,7 +207,7 @@ class RouterIntent:
     calendar_keyword: str = ""
     calendar_period: str = ""
     calendar_on_date: str = ""
-    # email_label
+    # gmail_label
     target_id: str = ""
     label_name: str = ""
     # meta

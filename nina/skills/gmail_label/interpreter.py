@@ -1,10 +1,10 @@
-"""Email Label intent interpreter — hybrid pattern match + LLM fallback."""
+"""Gmail Label intent interpreter — hybrid pattern match + LLM fallback."""
 
 import json
 import re
 from dataclasses import dataclass
 
-_KEYWORDS = {"email", "e-mail", "label", "etiqueta", "email_label", "emailtag"}
+_KEYWORDS = {"email", "e-mail", "label", "etiqueta", "gmail_label"}
 
 _ACTION_WORDS: dict[str, dict[str, set[str]]] = {
     "pt": {
@@ -26,7 +26,7 @@ _ACTION_WORDS: dict[str, dict[str, set[str]]] = {
 }
 
 _SYSTEM_PROMPT = """\
-You are a command parser for the email_label domain in a personal assistant.
+You are a command parser for the gmail_label domain in a personal assistant.
 The user message may be in Portuguese or English.
 Return JSON only — no explanation, no markdown.
 Schema: {"action": "list|teach|dismiss|dismiss_all|none", "target_id": "<suggestion id prefix or empty>", "label_name": "<label string or empty>"}
@@ -35,7 +35,7 @@ Actions:
   dismiss     — ignore a single email suggestion (requires target_id)
   dismiss_all — ignore ALL open email suggestions at once (target_id and label_name are empty)
   teach       — teach/save a label for an email suggestion (label_name must start with @)
-  none        — not an email_label action
+  none        — not a gmail_label action
 
 Extraction Rules:
 - target_id: usually an 8+ character alphanumeric string (e.g., "1234abcd") that comes after the action or the word "id".

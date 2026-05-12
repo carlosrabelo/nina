@@ -1,4 +1,4 @@
-"""`nina email process|infer-rules|rules` — Gmail label learning CLI."""
+"""`nina gmail_label process|infer-rules|rules` — Gmail label learning CLI."""
 
 import argparse
 import os
@@ -90,27 +90,27 @@ def cmd_process(args: argparse.Namespace) -> None:
 
 def cmd_list_ignored(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
-    from nina.skills.email_label.execute import format_ignored_list
+    from nina.skills.gmail_label.execute import format_ignored_list
 
     print(format_ignored_list(data_dir, account=args.account))
 
 
 def cmd_ignore_add(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
-    from nina.skills.email_label.execute import add_ignored
+    from nina.skills.gmail_label.execute import add_ignored
 
     print(add_ignored(data_dir, args.account, args.sender))
 
 
 def cmd_ignore_remove(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
-    from nina.skills.email_label.execute import remove_ignored
+    from nina.skills.gmail_label.execute import remove_ignored
 
     print(remove_ignored(data_dir, args.account, args.sender))
 
 
 def register(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser("email", help="Gmail label learning (per account)")
+    p = sub.add_parser("gmail_label", help="Gmail label learning (per account)")
     g = p.add_subparsers(dest="action", required=True)
 
     p_process = g.add_parser(

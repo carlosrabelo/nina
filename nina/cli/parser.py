@@ -7,8 +7,8 @@ from nina.cli import (
     calendar,
     console,
     daemon,
-    email_label,
     gmail,
+    gmail_label,
     llm,
     make_aliases,
     revoke,
@@ -54,7 +54,7 @@ def main() -> None:
         raise SystemExit(2)
 
     p_help = sub.add_parser("help", help="Show help (optionally for one command)")
-    p_help.add_argument("topic", nargs="?", help="Command name (e.g. gmail, email)")
+    p_help.add_argument("topic", nargs="?", help="Command name (e.g. gmail, gmail_label)")
     p_help.set_defaults(func=cmd_help)
 
     auth.register(sub)
@@ -64,7 +64,7 @@ def main() -> None:
     daemon.register(sub)
     make_aliases.register(sub)
     gmail.register(sub)
-    email_label.register(sub)
+    gmail_label.register(sub)
     calendar.register(sub)
     telegram.register(sub)
     llm.register(sub)
