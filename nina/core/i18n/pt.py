@@ -93,16 +93,17 @@ STRINGS: dict[str, str] = {
         "(id curto: {short_id}...)"
     ),
     "gmail_label.usage": (
-        "/gmail_label — lista sugestões abertas\n"
+        "/gmail_label — lista sugestoes abertas\n"
         "/gmail_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
         "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
-        "/gmail_label dismiss <id> — ignora a sugestão (adiciona remetente à lista de ignorados)\n"
-        "/gmail_label dismiss-all — ignora todas as sugestões abertas\n"
+        "/gmail_label rules check — validar todas as regras\n"
+        "/gmail_label dismiss <id> — ignora a sugestao (adiciona remetente a lista de ignorados)\n"
+        "/gmail_label dismiss-all — ignora todas as sugestoes abertas\n"
         "/gmail_label ignore list — listar remetentes ignorados\n"
-        "/gmail_label ignore add <conta> <remetente> — adicionar à lista de ignorados\n"
+        "/gmail_label ignore add <conta> <remetente> — adicionar a lista de ignorados\n"
         "/gmail_label ignore remove <conta> <remetente> — remover da lista de ignorados\n"
-        "A etiqueta deve começar com @ (ex.: @Financeiro).\n"
-        "Use pelo menos 8 caracteres do id da sugestão."
+        "A etiqueta deve comecar com @ ou ! (ex.: @Financeiro, !Importante).\n"
+        "Use pelo menos 8 caracteres do id da sugestao."
     ),
     "gmail_label.no_pending": "Nenhuma sugestão de remetente aberta.",
     "gmail_label.pending_header": "Sugestões abertas (regras por conta):",
@@ -119,10 +120,34 @@ STRINGS: dict[str, str] = {
         "{count} sugestão(ões) ignorada(s)."
     ),
     "gmail_label.label_must_at": (
-        "A etiqueta deve começar com @ (ex.: @Financeiro)."
+        "A etiqueta deve comecar com @ ou ! (ex.: @Financeiro, !Importante)."
     ),
     "gmail_label.rule_added": (
-        "✓ Regra adicionada: {sender} → [{label}] em {account}."
+        "Regra adicionada: {sender} → [{label}] em {account}."
+    ),
+    "gmail_label.rule_updated": (
+        "Regra atualizada: {sender} → [{label}] em {account} (era [{old_label}])."
+    ),
+    "gmail_label.check_ok": (
+        "Todas as {count} regra(s) estao ok."
+    ),
+    "gmail_label.check_no_rules": (
+        "Nenhuma regra na base de dados."
+    ),
+    "gmail_label.check_header": (
+        "{count} problema(s) encontrado(s) em {rules} regra(s):"
+    ),
+    "gmail_label.check_bad_prefix": (
+        "[{account}] {sender} → [{label}] — etiqueta deve comecar com @ ou !"
+    ),
+    "gmail_label.check_ignored": (
+        "[{account}] {sender} → [{label}] — remetente tambem esta na lista de ignorados"
+    ),
+    "gmail_label.check_no_token": (
+        "[{account}] {sender} → [{label}] — sem token OAuth para esta conta"
+    ),
+    "gmail_label.check_missing_label": (
+        "[{account}] {sender} → [{label}] — etiqueta nao existe no Gmail"
     ),
     "gmail_label.ignore_added": (
         "Remetente ignorado adicionado: [{account}] {sender}."
@@ -246,12 +271,13 @@ STRINGS: dict[str, str] = {
         "/gmail_label — listar sugestoes abertas\n"
         "/gmail_label <id> <etiqueta> — gravar etiqueta para o remetente nessa conta\n"
         "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
+        "/gmail_label rules check — validar regras (prefixo, Gmail, tokens, conflitos)\n"
         "/gmail_label dismiss <id> — ignorar sugestao (adiciona remetente aos ignorados)\n"
         "/gmail_label dismiss-all — ignorar todas as sugestoes abertas\n"
         "/gmail_label ignore list — listar remetentes ignorados\n"
         "/gmail_label ignore add <conta> <remetente> — adicionar aos ignorados\n"
         "/gmail_label ignore remove <conta> <remetente> — remover dos ignorados\n\n"
-        "Etiquetas devem comecar com @ (ex.: @Financeiro).\n"
+        "Etiquetas devem comecar com @ ou ! (ex.: @Financeiro, !Importante).\n"
         "Use pelo menos 8 caracteres do id da sugestao."
     ),
     "help.health": (

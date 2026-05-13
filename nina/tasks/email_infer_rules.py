@@ -28,7 +28,7 @@ def _user_label_names_on_message(
     names = [
         user_id_to_name[lid]
         for lid in label_ids
-        if lid in user_id_to_name and user_id_to_name[lid].startswith("@")
+        if lid in user_id_to_name and user_id_to_name[lid].startswith(("@", "!"))
     ]
     return sorted(set(names))
 

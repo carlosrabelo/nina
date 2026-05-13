@@ -96,12 +96,13 @@ STRINGS: dict[str, str] = {
         "/gmail_label — list open suggestions\n"
         "/gmail_label <id> <label> — save label for sender on that account\n"
         "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
+        "/gmail_label rules check — validate all rules\n"
         "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
         "/gmail_label dismiss-all — ignore all open suggestions\n"
         "/gmail_label ignore list — list ignored senders\n"
         "/gmail_label ignore add <account> <sender> — add to ignored list\n"
         "/gmail_label ignore remove <account> <sender> — remove from ignored list\n"
-        "Label must start with @ (e.g. @Finance).\n"
+        "Label must start with @ or ! (e.g. @Finance, !Important).\n"
         "Use at least 8 characters of the suggestion id."
     ),
     "gmail_label.no_pending": "No open sender suggestions.",
@@ -119,10 +120,34 @@ STRINGS: dict[str, str] = {
         "{count} suggestion(s) dismissed."
     ),
     "gmail_label.label_must_at": (
-        "Label must start with @ (e.g. @Finance)."
+        "Label must start with @ or ! (e.g. @Finance, !Important)."
     ),
     "gmail_label.rule_added": (
-        "✓ Rule added: {sender} → [{label}] on {account}."
+        "Rule added: {sender} → [{label}] on {account}."
+    ),
+    "gmail_label.rule_updated": (
+        "Rule updated: {sender} → [{label}] on {account} (was [{old_label}])."
+    ),
+    "gmail_label.check_ok": (
+        "All {count} rule(s) look good."
+    ),
+    "gmail_label.check_no_rules": (
+        "No rules in the database."
+    ),
+    "gmail_label.check_header": (
+        "{count} issue(s) found across {rules} rule(s):"
+    ),
+    "gmail_label.check_bad_prefix": (
+        "[{account}] {sender} → [{label}] — label must start with @ or !"
+    ),
+    "gmail_label.check_ignored": (
+        "[{account}] {sender} → [{label}] — sender is also in the ignored list"
+    ),
+    "gmail_label.check_no_token": (
+        "[{account}] {sender} → [{label}] — no OAuth token for this account"
+    ),
+    "gmail_label.check_missing_label": (
+        "[{account}] {sender} → [{label}] — label does not exist in Gmail"
     ),
     "gmail_label.ignore_added": (
         "Ignored sender added: [{account}] {sender}."
@@ -246,12 +271,13 @@ STRINGS: dict[str, str] = {
         "/gmail_label — list open suggestions\n"
         "/gmail_label <id> <label> — save label for sender on that account\n"
         "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
+        "/gmail_label rules check — validate all rules (prefix, Gmail, tokens, conflicts)\n"
         "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
         "/gmail_label dismiss-all — ignore all open suggestions\n"
         "/gmail_label ignore list — list ignored senders\n"
         "/gmail_label ignore add <account> <sender> — add to ignored list\n"
         "/gmail_label ignore remove <account> <sender> — remove from ignored list\n\n"
-        "Labels must start with @ (e.g. @Finance).\n"
+        "Labels must start with @ or ! (e.g. @Finance, !Important).\n"
         "Use at least 8 characters of the suggestion id."
     ),
     "help.health": (

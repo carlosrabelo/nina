@@ -25,7 +25,7 @@ def teach_label_for_pending(
     label_name = label_name.strip()
     if not label_name:
         return t("gmail_label.label_empty", lang)
-    if not label_name.startswith("@"):
+    if not label_name.startswith(("@", "!")):
         return t("gmail_label.label_must_at", lang)
 
     conn = open_db(data_dir)
@@ -93,11 +93,12 @@ def add_rule_direct(
     account = account.strip()
     sender = sender.strip().lower()
     label_name = label_name.strip()
-    if not label_name.startswith("@"):
+    if not label_name.startswith(("@", "!")):
         return t("gmail_label.label_must_at", lang)
 
     conn = open_db(data_dir)
     try:
+        existing = el.get_rule(conn, account, sender)
         el.upsert_rule(
             conn,
             SenderRule(
@@ -107,13 +108,9 @@ def add_rule_direct(
                 archive_inbox=True,
             ),
         )
-        return t(
-            "gmail_label.rule_added",
-            lang,
-            sender=sender,
-            label=label_name,
-            account=account,
-        )
+        key = "gmail_label.rule_updated" if existing else "gmail_label.rule_added"
+        return t(key, lang, sender=sender, label=label_name, account=account,
+                 old_label=existing.label_name if existing else "")
     finally:
         conn.close()
 
@@ -248,5 +245,82 @@ def remove_ignored(data_dir: Path, account: str, sender: str) -> str:
             account=account.strip(),
             sender=sender.strip(),
         )
+    finally:
+        conn.close()
+
+
+def check_rules(data_dir: Path, tokens_dir: Path) -> str:
+    from nina.core.i18n import t
+    from nina.core.locale.store import load as load_locale
+    from nina.core.store.db import open_db
+    from nina.core.store.repos import email_label as el
+    from nina.errors import ConfigError
+    from nina.integrations.google.auth import discover_accounts
+    from nina.integrations.google.gmail.client import GmailMultiClient
+
+    lang = load_locale(data_dir).lang
+    conn = open_db(data_dir)
+    issues: list[str] = []
+
+    try:
+        rules = el.list_rules(conn)
+        if not rules:
+            return t("gmail_label.check_no_rules", lang)
+
+        valid_accounts = discover_accounts(tokens_dir)
+        gmail_labels_by_account: dict[str, set[str]] = {}
+
+        try:
+            multi = GmailMultiClient.from_env()
+            for acct in multi.accounts:
+                try:
+                    label_map = multi.client(acct).list_user_label_map()
+                    gmail_labels_by_account[acct] = set(label_map.values())
+                except Exception:
+                    gmail_labels_by_account[acct] = None
+        except ConfigError:
+            pass
+
+        ignored_pairs: set[tuple[str, str]] = set()
+        ignored = el.list_ignored_senders(conn)
+        for ig in ignored:
+            ignored_pairs.add((ig.account, ig.sender_norm))
+
+        for rule in rules:
+            if not rule.label_name.startswith(("@", "!")):
+                issues.append(
+                    t("gmail_label.check_bad_prefix", lang,
+                      account=rule.account, sender=rule.sender_norm,
+                      label=rule.label_name)
+                )
+
+            if (rule.account, rule.sender_norm) in ignored_pairs:
+                issues.append(
+                    t("gmail_label.check_ignored", lang,
+                      account=rule.account, sender=rule.sender_norm,
+                      label=rule.label_name)
+                )
+
+            if rule.account not in valid_accounts:
+                issues.append(
+                    t("gmail_label.check_no_token", lang,
+                      account=rule.account, sender=rule.sender_norm,
+                      label=rule.label_name)
+                )
+
+            labels_set = gmail_labels_by_account.get(rule.account)
+            if labels_set is not None and rule.label_name not in labels_set:
+                issues.append(
+                    t("gmail_label.check_missing_label", lang,
+                      account=rule.account, sender=rule.sender_norm,
+                      label=rule.label_name)
+                )
+
+        if not issues:
+            return t("gmail_label.check_ok", lang, count=len(rules))
+
+        header = t("gmail_label.check_header", lang,
+                   count=len(issues), rules=len(rules))
+        return header + "\n" + "\n".join(f"  {i}" for i in issues)
     finally:
         conn.close()

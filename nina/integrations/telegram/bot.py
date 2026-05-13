@@ -515,6 +515,7 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
     from nina.skills.gmail_label.execute import (
         add_ignored,
         add_rule_direct,
+        check_rules,
         dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_ignored_list,
@@ -548,6 +549,13 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text(t("gmail_label.usage", lang))
             return
         out = add_rule_direct(data_dir, args[2], args[3], " ".join(args[4:]))
+        await update.message.reply_text(out[:MAX_MSG])
+        return
+    if args[0].lower() == "rules":
+        if len(args) < 2 or args[1].lower() != "check":
+            await update.message.reply_text(t("gmail_label.usage", lang))
+            return
+        out = check_rules(data_dir, tokens_dir)
         await update.message.reply_text(out[:MAX_MSG])
         return
     if args[0].lower() == "ignore":
@@ -629,7 +637,6 @@ def create_application(token: str, owner_id: int, tokens_dir: Path, data_dir: Pa
     app.add_handler(CommandHandler("help",     handle_help,     filters=owner_filter))
     app.add_handler(CommandHandler("lang",     handle_lang,     filters=owner_filter))
     app.add_handler(CommandHandler("presence", handle_presence, filters=owner_filter))
-    app.add_handler(CommandHandler("health",   handle_health,   filters=owner_filter))
     app.add_handler(CommandHandler("workdays",  handle_workdays,  filters=owner_filter))
     app.add_handler(CommandHandler("timezone",  handle_timezone,  filters=owner_filter))
     app.add_handler(CommandHandler("context",   handle_context,   filters=owner_filter))
@@ -652,10 +659,6 @@ async def run_batch(token: str, owner_id: int, sessions_dir: Path) -> int:
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("help", handle_help))
-    app.add_handler(CommandHandler("unread", handle_unread))
-    app.add_handler(CommandHandler("latest", handle_latest))
-    app.add_handler(CommandHandler("events", handle_events))
-    app.add_handler(CommandHandler("dialogs", handle_dialogs))
 
     offset = load_offset(sessions_dir)
     processed = 0

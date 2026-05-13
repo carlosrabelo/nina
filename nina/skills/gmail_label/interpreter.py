@@ -38,13 +38,13 @@ Actions:
   list        — show open email suggestions
   dismiss     — ignore a single email suggestion (requires target_id)
   dismiss_all — ignore ALL open email suggestions at once
-  teach       — teach/save a label for an email suggestion (label_name must start with @)
-  rule_add    — add a sender rule manually (requires account, sender, label_name starting with @)
+  teach       — teach/save a label for an email suggestion (label_name must start with @ or !)
+  rule_add    — add a sender rule manually (requires account, sender, label_name starting with @ or !)
   none        — not a gmail_label action
 
 Extraction Rules:
 - target_id: usually an 8+ character alphanumeric string after the action or the word "id".
-- label_name: the label to assign. Must start with "@". Do not include the word "label" or "etiqueta".
+- label_name: the label to assign. Must start with "@" or "!". Do not include the word "label" or "etiqueta".
 - sender: an email address (e.g. "newsletter@company.com") when creating a rule directly.
 - account: the Gmail account (e.g. "user@gmail.com") when creating a rule directly.
 
@@ -88,7 +88,7 @@ def try_action(text: str, lang: str = "pt") -> EmailLabelIntent | None:
 
     # 3. rule add (needs account, sender, label)
     if any(w in lower for w in words_by_action["rule_add"]):
-        label_m = re.search(r'(@[\w/-]+)', text)
+        label_m = re.search(r'([@!][\w/-]+)', text)
         email_m = re.search(r'[\w.+-]+@[\w.-]+\.\w+', text)
         if label_m and email_m:
             return EmailLabelIntent(

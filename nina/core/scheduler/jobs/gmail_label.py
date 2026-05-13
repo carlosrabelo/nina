@@ -1,4 +1,4 @@
-"""Periodic Gmail process: ingest headers, apply rules, Telegram suggestions."""
+"""Periodic Gmail process: ingest headers, apply rules."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 
-def make_job(tokens_dir: Path, data_dir: Path, bot_token: str, owner_id: int):  # type: ignore[no-untyped-def]
-    """Return APScheduler job: process inbox, apply rules, Telegram suggestions."""
+def make_job(tokens_dir: Path, data_dir: Path):  # type: ignore[no-untyped-def]
+    """Return APScheduler job: process inbox and apply learned rules."""
 
     def job() -> None:
         try:
@@ -18,9 +18,6 @@ def make_job(tokens_dir: Path, data_dir: Path, bot_token: str, owner_id: int):  
             run_email_label_process(
                 tokens_dir,
                 data_dir,
-                bot_token=bot_token,
-                owner_id=owner_id,
-                send_telegram=True,
             )
         except Exception as e:
             log.warning("email learning job failed: %s", e)

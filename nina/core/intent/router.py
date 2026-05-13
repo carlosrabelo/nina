@@ -169,7 +169,7 @@ Fields not relevant to the detected domain must be null / "" / [].
           dismiss    (ignore a suggestion and block future suggestions for that sender)
           rule_add   (add a sender rule manually without a pending suggestion)
   target_id: the suggestion id prefix (8+ hex chars) or empty for list
-  label_name: the Gmail label to assign (teach/rule_add only), must start with @
+  label_name: the Gmail label to assign (teach/rule_add only), must start with @ or !
   sender: email address (rule_add only)
   account: Gmail account (rule_add only)
   Examples:

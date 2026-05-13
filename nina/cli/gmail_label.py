@@ -15,6 +15,14 @@ def cmd_rule_add(args: argparse.Namespace) -> None:
     print(add_rule_direct(data_dir, args.account, args.sender, args.label))
 
 
+def cmd_rules_check(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
+    from nina.skills.gmail_label.execute import check_rules
+
+    print(check_rules(data_dir, tokens_dir))
+
+
 def cmd_list_rules(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     from nina.core.store.db import open_db
@@ -79,9 +87,6 @@ def cmd_process(args: argparse.Namespace) -> None:
         run_email_label_process(
             tokens_dir,
             data_dir,
-            bot_token=None,
-            owner_id=None,
-            send_telegram=False,
             verbose=args.verbose,
             days=args.days,
             max_per_account=args.max_per_account,
@@ -158,13 +163,25 @@ def register(sub: argparse._SubParsersAction) -> None:
 
     p_rules = g.add_parser(
         "rules",
-        help="List learned sender→label rules stored in PostgreSQL (what Nina applies)",
+        help="Manage learned sender→label rules",
     )
-    p_rules.add_argument(
+    rules_sub = p_rules.add_subparsers(dest="rules_action", required=True)
+
+    rules_list = rules_sub.add_parser(
+        "list",
+        help="List learned sender→label rules stored in PostgreSQL",
+    )
+    rules_list.add_argument(
         "--account",
         help="Filter to one Gmail account email",
     )
-    p_rules.set_defaults(func=cmd_list_rules)
+    rules_list.set_defaults(func=cmd_list_rules)
+
+    rules_check = rules_sub.add_parser(
+        "check",
+        help="Validate rules (prefix, Gmail label existence, tokens, ignored conflicts)",
+    )
+    rules_check.set_defaults(func=cmd_rules_check)
 
     p_infer = g.add_parser(
         "infer-rules",
@@ -246,5 +263,5 @@ def register(sub: argparse._SubParsersAction) -> None:
     )
     rule_add.add_argument("account", help="Gmail account email")
     rule_add.add_argument("sender", help="Sender email address")
-    rule_add.add_argument("label", help="Gmail label (must start with @)")
+    rule_add.add_argument("label", help="Gmail label (must start with @ or !)")
     rule_add.set_defaults(func=cmd_rule_add)

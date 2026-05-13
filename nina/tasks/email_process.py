@@ -1,14 +1,11 @@
-"""Ingest inbox headers, apply per-account learned labels, notify on new senders."""
+"""Ingest inbox headers, apply per-account learned labels."""
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
 import sys
-import urllib.error
-import urllib.request
 import uuid
 from pathlib import Path
 
@@ -57,80 +54,10 @@ def _process_max_messages(max_per_account: int | None) -> int:
     return _max_messages()
 
 
-def _send_telegram(bot_token: str, owner_id: int, text: str) -> None:
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    data = json.dumps(
-        {"chat_id": owner_id, "text": text[:4000]}
-    ).encode()
-    req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
-    )
-    try:
-        urllib.request.urlopen(req, timeout=15)
-    except urllib.error.URLError as e:
-        log.warning("email learning telegram send failed: %s", e)
-
-
-def _may_notify_telegram(data_dir: Path) -> bool:
-    """Respect DND and work/lunch window (same spirit as calendar notifications)."""
-    from nina.skills.presence.models import PresenceStatus
-    from nina.skills.presence.store import load as load_presence
-    from nina.skills.workdays.checker import get_context
-    from nina.skills.workdays.store import load as load_workdays
-
-    presence = load_presence(data_dir)
-    if presence.status == PresenceStatus.DND:
-        return False
-    ctx = get_context(load_workdays(data_dir), presence, "en")
-    return bool(ctx.is_work_time or ctx.is_lunch_time)
-
-
-def flush_pending_telegram(
-    conn,
-    data_dir: Path,
-    bot_token: str,
-    owner_id: int,
-) -> None:
-    """Send Telegram for pending rows not yet notified (e.g. created off-hours)."""
-    from nina.core.i18n import t
-    from nina.core.locale.store import load as load_locale
-    from nina.core.store.repos import email_label as el
-
-    if not _may_notify_telegram(data_dir):
-        return
-
-    lang = load_locale(data_dir).lang
-    rows = conn.execute(
-        """
-        SELECT id, account, sender_norm, sample_subject, hit_count
-        FROM email_pending_labels
-        WHERE status = 'open' AND notified = false
-        ORDER BY created_at ASC
-        LIMIT 20
-        """
-    ).fetchall()
-    for row in rows:
-        text = t(
-            "gmail_label.suggest_telegram",
-            lang,
-            account=row["account"],
-            sender=row["sender_norm"],
-            subject=(row.get("sample_subject") or "")[:200],
-            count=row["hit_count"],
-            full_id=row["id"],
-            short_id=row["id"][:12],
-        )
-        _send_telegram(bot_token, owner_id, text)
-        el.set_pending_notified(conn, row["id"])
-
-
 def run_email_label_process(
     tokens_dir: Path,
     data_dir: Path,
     *,
-    bot_token: str | None = None,
-    owner_id: int | None = None,
-    send_telegram: bool = True,
     verbose: bool = False,
     days: int | None = None,
     max_per_account: int | None = None,
@@ -154,21 +81,11 @@ def run_email_label_process(
     _verbose_print(
         verbose,
         f"[email process] query={query!r} max_messages={max_list} "
-        f"min_hits_for_pending={min_hits} telegram={send_telegram}",
+        f"min_hits_for_pending={min_hits}",
     )
     _verbose_print(verbose, f"[email process] accounts: {', '.join(multi.accounts)}")
 
     try:
-        if send_telegram and bot_token and owner_id is not None:
-            flush_pending_telegram(conn, data_dir, bot_token, owner_id)
-            _verbose_print(verbose, "[email process] flush_pending_telegram done")
-        elif verbose:
-            _verbose_print(
-                verbose,
-                "[email process] Telegram flush skipped "
-                "(no bot context or send_telegram=false)",
-            )
-
         for account in multi.accounts:
             gc = multi.client(account)
             try:
@@ -259,25 +176,6 @@ def run_email_label_process(
                     (msg.subject or "")[:500],
                     cnt,
                 )
-
-                if send_telegram and bot_token and owner_id is not None:
-                    if _may_notify_telegram(data_dir):
-                        from nina.core.i18n import t
-                        from nina.core.locale.store import load as load_locale
-
-                        lang = load_locale(data_dir).lang
-                        text = t(
-                            "gmail_label.suggest_telegram",
-                            lang,
-                            account=account,
-                            sender=norm,
-                            subject=(msg.subject or "")[:200],
-                            count=cnt,
-                            full_id=pid,
-                            short_id=pid[:12],
-                        )
-                        _send_telegram(bot_token, owner_id, text)
-                        el.set_pending_notified(conn, pid)
             _verbose_print(
                 verbose,
                 f"[email process] {account} — done",
@@ -285,5 +183,3 @@ def run_email_label_process(
         _verbose_print(verbose, "[email process] all accounts finished")
     finally:
         conn.close()
-
-

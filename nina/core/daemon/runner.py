@@ -118,7 +118,7 @@ def run(dev: bool = False) -> None:
                 from nina.core.scheduler.jobs.gmail_label import make_job as make_email_job
 
                 scheduler.add_job(
-                    make_email_job(tokens_dir, data_dir, _bot_token, int(_owner_raw)),
+                    make_email_job(tokens_dir, data_dir),
                     "interval",
                     minutes=10,
                 )

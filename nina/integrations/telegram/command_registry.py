@@ -10,7 +10,6 @@ COMMAND_NAMES = [
     "help",
     "lang",
     "presence",
-    "health",
     "workdays",
     "timezone",
     "context",
