@@ -290,6 +290,21 @@ def dismiss_pending(conn: psycopg.Connection[dict], pending_id: str) -> bool:
     return cur.rowcount > 0
 
 
+def dismiss_pending_for_sender(
+    conn: psycopg.Connection[dict], account: str, sender_norm: str
+) -> int:
+    cur = conn.execute(
+        """
+        UPDATE email_pending_labels
+        SET status = 'dismissed'
+        WHERE account = %s AND sender_norm = %s AND status = 'open'
+        """,
+        (account, sender_norm),
+    )
+    conn.commit()
+    return cur.rowcount
+
+
 def dismiss_all_pending(conn: psycopg.Connection[dict]) -> int:
     cur = conn.execute(
         "UPDATE email_pending_labels SET status = 'dismissed' WHERE status = 'open'"

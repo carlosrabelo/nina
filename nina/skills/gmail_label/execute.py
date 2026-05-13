@@ -214,14 +214,18 @@ def add_ignored(data_dir: Path, account: str, sender: str) -> str:
     from nina.core.store.repos import email_label as el
 
     lang = load_locale(data_dir).lang
+    acct = account.strip()
+    snd = sender.strip()
     conn = open_db(data_dir)
     try:
-        el.add_ignored_sender(conn, account.strip(), sender.strip())
+        el.add_ignored_sender(conn, acct, snd)
+        cleaned = el.dismiss_pending_for_sender(conn, acct, snd)
         return t(
             "gmail_label.ignore_added",
             lang,
-            account=account.strip(),
-            sender=sender.strip(),
+            account=acct,
+            sender=snd,
+            cleaned=cleaned,
         )
     finally:
         conn.close()

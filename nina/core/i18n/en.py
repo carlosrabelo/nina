@@ -157,7 +157,8 @@ STRINGS: dict[str, str] = {
         "{count} pending suggestion(s) created."
     ),
     "gmail_label.ignore_added": (
-        "Ignored sender added: [{account}] {sender}."
+        "Ignored sender added: [{account}] {sender}. "
+        "{cleaned} pending suggestion(s) removed."
     ),
     "gmail_label.ignore_removed": (
         "Removed from ignored list: [{account}] {sender}."

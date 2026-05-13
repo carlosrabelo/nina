@@ -157,7 +157,8 @@ STRINGS: dict[str, str] = {
         "{count} sugestao(oes) pendente(s) criada(s)."
     ),
     "gmail_label.ignore_added": (
-        "Remetente ignorado adicionado: [{account}] {sender}."
+        "Remetente ignorado adicionado: [{account}] {sender}. "
+        "{cleaned} sugestao(oes) pendente(s) removida(s)."
     ),
     "gmail_label.ignore_removed": (
         "Removido da lista de ignorados: [{account}] {sender}."
