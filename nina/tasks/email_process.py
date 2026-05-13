@@ -58,6 +58,7 @@ def run_email_label_process(
     tokens_dir: Path,
     data_dir: Path,
     *,
+    account: str | None = None,
     verbose: bool = False,
     days: int | None = None,
     max_per_account: int | None = None,
@@ -74,6 +75,11 @@ def run_email_label_process(
         log.info("email learning process skipped: %s", e)
         return
 
+    accounts = [a for a in multi.accounts if account is None or a == account]
+    if not accounts:
+        log.info("email learning process: no matching accounts for %r", account)
+        return
+
     conn = open_db(data_dir)
     min_hits = _min_hits()
     max_list = _process_max_messages(max_per_account)
@@ -83,10 +89,10 @@ def run_email_label_process(
         f"[email process] query={query!r} max_messages={max_list} "
         f"min_hits_for_pending={min_hits}",
     )
-    _verbose_print(verbose, f"[email process] accounts: {', '.join(multi.accounts)}")
+    _verbose_print(verbose, f"[email process] accounts: {', '.join(accounts)}")
 
     try:
-        for account in multi.accounts:
+        for account in accounts:
             gc = multi.client(account)
             try:
                 msgs = gc.search(query, max_results=max_list)

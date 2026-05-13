@@ -87,6 +87,7 @@ def cmd_process(args: argparse.Namespace) -> None:
         run_email_label_process(
             tokens_dir,
             data_dir,
+            account=args.account,
             verbose=args.verbose,
             days=args.days,
             max_per_account=args.max_per_account,
@@ -128,9 +129,13 @@ def register(sub: argparse._SubParsersAction) -> None:
     p_process = g.add_parser(
         "process",
         help=(
-            "Fetch inbox messages, upsert email_messages, apply saved rules, "
-            "optional Telegram suggestions (CLI: no Telegram)"
+            "Fetch inbox messages, upsert email_messages, apply saved rules"
         ),
+    )
+    p_process.add_argument(
+        "--account",
+        default=None,
+        help="Process only this Gmail account (default: all)",
     )
     p_process.add_argument(
         "-v",
