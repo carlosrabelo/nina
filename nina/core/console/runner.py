@@ -63,13 +63,11 @@ class NinaConsole(cmd.Cmd):
     # ── health ────────────────────────────────────────────────────────────────
 
     def do_health(self, arg: str) -> None:  # noqa: ARG002
+        from nina.skills.health.execute import get_status
         lang = console_lang()
-        try:
-            data = client.get("/health")
-            print(t("console.health.status", lang, value=data["status"]))
-            print(t("console.health.uptime", lang, value=data["uptime"]))
-        except ConnectionError as e:
-            print(f"  ✗  {e}")
+        status = get_status()
+        print(t("console.health.status", lang, value=status["status"]))
+        print(t("console.health.uptime", lang, value=status["uptime"]))
 
     def help_health(self) -> None:
         print(t("help.health", console_lang()))

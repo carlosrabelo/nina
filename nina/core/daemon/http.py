@@ -1,5 +1,4 @@
 import os
-import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -8,6 +7,7 @@ from pydantic import BaseModel
 
 from nina.core.i18n import t
 from nina.core.locale.store import load as load_locale
+from nina.skills.health.execute import get_status as _health_status, mark_start as _health_mark_start
 from nina.skills.presence.models import PresenceState, PresenceStatus
 from nina.skills.presence.store import load as load_presence
 from nina.skills.presence.store import save as save_presence
@@ -16,7 +16,7 @@ from nina.skills.workdays.models import DAY_NAMES_EN
 from nina.skills.workdays.store import load as load_schedule
 from nina.skills.workdays.store import save as save_schedule
 
-_start_time = time.time()
+_health_mark_start()
 
 
 class CommandRequest(BaseModel):
@@ -62,15 +62,13 @@ def create_app(tokens_dir: Path, data_dir: Path) -> FastAPI:
 
     @app.get("/", dependencies=[Depends(_require_api_key)])
     def root() -> dict:
-        uptime = int(time.time() - _start_time)
-        hours, remainder = divmod(uptime, 3600)
-        minutes, seconds = divmod(remainder, 60)
+        h = _health_status()
         presence = load_presence(data_dir)
         schedule = load_schedule(data_dir)
         ctx = get_context(schedule, presence, _lang())
         return {
             "nina": "ok",
-            "uptime": f"{hours:02d}:{minutes:02d}:{seconds:02d}",
+            "uptime": h["uptime"],
             "context": ctx.label,
             "presence": {
                 "status": presence.status.value,
@@ -83,14 +81,7 @@ def create_app(tokens_dir: Path, data_dir: Path) -> FastAPI:
 
     @app.get("/health", dependencies=[Depends(_require_api_key)])
     def health() -> dict:
-        uptime = int(time.time() - _start_time)
-        hours, remainder = divmod(uptime, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        return {
-            "status": "ok",
-            "uptime": f"{hours:02d}:{minutes:02d}:{seconds:02d}",
-            "uptime_seconds": uptime,
-        }
+        return _health_status()
 
     @app.get("/presence", dependencies=[Depends(_require_api_key)])
     def get_presence() -> dict:

@@ -91,6 +91,8 @@ async def _serve(
 def run(dev: bool = False) -> None:
     load_project_dotenv()
     exit_if_missing_required_env()
+    from nina.skills.health.execute import mark_start
+    mark_start()
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     sessions_dir = Path(os.environ.get("SESSIONS_DIR", "sessions"))

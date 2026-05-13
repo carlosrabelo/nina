@@ -69,6 +69,15 @@ Ordem alfabética pelo id do domínio (ver [AGENTS.md](AGENTS.md)).
 
 ---
 
+### `health` — status e uptime do daemon
+
+- **Objetivo:** Informar se o daemon esta a correr e ha quanto tempo.
+- **Acionadores:** **`/health`** no Telegram, **`health`** no `nina console`, HTTP **`GET /health`**.
+- **Codigo:** [`nina/skills/health/execute.py`](nina/skills/health/execute.py).
+- **Armazenamento:** Nenhum (stateless — uptime calculado a partir do inicio do processo).
+
+---
+
 ### `memo` — notas e lembretes
 
 - **Objetivo:** Criar, listar, fechar ou dispensar memos; lembretes com data/hora resolvida.

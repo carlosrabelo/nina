@@ -228,14 +228,11 @@ async def handle_presence(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
 async def handle_health(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None:
         return
-    import time as _time
+    from nina.skills.health.execute import get_status
     lang = bot_lang(ctx)
-    start_time: float = ctx.bot_data["start_time"]
-    uptime = int(_time.time() - start_time)
-    hours, remainder = divmod(uptime, 3600)
-    minutes, seconds = divmod(remainder, 60)
+    status = get_status()
     await update.message.reply_text(
-        t("health.online", lang, uptime=f"{hours:02d}:{minutes:02d}:{seconds:02d}")
+        t("health.online", lang, uptime=status["uptime"])
     )
 
 
@@ -644,6 +641,7 @@ def create_application(token: str, owner_id: int, tokens_dir: Path, data_dir: Pa
     app.add_handler(CommandHandler("start",    handle_start,    filters=owner_filter))
     app.add_handler(CommandHandler("help",     handle_help,     filters=owner_filter))
     app.add_handler(CommandHandler("lang",     handle_lang,     filters=owner_filter))
+    app.add_handler(CommandHandler("health",   handle_health,   filters=owner_filter))
     app.add_handler(CommandHandler("presence", handle_presence, filters=owner_filter))
     app.add_handler(CommandHandler("workdays",  handle_workdays,  filters=owner_filter))
     app.add_handler(CommandHandler("timezone",  handle_timezone,  filters=owner_filter))
