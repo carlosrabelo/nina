@@ -1,6 +1,7 @@
 """Telegram Bot — persistent and batch mode."""
 
 import asyncio
+import logging
 import os
 from pathlib import Path
 
@@ -28,6 +29,8 @@ from nina.integrations.telegram.constants import MAX_MSG
 from nina.integrations.telegram.free_text_handler import handle_message
 from nina.integrations.telegram.offset_store import load_offset, save_offset
 
+log = logging.getLogger(__name__)
+
 # Re-export for tests and backwards compatibility
 __all__ = [
     "create_application",
@@ -42,6 +45,16 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
+
+async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    import traceback
+    from telegram.error import NetworkError, TimedOut
+    err = context.error
+    if isinstance(err, (NetworkError, TimedOut)):
+        log.warning("telegram network error: %s", err)
+        return
+    log.error("telegram unhandled error: %s\n%s", err, traceback.format_exc())
+
 
 async def handle_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None:
@@ -653,6 +666,7 @@ def create_application(token: str, owner_id: int, tokens_dir: Path, data_dir: Pa
     app.add_handler(CommandHandler("memos",     handle_memos,     filters=owner_filter))
     app.add_handler(CommandHandler("gmail_label", handle_gmail_label, filters=owner_filter))
     app.add_handler(MessageHandler(owner_filter & filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_error_handler(_error_handler)
     return app
 
 
