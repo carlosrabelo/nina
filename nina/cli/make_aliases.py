@@ -120,7 +120,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.set_defaults(func=gmail_mod.cmd_labels)
 
     p = sub.add_parser(
-        "email-process",
+        "gmail-label-process",
         help="Process inbox + rules once (alias: nina gmail_label process)",
     )
     p.add_argument("--days", type=int, default=None, metavar="D")
@@ -129,7 +129,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.set_defaults(func=email_mod.cmd_process)
 
     p = sub.add_parser(
-        "email-infer-rules",
+        "gmail-label-infer",
         help="Infer sender rules from Gmail labels (alias: nina gmail_label infer-rules)",
     )
     p.add_argument("--max-per-account", type=int, default=500, metavar="N")
@@ -139,8 +139,8 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.set_defaults(func=email_mod.cmd_infer_rules)
 
     p = sub.add_parser(
-        "email-rules",
-        help="List learned sender→label rules (alias: nina gmail_label rules)",
+        "gmail-label-rules",
+        help="List learned sender rules (alias: nina gmail_label rules)",
     )
     p.add_argument("--account", help="Filter to one Gmail account email")
     p.set_defaults(func=email_mod.cmd_list_rules)

@@ -368,6 +368,7 @@ class NinaConsole(cmd.Cmd):
     def do_gmail_label(self, arg: str) -> None:
         from nina.skills.gmail_label.execute import (
             add_ignored,
+            add_rule_direct,
             dismiss_all_pending_labels,
             dismiss_pending_by_prefix,
             format_ignored_list,
@@ -395,6 +396,13 @@ class NinaConsole(cmd.Cmd):
             return
         if parts[0].lower() == "dismiss-all":
             out = dismiss_all_pending_labels(dd)
+            print(f"  {out}")
+            return
+        if parts[0].lower() == "rule":
+            if len(parts) < 4 or parts[1].lower() != "add":
+                print(f"  {t('gmail_label.usage', lang)}")
+                return
+            out = add_rule_direct(dd, parts[2], parts[3], " ".join(parts[4:]))
             print(f"  {out}")
             return
         if parts[0].lower() == "ignore":

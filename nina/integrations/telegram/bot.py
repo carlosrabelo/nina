@@ -44,6 +44,8 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 async def handle_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     data_dir: Path = ctx.bot_data["data_dir"]
     tg_lang_code = (update.effective_user.language_code or "") if update.effective_user else ""
 
@@ -80,6 +82,8 @@ async def handle_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_unread(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     lang = bot_lang(ctx)
     try:
         nina = GmailMultiClient.from_env()
@@ -104,6 +108,8 @@ async def handle_unread(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_latest(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     lang = bot_lang(ctx)
     try:
         nina = GmailMultiClient.from_env()
@@ -128,6 +134,8 @@ async def handle_latest(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_events(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     lang = bot_lang(ctx)
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     accounts = discover_accounts(tokens_dir)
@@ -158,6 +166,8 @@ async def handle_events(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_dialogs(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     lang = bot_lang(ctx)
     try:
         with TgClient.from_env() as tg:
@@ -181,6 +191,8 @@ async def handle_dialogs(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
 # ---------------------------------------------------------------------------
 
 async def handle_presence(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.skills.presence.models import PresenceState, PresenceStatus
     from nina.skills.presence.store import load as load_presence
     from nina.skills.presence.store import save as save_presence
@@ -214,6 +226,8 @@ async def handle_presence(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def handle_health(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     import time as _time
     lang = bot_lang(ctx)
     start_time: float = ctx.bot_data["start_time"]
@@ -226,6 +240,8 @@ async def handle_health(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_workdays(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
     from nina.skills.workdays.store import load as load_workdays
@@ -242,6 +258,8 @@ async def handle_workdays(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def handle_timezone(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
     from nina.skills.workdays.store import load as load_workdays
@@ -268,6 +286,8 @@ async def handle_timezone(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def handle_context(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.skills.presence.store import load as load_presence
     from nina.skills.workdays.checker import get_context
     from nina.skills.workdays.store import load as load_workdays
@@ -285,6 +305,8 @@ async def handle_context(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
 
 
 async def handle_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.skills.presence.models import PresenceStatus
     from nina.skills.profile.store import load as load_profile
     lang = bot_lang(ctx)
@@ -319,6 +341,8 @@ async def handle_profile(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
 
 
 async def handle_notify(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.skills.notifications.store import load as load_notif
     from nina.skills.notifications.store import save as save_notif
     lang = bot_lang(ctx)
@@ -357,6 +381,8 @@ async def handle_notify(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
@@ -418,6 +444,8 @@ async def handle_schedule(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def handle_memo(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.core.store.db import open_db
     from nina.core.store.models import Memo
     from nina.core.store.repos import memo as memo_repo
@@ -461,6 +489,8 @@ async def handle_memo(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_memos(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.core.store.db import open_db
     from nina.core.store.repos import memo as memo_repo
     lang = bot_lang(ctx)
@@ -479,9 +509,12 @@ async def handle_memos(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     from nina.core.i18n import t
     from nina.skills.gmail_label.execute import (
         add_ignored,
+        add_rule_direct,
         dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_ignored_list,
@@ -508,6 +541,13 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
         return
     if args[0].lower() == "dismiss-all":
         out = dismiss_all_pending_labels(data_dir)
+        await update.message.reply_text(out[:MAX_MSG])
+        return
+    if args[0].lower() == "rule":
+        if len(args) < 4 or args[1].lower() != "add":
+            await update.message.reply_text(t("gmail_label.usage", lang))
+            return
+        out = add_rule_direct(data_dir, args[2], args[3], " ".join(args[4:]))
         await update.message.reply_text(out[:MAX_MSG])
         return
     if args[0].lower() == "ignore":
@@ -544,6 +584,8 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def handle_lang(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message is None:
+        return
     lang = bot_lang(ctx)
     data_dir: Path = ctx.bot_data["data_dir"]
 

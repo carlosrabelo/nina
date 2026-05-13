@@ -146,9 +146,11 @@ def execute_activity_log_intent(
 
 
 def execute_gmail_label_intent(
-    action: str, target_id: str, label_name: str, lang: str, *, data_dir: Path, tokens_dir: Path
+    action: str, target_id: str, label_name: str, lang: str, *, data_dir: Path,
+    tokens_dir: Path, sender: str = "", account: str = "",
 ) -> None:
     from nina.skills.gmail_label.execute import (
+        add_rule_direct,
         dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_pending_list,
@@ -162,6 +164,14 @@ def execute_gmail_label_intent(
         return
     if action == "dismiss_all":
         out = dismiss_all_pending_labels(data_dir)
+        print(f"  {out}")
+        return
+    if action == "rule_add" and sender and label_name:
+        if not account:
+            from nina.core.i18n import t as _t
+            print(f"  {_t('gmail_label.usage', lang)}")
+            return
+        out = add_rule_direct(data_dir, account, sender, label_name)
         print(f"  {out}")
         return
     if action == "dismiss" and target_id:

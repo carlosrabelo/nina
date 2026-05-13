@@ -8,6 +8,13 @@ from pathlib import Path
 from nina.errors import ConfigError
 
 
+def cmd_rule_add(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    from nina.skills.gmail_label.execute import add_rule_direct
+
+    print(add_rule_direct(data_dir, args.account, args.sender, args.label))
+
+
 def cmd_list_rules(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     from nina.core.store.db import open_db
@@ -226,3 +233,18 @@ def register(sub: argparse._SubParsersAction) -> None:
     ig_remove.add_argument("account", help="Gmail account email")
     ig_remove.add_argument("sender", help="Normalized sender email")
     ig_remove.set_defaults(func=cmd_ignore_remove)
+
+    p_rule = g.add_parser(
+        "rule",
+        help="Manage sender rules directly",
+    )
+    rule_sub = p_rule.add_subparsers(dest="rule_action", required=True)
+
+    rule_add = rule_sub.add_parser(
+        "add",
+        help="Add a sender rule manually",
+    )
+    rule_add.add_argument("account", help="Gmail account email")
+    rule_add.add_argument("sender", help="Sender email address")
+    rule_add.add_argument("label", help="Gmail label (must start with @)")
+    rule_add.set_defaults(func=cmd_rule_add)

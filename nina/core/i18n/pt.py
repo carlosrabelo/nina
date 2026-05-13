@@ -10,18 +10,20 @@ STRINGS: dict[str, str] = {
     "lang.set_ok":   "✓ Idioma alterado para: {code}",
     "lang.invalid":  "Idioma desconhecido '{code}'. Disponíveis: {supported}",
     "help.text": (
-        "Comandos disponíveis:\n\n"
-        "🤖 Nina\n"
-        "/presence — presença atual\n"
-        "/presence <status> — muda presença (home|work|out|dnd)\n"
-        "/health — status do daemon\n"
-        "/workdays — horário de trabalho\n"
-        "/timezone — timezone atual\n"
+        "Comandos disponiveis:\n\n"
         "/context — contexto atual\n"
+        "/gmail_label — sugestoes remetente → etiqueta\n"
+        "/health — status do daemon\n"
         "/lang — idioma atual\n"
-        "/lang <código> — muda idioma (en|pt)\n"
-        "/profile — contas associadas por presença\n"
-        "/gmail_label — sugestões remetente → etiqueta\n"
+        "/lang <codigo> — muda idioma (en|pt)\n"
+        "/memo — notas e lembretes\n"
+        "/presence — presenca atual\n"
+        "/presence <status> — muda presenca (home|work|out|dnd)\n"
+        "/profile — contas associadas por presenca\n"
+        "/schedule — agendar evento no calendario\n"
+        "/workdays — horario de trabalho\n"
+        "/timezone — timezone atual\n\n"
+        "/help <comando> — ver sub-opcoes de um comando"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -93,6 +95,7 @@ STRINGS: dict[str, str] = {
     "gmail_label.usage": (
         "/gmail_label — lista sugestões abertas\n"
         "/gmail_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
+        "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
         "/gmail_label dismiss <id> — ignora a sugestão (adiciona remetente à lista de ignorados)\n"
         "/gmail_label dismiss-all — ignora todas as sugestões abertas\n"
         "/gmail_label ignore list — listar remetentes ignorados\n"
@@ -118,6 +121,9 @@ STRINGS: dict[str, str] = {
     "gmail_label.label_must_at": (
         "A etiqueta deve começar com @ (ex.: @Financeiro)."
     ),
+    "gmail_label.rule_added": (
+        "✓ Regra adicionada: {sender} → [{label}] em {account}."
+    ),
     "gmail_label.ignore_added": (
         "Remetente ignorado adicionado: [{account}] {sender}."
     ),
@@ -137,17 +143,6 @@ STRINGS: dict[str, str] = {
     "gmail_label.taught_ok": (
         "✓ Regra gravada: {sender} → [{label}] em {account}.\n"
         "Aplicada em {applied} mensagem(ns) que a Nina já tinha registado."
-    ),
-    "help.gmail_label": (
-        "  gmail_label | /gmail_label         Listar sugestões remetente → etiqueta\n"
-        "  gmail_label <id> <etiqueta>     Ensinar etiqueta Gmail para esse remetente (por conta)\n"
-        "  gmail_label dismiss <id>        Ignorar uma sugestão (adiciona à lista de ignorados)\n"
-        "  gmail_label dismiss-all         Ignorar todas as sugestões abertas\n"
-        "  gmail_label ignore list         Listar remetentes ignorados\n"
-        "  gmail_label ignore add <conta> <remetente>   Adicionar à lista de ignorados\n"
-        "  gmail_label ignore remove <conta> <remetente>   Remover da lista de ignorados\n"
-        "\n"
-        "  Use pelo menos 8 caracteres do id da sugestão (igual ao /gmail_label no Telegram)."
     ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
@@ -171,10 +166,9 @@ STRINGS: dict[str, str] = {
     "profile.no_accounts":      "(não configurado)",
     "profile.gmail":            "gmail:    {accounts}",
     "profile.calendar":         "calendar: {accounts}",
-    "profile.set_ok":           "✓ Perfil atualizado.",
-    "profile.empty":            "Nenhuma conta configurada ainda.\nEnvie algo como: \"no escritório usar work@empresa.com\"",
-    "help.profile":             "  profile   Ver contas associadas a cada presença\n  profile <presença>   Ver para uma presença específica",
-    "cmd.profile":              "Ver perfil de contas por presença",
+    "profile.set_ok":           "Perfil atualizado.",
+    "profile.empty":            "Nenhuma conta configurada ainda.\nEnvie algo como: \"no escritorio usar work@empresa.com\"",
+    "cmd.profile":              "Ver perfil de contas por presenca",
 
     # ── llm interpreter ───────────────────────────────────────────────────────
     "llm.presence_set":    "✓ {status} — {label}",
@@ -188,15 +182,8 @@ STRINGS: dict[str, str] = {
     "console.unknown_cmd":    "  Comando desconhecido: '{cmd}'. Digite 'help' para ver os comandos.",
     "console.health.status":  "  status   {value}",
     "console.health.uptime":  "  uptime   {value}",
-    "console.context.presence": "  {work}  ·  presença: {presence}",
-    "help.presence":          "  presence                    Ver presença atual\n  presence <status>           Definir presença  (home | work | out | dnd)\n  presence <status> <nota>    Definir com nota",
-    "help.health":            "  health   Ver status e uptime do daemon",
-    "help.workdays":          "  workdays   Ver horário de trabalho",
-    "help.timezone":          "  timezone              Ver timezone atual\n  timezone <tz>         Definir timezone  (ex: America/Cuiaba)",
+    "console.context.presence": "  {work}  ·  presenca: {presence}",
     "cmd.timezone":           "Ver ou definir timezone",
-    "help.context":           "  context   Ver contexto de trabalho atual (presença × horário)",
-    "help.lang":              "  lang              Ver idioma atual\n  lang <código>     Mudar idioma  (en | pt)",
-    "help.exit":              "  exit / quit   Sair do console",
 
     # ── schedule command ──────────────────────────────────────────────────────
     "schedule.created":  "✓ {title}\n{date} · {start} → {end}\nConta: {account}",
@@ -209,15 +196,7 @@ STRINGS: dict[str, str] = {
         "  schedule amanhã 10:00 Consulta 30min\n"
         "  schedule 29/03 14:00 Treinamento 2h"
     ),
-    "help.schedule": (
-        "  schedule HH:MM <título> [duração]\n"
-        "  schedule hoje|amanhã HH:MM <título> [duração]\n"
-        "  schedule DD/MM HH:MM <título> [duração]\n"
-        "  schedule DD/MM/AAAA HH:MM <título> [duração]\n"
-        "\n"
-        "  Duração: 1h  30min  1h30  (padrão: 60min)"
-    ),
-    "cmd.schedule":  "Agendar evento no calendário diretamente",
+    "cmd.schedule":  "Agendar evento no calendario diretamente",
 
     # ── bot command descriptions (shown in Telegram autocomplete) ─────────────
     "cmd.start":     "Iniciar a Nina",
@@ -237,9 +216,8 @@ STRINGS: dict[str, str] = {
     "notify.reminder_set":   "✓ Lembrete definido para {minutes} minutos antes.",
     "notify.days_set":       "✓ Janela de monitoramento definida para {days} dias.",
     "notify.invalid_value":  "Valor inválido '{value}'. Deve ser um número inteiro positivo.",
-    "notify.usage":          "  notify                       Ver configurações de notificação\n  notify reminder <min>        Definir antecedência do lembrete (minutos)\n  notify days <n>              Definir janela de monitoramento (dias)",
-    "help.notify":           "  notify                       Ver configurações de notificação\n  notify reminder <min>        Definir antecedência do lembrete (minutos)\n  notify days <n>              Definir janela de monitoramento (dias)",
-    "cmd.notify":            "Ver ou configurar notificações",
+    "notify.usage":          "  notify                       Ver configuracoes de notificacao\n  notify reminder <min>        Definir antecedencia do lembrete (minutos)\n  notify days <n>              Definir janela de monitoramento (dias)",
+    "cmd.notify":            "Ver ou configurar notificacoes",
 
     # ── memo ──────────────────────────────────────────────────────────────────
     "memo.saved":       "✓ Memo salvo.",
@@ -250,8 +228,7 @@ STRINGS: dict[str, str] = {
     "memo.none_open":   "Nenhum memo aberto.",
     "memo.item":        "[{index}] {text}{due}",
     "memo.due":         "  Vence: {date}",
-    "memo.usage":       "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluído\n  memo dismiss <id>        Descartar memo",
-    "help.memo":        "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluído\n  memo dismiss <id>        Descartar",
+    "memo.usage":       "  memo <texto>             Salvar um novo memo\n  memo <texto> due <data>  Salvar com data de vencimento\n  memos                    Listar memos abertos\n  memo done <id>           Marcar como concluido\n  memo dismiss <id>        Descartar memo",
     "cmd.memo":         "Salvar ou listar memos",
     "cmd.memos":        "Listar memos abertos",
     "cmd.gmail_label":   "Ensinar etiquetas Gmail por conta",
@@ -259,5 +236,64 @@ STRINGS: dict[str, str] = {
     # ── dialogs ───────────────────────────────────────────────────────────────
     "dialogs.none":   "Nenhum chat encontrado.",
     "dialogs.error":  "Erro: {error}",
-    "dialogs.unread": " ({count} não lidas)",
+    "dialogs.unread": " ({count} nao lidas)",
+
+    # ── /help <command> — per-command help (alphabetical) ──────────────────────
+    "help.context": (
+        "/context — contexto de trabalho atual"
+    ),
+    "help.gmail_label": (
+        "/gmail_label — listar sugestoes abertas\n"
+        "/gmail_label <id> <etiqueta> — gravar etiqueta para o remetente nessa conta\n"
+        "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
+        "/gmail_label dismiss <id> — ignorar sugestao (adiciona remetente aos ignorados)\n"
+        "/gmail_label dismiss-all — ignorar todas as sugestoes abertas\n"
+        "/gmail_label ignore list — listar remetentes ignorados\n"
+        "/gmail_label ignore add <conta> <remetente> — adicionar aos ignorados\n"
+        "/gmail_label ignore remove <conta> <remetente> — remover dos ignorados\n\n"
+        "Etiquetas devem comecar com @ (ex.: @Financeiro).\n"
+        "Use pelo menos 8 caracteres do id da sugestao."
+    ),
+    "help.health": (
+        "/health — status e uptime do daemon"
+    ),
+    "help.lang": (
+        "/lang — idioma atual\n"
+        "/lang <codigo> — mudar idioma (en|pt)"
+    ),
+    "help.memo": (
+        "/memo <texto> — salvar novo memo\n"
+        "/memo <texto> due <data> — salvar com data de vencimento\n"
+        "/memos — listar memos abertos\n"
+        "/memo done <id> — marcar como concluido\n"
+        "/memo dismiss <id> — descartar memo"
+    ),
+    "help.notify": (
+        "/notify — ver configuracoes de notificacao\n"
+        "/notify reminder <min> — definir antecedencia do lembrete (minutos)\n"
+        "/notify days <n> — definir janela de monitoramento (dias)"
+    ),
+    "help.presence": (
+        "/presence — presenca atual\n"
+        "/presence <status> — definir presenca (home|work|out|dnd)\n"
+        "/presence <status> <nota> — definir com nota"
+    ),
+    "help.profile": (
+        "/profile — ver contas associadas a cada presenca\n"
+        "/profile <presenca> — ver para uma presenca especifica"
+    ),
+    "help.schedule": (
+        "/schedule HH:MM <titulo> [duracao]\n"
+        "/schedule hoje|amanha HH:MM <titulo> [duracao]\n"
+        "/schedule DD/MM HH:MM <titulo> [duracao]\n"
+        "/schedule DD/MM/AAAA HH:MM <titulo> [duracao]\n\n"
+        "Duracao: 1h  30min  1h30  (padrao: 60min)"
+    ),
+    "help.timezone": (
+        "/timezone — timezone atual\n"
+        "/timezone <tz> — definir timezone (ex.: America/Cuiaba)"
+    ),
+    "help.workdays": (
+        "/workdays — horario de trabalho"
+    ),
 }

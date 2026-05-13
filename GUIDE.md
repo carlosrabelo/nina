@@ -74,12 +74,13 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 
 | Flat alias | Hierarchical | What it does |
 |------------|--------------|--------------|
-| `nina email-process [--verbose] [--days D] [--max-per-account N]` | `nina email process [--verbose] [--days D] [--max-per-account N]` | **Processing run:** fetch via **`NINA_EMAIL_SYNC_QUERY`**, upsert **`email_messages`**, apply **`email_sender_rules`** in Gmail, Telegram suggestions when the daemon path is used; **CLI** runs with Telegram disabled. Messages that already have **`tagged_at`** in **`email_messages`** are skipped early (no header upsert, no rule/pending work). **`--days`** sets or replaces the first `newer_than:Dd` in the query (wide backfill). **`--max-per-account`** caps Gmail list size per account (env default max 500; CLI allows up to **5000**). **`--verbose`** (`-v`) prints progress on stderr. |
-| `nina email-rules [--account …]` | `nina email rules …` | **PostgreSQL:** lists **learned** sender→label rules Nina will apply (`email_sender_rules`: account, normalized sender, Gmail user label name, archive flag, `created_at`). No Gmail API calls. |
-| `nina email-infer-rules` | `nina email infer-rules [--days D] [--max-per-account N] [--min-messages M] [--verbose]` | **Rules only:** scan Gmail over `newer_than:Dd` and **insert** new **`email_sender_rules`** when one user label appears alone on enough messages from a sender (does not overwrite an existing rule). Does **not** write `email_messages` or change the inbox — run **`nina email process`** afterward to ingest and apply. **`--verbose`** (`-v`) prints progress on stderr. |
-| `nina email ignore list [--account …]` | `nina email ignore list …` | List ignored senders that will never generate label suggestions. |
-| `nina email ignore add <account> <sender>` | (same) | Add a sender to the ignore list. Also happens automatically when you **dismiss** a pending suggestion. |
-| `nina email ignore remove <account> <sender>` | (same) | Remove a sender from the ignore list so suggestions can appear again. |
+| `nina gmail-label-process [--verbose] [--days D] [--max-per-account N]` | `nina gmail_label process [--verbose] [--days D] [--max-per-account N]` | **Processing run:** fetch via **`NINA_EMAIL_SYNC_QUERY`**, upsert **`email_messages`**, apply **`email_sender_rules`** in Gmail, Telegram suggestions when the daemon path is used; **CLI** runs with Telegram disabled. Messages that already have **`tagged_at`** in **`email_messages`** are skipped early (no header upsert, no rule/pending work). **`--days`** sets or replaces the first `newer_than:Dd` in the query (wide backfill). **`--max-per-account`** caps Gmail list size per account (env default max 500; CLI allows up to **5000**). **`--verbose`** (`-v`) prints progress on stderr. |
+| `nina gmail-label-rules [--account …]` | `nina gmail_label rules …` | **PostgreSQL:** lists **learned** sender rules Nina will apply (`email_sender_rules`: account, normalized sender, Gmail user label name, archive flag, `created_at`). No Gmail API calls. |
+| `nina gmail-label-infer` | `nina gmail_label infer-rules [--days D] [--max-per-account N] [--min-messages M] [--verbose]` | **Rules only:** scan Gmail over `newer_than:Dd` and **insert** new **`email_sender_rules`** when one user label appears alone on enough messages from a sender (does not overwrite an existing rule). Does **not** write `email_messages` or change the inbox — run **`nina gmail_label process`** afterward to ingest and apply. **`--verbose`** (`-v`) prints progress on stderr. |
+| `nina gmail_label rule add <account> <sender> <@label>` | (same) | **Add rule manually:** create a sender rule directly without a pending suggestion. Label must start with **`@`**. |
+| `nina gmail_label ignore list [--account …]` | (same) | List ignored senders that will never generate label suggestions. |
+| `nina gmail_label ignore add <account> <sender>` | (same) | Add a sender to the ignore list. Also happens automatically when you **dismiss** a pending suggestion. |
+| `nina gmail_label ignore remove <account> <sender>` | (same) | Remove a sender from the ignore list so suggestions can appear again. |
 
 Teach or list pending labels from **Telegram** (`/gmail_label`) or **`nina console`** (`gmail_label`; see `help` / `help gmail_label` in the console). Dismissing a suggestion automatically adds the sender to the **ignored list** (`email_ignored_senders`), preventing future suggestions. **`/gmail_label dismiss-all`** clears all open suggestions at once. Labels must start with **`@`** (e.g. `@Finance`). Manage ignored senders with **`/gmail_label ignore list|add|remove`** or **`nina gmail_label ignore ...`**. Requires `gmail.modify` OAuth scope.
 
@@ -133,10 +134,10 @@ nina daemon --dev          # terminal A
 make console               # terminal B — host `.env` must point at DB + daemon
 nina gmail-unread --limit 5
 nina gmail labels --user-only
-nina email process
+nina gmail_label process
 # optional: wide window, more messages; already-tagged rows are skipped early
-nina email process --days 365 --max-per-account 2000 -v
-nina email rules
+nina gmail_label process --days 365 --max-per-account 2000 -v
+nina gmail_label rules
 nina cal-events --limit 3
 nina llm-ping
 ```

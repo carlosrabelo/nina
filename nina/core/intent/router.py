@@ -70,7 +70,9 @@ Return ONLY a single JSON object — no explanation, no markdown.
 
   // gmail_label only
   "target_id": "<suggestion id prefix or empty>",
-  "label_name": "<Gmail label to assign or empty>"
+  "label_name": "<Gmail label to assign or empty>",
+  "sender": "<email address for rule_add or empty>",
+  "account": "<Gmail account for rule_add or empty>"
 }
 
 Fields not relevant to the detected domain must be null / "" / [].
@@ -161,12 +163,15 @@ Fields not relevant to the detected domain must be null / "" / [].
 ▸ none — not recognized or out of scope
   Examples: "qual é o tempo?", "conta uma piada", "o que é machine learning"
 
-▸ gmail_label — managing Gmail label learning (listing suggestions, teaching labels, ignoring senders)
-  action: list   (show open sender→label suggestions)
-          teach  (assign a Gmail label to a pending sender)
-          dismiss (ignore a suggestion and block future suggestions for that sender)
+▸ gmail_label — managing Gmail label learning (listing suggestions, teaching labels, adding rules, ignoring senders)
+  action: list       (show open sender→label suggestions)
+          teach      (assign a Gmail label to a pending sender)
+          dismiss    (ignore a suggestion and block future suggestions for that sender)
+          rule_add   (add a sender rule manually without a pending suggestion)
   target_id: the suggestion id prefix (8+ hex chars) or empty for list
-  label_name: the Gmail label to assign (teach only), e.g. "@Financeiro", "Trabalho"
+  label_name: the Gmail label to assign (teach/rule_add only), must start with @
+  sender: email address (rule_add only)
+  account: Gmail account (rule_add only)
   Examples:
     "quais sugestoes de email"                    → gmail_label, list
     "listar etiquetas pendentes"                  → gmail_label, list
@@ -174,6 +179,7 @@ Fields not relevant to the detected domain must be null / "" / [].
     "ensina a etiqueta @Financeiro para abc12345" → gmail_label, teach, target_id="abc12345", label_name="@Financeiro"
     "ignora a sugestao abc12345"                  → gmail_label, dismiss, target_id="abc12345"
     "descarta o remetente abc12345"               → gmail_label, dismiss, target_id="abc12345"
+    "adicionar regra para newsletter@empresa.com com @Marketing na conta user@gmail.com" → gmail_label, rule_add, sender="newsletter@empresa.com", label_name="@Marketing", account="user@gmail.com"
 
 ━━━ DISAMBIGUATION RULES ━━━
 • "estou no trabalho" / "cheguei no trabalho"  → presence (current status), NOT workdays
@@ -210,6 +216,8 @@ class RouterIntent:
     # gmail_label
     target_id: str = ""
     label_name: str = ""
+    sender: str = ""
+    account: str = ""
     # meta
     resolved_by: str = "llm"  # "local" | "llm" | "none"
 
@@ -245,6 +253,8 @@ def _local_to_router(local: LocalIntent) -> RouterIntent:
         calendar_on_date=str(entities.get("calendar_on_date", "") or ""),
         target_id=str(entities.get("target_id", "") or ""),
         label_name=str(entities.get("label_name", "") or ""),
+        sender=str(entities.get("sender", "") or ""),
+        account=str(entities.get("account", "") or ""),
         resolved_by="local",
     )
 
@@ -299,5 +309,7 @@ def route(
         calendar_on_date=str(data.get("calendar_on_date") or ""),
         target_id=str(data.get("target_id") or ""),
         label_name=str(data.get("label_name") or ""),
+        sender=str(data.get("sender") or ""),
+        account=str(data.get("account") or ""),
         resolved_by="llm",
     )

@@ -30,6 +30,7 @@ def dispatch_natural_language_line(line: str) -> None:
         execute_gmail_label_intent(
             el_result.action, el_result.target_id, el_result.label_name,
             lang, data_dir=ddir, tokens_dir=tdir,
+            sender=el_result.sender, account=el_result.account,
         )
         return
 
@@ -212,6 +213,7 @@ def dispatch_natural_language_line(line: str) -> None:
         execute_gmail_label_intent(
             el_intent.action, el_intent.target_id, el_intent.label_name,
             lang, data_dir=ddir, tokens_dir=tdir,
+            sender=el_intent.sender, account=el_intent.account,
         )
         return
 

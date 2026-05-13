@@ -15,13 +15,17 @@ _ACTION_WORDS: dict[str, dict[str, set[str]]] = {
                         "descartar tudo", "descarte tudo", "ignorar tudo", "ignore tudo",
                         "apagar todas", "apague todas", "limpar sugestões", "limpar sugestoes",
                         "limpar pendentes"},
-        "teach":   {"ensine", "ensinar", "gravar", "salvar", "aplique", "aplicar", "crie a label", "adicionar label", "adiciona label"},
+        "teach":   {"ensine", "ensinar", "gravar", "salvar", "aplique", "aplicar",
+                    "crie a label", "adicionar label", "adiciona label"},
+        "rule_add": {"adicionar regra", "criar regra", "nova regra",
+                     "associar label", "mapear remetente"},
     },
     "en": {
         "list":    {"list", "show", "display", "pending", "suggestions"},
         "dismiss": {"dismiss", "ignore", "discard"},
         "dismiss_all": {"dismiss all", "clear all", "discard all", "ignore all"},
         "teach":   {"teach", "save", "apply", "create label", "add label"},
+        "rule_add": {"add rule", "create rule", "new rule", "map sender"},
     },
 }
 
@@ -29,25 +33,27 @@ _SYSTEM_PROMPT = """\
 You are a command parser for the gmail_label domain in a personal assistant.
 The user message may be in Portuguese or English.
 Return JSON only — no explanation, no markdown.
-Schema: {"action": "list|teach|dismiss|dismiss_all|none", "target_id": "<suggestion id prefix or empty>", "label_name": "<label string or empty>"}
+Schema: {"action": "list|teach|dismiss|dismiss_all|rule_add|none", "target_id": "<suggestion id prefix or empty>", "label_name": "<label string or empty>", "sender": "<email address or empty>", "account": "<gmail account or empty>"}
 Actions:
   list        — show open email suggestions
   dismiss     — ignore a single email suggestion (requires target_id)
-  dismiss_all — ignore ALL open email suggestions at once (target_id and label_name are empty)
+  dismiss_all — ignore ALL open email suggestions at once
   teach       — teach/save a label for an email suggestion (label_name must start with @)
+  rule_add    — add a sender rule manually (requires account, sender, label_name starting with @)
   none        — not a gmail_label action
 
 Extraction Rules:
-- target_id: usually an 8+ character alphanumeric string (e.g., "1234abcd") that comes after the action or the word "id".
-- label_name: the name of the label they want to assign. Must start with "@". Do not include the word "label" or "etiqueta" in the label name itself.
+- target_id: usually an 8+ character alphanumeric string after the action or the word "id".
+- label_name: the label to assign. Must start with "@". Do not include the word "label" or "etiqueta".
+- sender: an email address (e.g. "newsletter@company.com") when creating a rule directly.
+- account: the Gmail account (e.g. "user@gmail.com") when creating a rule directly.
 
 Examples:
-- "ensine a label @Financeiro para o id a1b2c3d4" -> {"action": "teach", "target_id": "a1b2c3d4", "label_name": "@Financeiro"}
-- "ignora a sugestão a1b2c3d4" -> {"action": "dismiss", "target_id": "a1b2c3d4", "label_name": ""}
-- "listar emails pendentes" -> {"action": "list", "target_id": "", "label_name": ""}
-- "descartar todas as sugestões" -> {"action": "dismiss_all", "target_id": "", "label_name": ""}
-- "apagar todos os pendentes" -> {"action": "dismiss_all", "target_id": "", "label_name": ""}
-- "dismiss all suggestions" -> {"action": "dismiss_all", "target_id": "", "label_name": ""}
+- "ensine a label @Financeiro para o id a1b2c3d4" -> {"action": "teach", "target_id": "a1b2c3d4", "label_name": "@Financeiro", "sender": "", "account": ""}
+- "ignora a sugestão a1b2c3d4" -> {"action": "dismiss", "target_id": "a1b2c3d4", "label_name": "", "sender": "", "account": ""}
+- "listar emails pendentes" -> {"action": "list", "target_id": "", "label_name": "", "sender": "", "account": ""}
+- "descartar todas as sugestões" -> {"action": "dismiss_all", "target_id": "", "label_name": "", "sender": "", "account": ""}
+- "adicionar regra para newsletter@empresa.com com label @Marketing na conta user@gmail.com" -> {"action": "rule_add", "target_id": "", "label_name": "@Marketing", "sender": "newsletter@empresa.com", "account": "user@gmail.com"}
 
 If unsure, return {"action": "none"}.
 """
@@ -55,9 +61,11 @@ If unsure, return {"action": "none"}.
 
 @dataclass
 class EmailLabelIntent:
-    action: str         # "list" | "teach" | "dismiss" | "none"
-    target_id: str = "" # minimum 8 characters usually
+    action: str         # "list" | "teach" | "dismiss" | "dismiss_all" | "rule_add" | "none"
+    target_id: str = ""
     label_name: str = ""
+    sender: str = ""
+    account: str = ""
 
 
 def try_action(text: str, lang: str = "pt") -> EmailLabelIntent | None:
@@ -78,7 +86,18 @@ def try_action(text: str, lang: str = "pt") -> EmailLabelIntent | None:
     if any(w in lower for w in words_by_action["dismiss_all"]):
         return EmailLabelIntent(action="dismiss_all")
 
-    # 3. dismiss single
+    # 3. rule add (needs account, sender, label)
+    if any(w in lower for w in words_by_action["rule_add"]):
+        label_m = re.search(r'(@[\w/-]+)', text)
+        email_m = re.search(r'[\w.+-]+@[\w.-]+\.\w+', text)
+        if label_m and email_m:
+            return EmailLabelIntent(
+                action="rule_add",
+                label_name=label_m.group(1),
+                sender=email_m.group(0),
+            )
+
+    # 4. dismiss single
     if any(w in lower for w in words_by_action["dismiss"]):
         # Extract potential ID (hex string 8+ chars)
         m = re.search(r'\b([a-f0-9]{8,})\b', lower)
@@ -109,6 +128,8 @@ def interpret(text: str, llm, lang: str = "pt") -> EmailLabelIntent:
             action=data.get("action", "none"),
             target_id=data.get("target_id", ""),
             label_name=data.get("label_name", ""),
+            sender=data.get("sender", ""),
+            account=data.get("account", ""),
         )
     except Exception:
         return EmailLabelIntent(action="none")

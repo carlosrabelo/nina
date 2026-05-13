@@ -11,17 +11,19 @@ STRINGS: dict[str, str] = {
     "lang.invalid":  "Unknown language '{code}'. Supported: {supported}",
     "help.text": (
         "Available commands:\n\n"
-        "🤖 Nina\n"
-        "/presence — current presence\n"
-        "/presence <status> — change presence (home|work|out|dnd)\n"
-        "/health — daemon status\n"
-        "/workdays — work schedule\n"
-        "/timezone — current timezone\n"
         "/context — current context\n"
+        "/gmail_label — pending sender → label suggestions\n"
+        "/health — daemon status\n"
         "/lang — current language\n"
         "/lang <code> — change language (en|pt)\n"
+        "/memo — notes and reminders\n"
+        "/presence — current presence\n"
+        "/presence <status> — change presence (home|work|out|dnd)\n"
         "/profile — account mapping per presence\n"
-        "/gmail_label — pending sender → label suggestions\n"
+        "/schedule — schedule a calendar event\n"
+        "/workdays — work schedule\n"
+        "/timezone — current timezone\n\n"
+        "/help <command> — show sub-options for a command"
     ),
 
     # ── presence ──────────────────────────────────────────────────────────────
@@ -93,6 +95,7 @@ STRINGS: dict[str, str] = {
     "gmail_label.usage": (
         "/gmail_label — list open suggestions\n"
         "/gmail_label <id> <label> — save label for sender on that account\n"
+        "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
         "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
         "/gmail_label dismiss-all — ignore all open suggestions\n"
         "/gmail_label ignore list — list ignored senders\n"
@@ -118,6 +121,9 @@ STRINGS: dict[str, str] = {
     "gmail_label.label_must_at": (
         "Label must start with @ (e.g. @Finance)."
     ),
+    "gmail_label.rule_added": (
+        "✓ Rule added: {sender} → [{label}] on {account}."
+    ),
     "gmail_label.ignore_added": (
         "Ignored sender added: [{account}] {sender}."
     ),
@@ -137,17 +143,6 @@ STRINGS: dict[str, str] = {
     "gmail_label.taught_ok": (
         "✓ Saved rule for {sender} → [{label}] on {account}.\n"
         "Applied to {applied} message(s) Nina had recorded."
-    ),
-    "help.gmail_label": (
-        "  gmail_label | /gmail_label         List open sender -> label suggestions\n"
-        "  gmail_label <id> <label>        Teach Gmail label for that sender (per account)\n"
-        "  gmail_label dismiss <id>        Ignore a suggestion (adds to ignored list)\n"
-        "  gmail_label dismiss-all         Ignore all open suggestions\n"
-        "  gmail_label ignore list         List ignored senders\n"
-        "  gmail_label ignore add <acct> <sender>   Add to ignored list\n"
-        "  gmail_label ignore remove <acct> <sender>   Remove from ignored list\n"
-        "\n"
-        "  Use at least 8 characters of the suggestion id (same as /gmail_label on Telegram)."
     ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
@@ -171,9 +166,8 @@ STRINGS: dict[str, str] = {
     "profile.no_accounts":      "(not configured)",
     "profile.gmail":            "gmail:    {accounts}",
     "profile.calendar":         "calendar: {accounts}",
-    "profile.set_ok":           "✓ Profile updated.",
+    "profile.set_ok":           "Profile updated.",
     "profile.empty":            "No accounts configured yet.\nSend a message like: \"at the office use work@company.com\"",
-    "help.profile":             "  profile   Show account mapping per presence\n  profile <presence>   Show for specific presence",
     "cmd.profile":              "Show account profile per presence",
 
     # ── llm interpreter ───────────────────────────────────────────────────────
@@ -189,14 +183,7 @@ STRINGS: dict[str, str] = {
     "console.health.status":  "  status   {value}",
     "console.health.uptime":  "  uptime   {value}",
     "console.context.presence": "  {work}  ·  presence: {presence}",
-    "help.presence":          "  presence                    Show current presence status\n  presence <status>           Set presence  (home | work | out | dnd)\n  presence <status> <note>    Set with a note",
-    "help.health":            "  health   Show daemon status and uptime",
-    "help.workdays":          "  workdays   Show work schedule",
-    "help.timezone":          "  timezone              Show current timezone\n  timezone <tz>         Set timezone  (e.g. America/Cuiaba)",
     "cmd.timezone":           "Show or set timezone",
-    "help.context":           "  context   Show current work context (presence × schedule)",
-    "help.lang":              "  lang              Show current language\n  lang <code>       Set language  (en | pt)",
-    "help.exit":              "  exit / quit   Exit the console",
 
     # ── schedule command ──────────────────────────────────────────────────────
     "schedule.created":  "✓ {title}\n{date} · {start} → {end}\nAccount: {account}",
@@ -208,14 +195,6 @@ STRINGS: dict[str, str] = {
         "  schedule today 16:00 Meeting 1h\n"
         "  schedule tomorrow 10:00 Appointment 30min\n"
         "  schedule 29/03 14:00 Training 2h"
-    ),
-    "help.schedule": (
-        "  schedule HH:MM <title> [duration]\n"
-        "  schedule today|tomorrow HH:MM <title> [duration]\n"
-        "  schedule DD/MM HH:MM <title> [duration]\n"
-        "  schedule DD/MM/YYYY HH:MM <title> [duration]\n"
-        "\n"
-        "  Duration: 1h  30min  1h30  (default: 60min)"
     ),
     "cmd.schedule":  "Schedule a calendar event directly",
 
@@ -238,7 +217,6 @@ STRINGS: dict[str, str] = {
     "notify.days_set":       "✓ Watch window set to {days} days.",
     "notify.invalid_value":  "Invalid value '{value}'. Must be a positive integer.",
     "notify.usage":          "  notify                    Show notification settings\n  notify reminder <min>     Set reminder advance (minutes)\n  notify days <n>           Set watch window (days)",
-    "help.notify":           "  notify                    Show notification settings\n  notify reminder <min>     Set reminder advance (minutes)\n  notify days <n>           Set watch window (days)",
     "cmd.notify":            "Show or configure notifications",
 
     # ── memo ──────────────────────────────────────────────────────────────────
@@ -251,7 +229,6 @@ STRINGS: dict[str, str] = {
     "memo.item":        "[{index}] {text}{due}",
     "memo.due":         "  Due: {date}",
     "memo.usage":       "  memo <text>          Save a new memo\n  memo <text> due <date>  Save with due date (YYYY-MM-DD)\n  memos                List open memos\n  memo done <id>       Mark memo as done\n  memo dismiss <id>    Dismiss memo",
-    "help.memo":        "  memo <text>          Save a new memo\n  memo <text> due <date>  Save with due date\n  memos                List open memos\n  memo done <id>       Mark as done\n  memo dismiss <id>    Dismiss",
     "cmd.memo":         "Save or list memos",
     "cmd.memos":        "List open memos",
     "cmd.gmail_label":   "Teach Gmail labels per account",
@@ -260,4 +237,63 @@ STRINGS: dict[str, str] = {
     "dialogs.none":   "No chats found.",
     "dialogs.error":  "Error: {error}",
     "dialogs.unread": " ({count} unread)",
+
+    # ── /help <command> — per-command help (alphabetical) ──────────────────────
+    "help.context": (
+        "/context — current work context"
+    ),
+    "help.gmail_label": (
+        "/gmail_label — list open suggestions\n"
+        "/gmail_label <id> <label> — save label for sender on that account\n"
+        "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
+        "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
+        "/gmail_label dismiss-all — ignore all open suggestions\n"
+        "/gmail_label ignore list — list ignored senders\n"
+        "/gmail_label ignore add <account> <sender> — add to ignored list\n"
+        "/gmail_label ignore remove <account> <sender> — remove from ignored list\n\n"
+        "Labels must start with @ (e.g. @Finance).\n"
+        "Use at least 8 characters of the suggestion id."
+    ),
+    "help.health": (
+        "/health — daemon status and uptime"
+    ),
+    "help.lang": (
+        "/lang — current language\n"
+        "/lang <code> — change language (en|pt)"
+    ),
+    "help.memo": (
+        "/memo <text> — save a new memo\n"
+        "/memo <text> due <date> — save with due date\n"
+        "/memos — list open memos\n"
+        "/memo done <id> — mark as done\n"
+        "/memo dismiss <id> — dismiss memo"
+    ),
+    "help.notify": (
+        "/notify — show notification settings\n"
+        "/notify reminder <min> — set reminder advance (minutes)\n"
+        "/notify days <n> — set watch window (days)"
+    ),
+    "help.presence": (
+        "/presence — current presence\n"
+        "/presence <status> — set presence (home|work|out|dnd)\n"
+        "/presence <status> <note> — set with a note"
+    ),
+    "help.profile": (
+        "/profile — show account mapping per presence\n"
+        "/profile <presence> — show for a specific presence"
+    ),
+    "help.schedule": (
+        "/schedule HH:MM <title> [duration]\n"
+        "/schedule today|tomorrow HH:MM <title> [duration]\n"
+        "/schedule DD/MM HH:MM <title> [duration]\n"
+        "/schedule DD/MM/YYYY HH:MM <title> [duration]\n\n"
+        "Duration: 1h  30min  1h30  (default: 60min)"
+    ),
+    "help.timezone": (
+        "/timezone — current timezone\n"
+        "/timezone <tz> — set timezone (e.g. America/Cuiaba)"
+    ),
+    "help.workdays": (
+        "/workdays — work schedule"
+    ),
 }

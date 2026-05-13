@@ -77,6 +77,47 @@ def teach_label_for_pending(
         conn.close()
 
 
+def add_rule_direct(
+    data_dir: Path,
+    account: str,
+    sender: str,
+    label_name: str,
+) -> str:
+    from nina.core.i18n import t
+    from nina.core.locale.store import load as load_locale
+    from nina.core.store.db import open_db
+    from nina.core.store.repos import email_label as el
+    from nina.core.store.repos.email_label import SenderRule
+
+    lang = load_locale(data_dir).lang
+    account = account.strip()
+    sender = sender.strip().lower()
+    label_name = label_name.strip()
+    if not label_name.startswith("@"):
+        return t("gmail_label.label_must_at", lang)
+
+    conn = open_db(data_dir)
+    try:
+        el.upsert_rule(
+            conn,
+            SenderRule(
+                account=account,
+                sender_norm=sender,
+                label_name=label_name,
+                archive_inbox=True,
+            ),
+        )
+        return t(
+            "gmail_label.rule_added",
+            lang,
+            sender=sender,
+            label=label_name,
+            account=account,
+        )
+    finally:
+        conn.close()
+
+
 def dismiss_all_pending_labels(data_dir: Path) -> str:
     from nina.core.i18n import t
     from nina.core.locale.store import load as load_locale

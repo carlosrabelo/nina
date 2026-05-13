@@ -74,12 +74,13 @@ Quando existem duas formas, este guia indica o **alias plano** (ex.: `nina gmail
 
 | Alias plano | Hierárquico | Função |
 |-------------|-------------|--------|
-| `nina email-process [--verbose] [--days D] [--max-per-account N]` | `nina email process [--verbose] [--days D] [--max-per-account N]` | **Correr processamento:** ir buscar com **`NINA_EMAIL_SYNC_QUERY`**, upsert em **`email_messages`**, aplicar **`email_sender_rules`** no Gmail, sugestões Telegram no fluxo daemon; na **CLI** o Telegram fica desligado. Mensagens que já têm **`tagged_at`** em **`email_messages`** são ignoradas cedo (sem upsert de cabeçalho, sem regra/pending). **`--days`** define ou substitui o primeiro `newer_than:Dd` na consulta (backfill largo). **`--max-per-account`** limita quantas mensagens listar por conta (omissão: env, máx. 500; na CLI até **5000**). **`--verbose`** (`-v`) imprime progresso no stderr. |
-| `nina email-rules [--account …]` | `nina email rules …` | **PostgreSQL:** lista as regras **aprendidas** remetente→etiqueta que a Nina aplica (`email_sender_rules`: conta, remetente normalizado, nome da etiqueta de utilizador no Gmail, arquivo na inbox, `created_at`). Não chama a API Gmail. |
-| `nina email-infer-rules` | `nina email infer-rules [--days D] [--max-per-account N] [--min-messages M] [--verbose]` | **Só regras:** varre o Gmail com `newer_than:Dd` e **insere** novas linhas em **`email_sender_rules`** quando uma etiqueta de utilizador aparece sozinha em mensagens suficientes de um remetente (não substitui regra existente). **Não** grava `email_messages` nem altera a inbox — depois corra **`nina email process`** para ingerir e aplicar. **`--verbose`** (`-v`) imprime progresso no stderr. |
-| `nina email ignore list [--account …]` | `nina email ignore list …` | Lista remetentes ignorados que nunca vão gerar sugestões de etiquetas. |
-| `nina email ignore add <conta> <remetente>` | (mesmo) | Adiciona um remetente à lista de ignorados. Também acontece automaticamente ao **descartar** uma sugestão pendente. |
-| `nina email ignore remove <conta> <remetente>` | (mesmo) | Remove um remetente da lista de ignorados para que as sugestões possam aparecer novamente. |
+| `nina gmail-label-process [--verbose] [--days D] [--max-per-account N]` | `nina gmail_label process [--verbose] [--days D] [--max-per-account N]` | **Correr processamento:** ir buscar com **`NINA_EMAIL_SYNC_QUERY`**, upsert em **`email_messages`**, aplicar **`email_sender_rules`** no Gmail, sugestões Telegram no fluxo daemon; na **CLI** o Telegram fica desligado. Mensagens que já têm **`tagged_at`** em **`email_messages`** são ignoradas cedo (sem upsert de cabeçalho, sem regra/pending). **`--days`** define ou substitui o primeiro `newer_than:Dd` na consulta (backfill largo). **`--max-per-account`** limita quantas mensagens listar por conta (omissão: env, máx. 500; na CLI até **5000**). **`--verbose`** (`-v`) imprime progresso no stderr. |
+| `nina gmail-label-rules [--account …]` | `nina gmail_label rules …` | **PostgreSQL:** lista as regras **aprendidas** remetente→etiqueta que a Nina aplica (`email_sender_rules`: conta, remetente normalizado, nome da etiqueta de utilizador no Gmail, arquivo na inbox, `created_at`). Não chama a API Gmail. |
+| `nina gmail-label-infer` | `nina gmail_label infer-rules [--days D] [--max-per-account N] [--min-messages M] [--verbose]` | **Só regras:** varre o Gmail com `newer_than:Dd` e **insere** novas linhas em **`email_sender_rules`** quando uma etiqueta de utilizador aparece sozinha em mensagens suficientes de um remetente (não substitui regra existente). **Não** grava `email_messages` nem altera a inbox — depois corra **`nina gmail_label process`** para ingerir e aplicar. **`--verbose`** (`-v`) imprime progresso no stderr. |
+| `nina gmail_label rule add <conta> <remetente> <@etiqueta>` | (mesmo) | **Adicionar regra manualmente:** cria uma regra de remetente diretamente sem sugestão pendente. A etiqueta deve começar com **`@`**. |
+| `nina gmail_label ignore list [--account …]` | (mesmo) | Lista remetentes ignorados que nunca vão gerar sugestões de etiquetas. |
+| `nina gmail_label ignore add <conta> <remetente>` | (mesmo) | Adiciona um remetente à lista de ignorados. Também acontece automaticamente ao **descartar** uma sugestão pendente. |
+| `nina gmail_label ignore remove <conta> <remetente>` | (mesmo) | Remove um remetente da lista de ignorados para que as sugestões possam aparecer novamente. |
 
 Ensinar ou listar etiquetas pendentes no **Telegram** (`/gmail_label`) ou no **`nina console`** (`gmail_label`; ver `help` / `help gmail_label` no console). Descartar uma sugestao adiciona automaticamente o remetente a **lista de ignorados** (`email_ignored_senders`), impedindo sugestoes futuras. **`/gmail_label dismiss-all`** limpa todas as sugestoes abertas de uma vez. Etiquetas devem comecar com **`@`** (ex.: `@Financeiro`). Gerir os ignorados com **`/gmail_label ignore list|add|remove`** ou **`nina gmail_label ignore ...`**. Requer o scope OAuth `gmail.modify`.
 
@@ -133,10 +134,10 @@ nina daemon --dev          # terminal A
 make console               # terminal B — o `.env` no host deve apontar ao DB e ao daemon
 nina gmail-unread --limit 5
 nina gmail labels --user-only
-nina email process
+nina gmail_label process
 # opcional: janela larga, mais mensagens; linhas já etiquetadas são ignoradas cedo
-nina email process --days 365 --max-per-account 2000 -v
-nina email rules
+nina gmail_label process --days 365 --max-per-account 2000 -v
+nina gmail_label rules
 nina cal-events --limit 3
 nina llm-ping
 ```

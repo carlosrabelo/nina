@@ -34,9 +34,11 @@ def format_notification_intent_reply(
 
 
 def format_gmail_label_reply(
-    action: str, target_id: str, label_name: str, lang: str, data_dir: Path, tokens_dir: Path
+    action: str, target_id: str, label_name: str, lang: str,
+    data_dir: Path, tokens_dir: Path, sender: str = "", account: str = "",
 ) -> str:
     from nina.skills.gmail_label.execute import (
+        add_rule_direct,
         dismiss_all_pending_labels,
         dismiss_pending_by_prefix,
         format_pending_list,
@@ -47,6 +49,8 @@ def format_gmail_label_reply(
         return format_pending_list(data_dir)
     if action == "dismiss_all":
         return dismiss_all_pending_labels(data_dir)
+    if action == "rule_add" and sender and label_name and account:
+        return add_rule_direct(data_dir, account, sender, label_name)
     if action == "dismiss" and target_id:
         return dismiss_pending_by_prefix(data_dir, target_id)
     if action == "teach" and target_id and label_name:
@@ -172,6 +176,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
             format_gmail_label_reply(
                 el_result.action, el_result.target_id, el_result.label_name,
                 lang, data_dir, tokens_dir,
+                sender=el_result.sender, account=el_result.account,
             )
         )
         return
@@ -373,6 +378,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None
             format_gmail_label_reply(
                 el_intent.action, el_intent.target_id, el_intent.label_name,
                 lang, data_dir, tokens_dir,
+                sender=el_intent.sender, account=el_intent.account,
             )
         )
         return
