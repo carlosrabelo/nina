@@ -375,6 +375,7 @@ class NinaConsole(cmd.Cmd):
             format_ignored_list,
             format_pending_list,
             remove_ignored,
+            scan_pending_suggestions,
             teach_label_for_pending,
         )
 
@@ -413,6 +414,13 @@ class NinaConsole(cmd.Cmd):
             out = check_rules(dd, td)
             for part in out.split("\n"):
                 print(f"  {part}")
+            return
+        if parts[0].lower() == "pending":
+            if len(parts) < 2 or parts[1].lower() != "scan":
+                print(f"  {t('gmail_label.usage', lang)}")
+                return
+            out = scan_pending_suggestions(dd)
+            print(f"  {out}")
             return
         if parts[0].lower() == "ignore":
             if len(parts) < 2 or parts[1].lower() not in ("list", "add", "remove"):

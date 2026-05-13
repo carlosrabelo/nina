@@ -6,7 +6,6 @@ import logging
 import os
 import re
 import sys
-import uuid
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -59,10 +58,13 @@ def run_email_label_process(
     data_dir: Path,
     *,
     account: str | None = None,
+    discover_pending: bool = False,
     verbose: bool = False,
     days: int | None = None,
     max_per_account: int | None = None,
 ) -> None:
+    import uuid
+
     from nina.core.store.db import open_db
     from nina.core.store.repos import email_label as el
     from nina.errors import ConfigError
@@ -86,8 +88,8 @@ def run_email_label_process(
     query = _process_gmail_query(days)
     _verbose_print(
         verbose,
-        f"[email process] query={query!r} max_messages={max_list} "
-        f"min_hits_for_pending={min_hits}",
+        f"[email process] query={query!r} max_messages={max_list}"
+        f"{' discover_pending' if discover_pending else ''}",
     )
     _verbose_print(verbose, f"[email process] accounts: {', '.join(accounts)}")
 
@@ -155,33 +157,36 @@ def run_email_label_process(
                             )
                     continue
 
-                if el.is_sender_ignored(conn, account, norm):
-                    continue
+                if discover_pending:
+                    if el.is_sender_ignored(conn, account, norm):
+                        continue
 
-                cnt = el.count_sender_in_window(conn, account, norm, days=_window_days())
-                existing = el.find_open_pending(conn, account, norm)
-                if existing:
-                    el.update_pending_hit(
-                        conn,
-                        existing.id,
-                        cnt,
-                        (msg.subject or "")[:500],
+                    cnt = el.count_sender_in_window(
+                        conn, account, norm, days=_window_days()
                     )
-                    continue
+                    existing = el.find_open_pending(conn, account, norm)
+                    if existing:
+                        el.update_pending_hit(
+                            conn,
+                            existing.id,
+                            cnt,
+                            (msg.subject or "")[:500],
+                        )
+                        continue
 
-                if cnt < min_hits:
-                    continue
+                    if cnt < min_hits:
+                        continue
 
-                pid = uuid.uuid4().hex
-                el.insert_pending(
-                    conn,
-                    pid,
-                    account,
-                    norm,
-                    msg.sender,
-                    (msg.subject or "")[:500],
-                    cnt,
-                )
+                    pid = uuid.uuid4().hex
+                    el.insert_pending(
+                        conn,
+                        pid,
+                        account,
+                        norm,
+                        msg.sender,
+                        (msg.subject or "")[:500],
+                        cnt,
+                    )
             _verbose_print(
                 verbose,
                 f"[email process] {account} — done",

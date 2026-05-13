@@ -430,3 +430,58 @@ def list_ignored_senders(
         )
         for r in rows
     ]
+
+
+def find_candidate_senders(
+    conn: psycopg.Connection[dict],
+    *,
+    min_hits: int = 3,
+    window_days: int = 120,
+    account: str | None = None,
+) -> list[dict]:
+    """Senders in email_messages without a rule and not ignored, with enough hits."""
+    params: list = [window_days, min_hits]
+    acct_filter = ""
+    if account is not None:
+        acct_filter = "AND m.account = %s"
+        params.append(account)
+    rows = conn.execute(
+        f"""
+        SELECT m.account, m.sender_norm,
+               MAX(m.sender_raw) AS sender_raw,
+               MAX(m.subject) AS sample_subject,
+               COUNT(*) AS hit_count
+        FROM email_messages m
+        WHERE m.tagged_at IS NULL
+          AND m.first_seen_at >= now() - (%s * INTERVAL '1 day')
+          {acct_filter}
+        GROUP BY m.account, m.sender_norm
+        HAVING COUNT(*) >= %s
+        ORDER BY hit_count DESC
+        """,
+        params,
+    ).fetchall()
+
+    results: list[dict] = []
+    for row in rows:
+        acct = row["account"]
+        norm = row["sender_norm"]
+        if get_rule(conn, acct, norm) is not None:
+            continue
+        if is_sender_ignored(conn, acct, norm):
+            continue
+        existing = find_open_pending(conn, acct, norm)
+        if existing:
+            update_pending_hit(
+                conn, existing.id, int(row["hit_count"]),
+                (row.get("sample_subject") or "")[:500],
+            )
+            continue
+        results.append({
+            "account": acct,
+            "sender_norm": norm,
+            "sender_raw": row["sender_raw"] or norm,
+            "sample_subject": (row.get("sample_subject") or "")[:500],
+            "hit_count": int(row["hit_count"]),
+        })
+    return results

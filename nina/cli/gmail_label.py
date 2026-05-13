@@ -23,6 +23,19 @@ def cmd_rules_check(args: argparse.Namespace) -> None:
     print(check_rules(data_dir, tokens_dir))
 
 
+def cmd_pending_scan(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    from nina.skills.gmail_label.execute import scan_pending_suggestions
+
+    print(scan_pending_suggestions(
+        data_dir,
+        min_hits=args.min_messages,
+        window_days=args.days,
+        account=args.account,
+        verbose=args.verbose,
+    ))
+
+
 def cmd_list_rules(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     from nina.core.store.db import open_db
@@ -223,6 +236,43 @@ def register(sub: argparse._SubParsersAction) -> None:
         help="Progress messages on stderr (accounts, Gmail fetch batches, DB writes)",
     )
     p_infer.set_defaults(func=cmd_infer_rules)
+
+    p_pending = g.add_parser(
+        "pending",
+        help="Manage pending sender suggestions",
+    )
+    pending_sub = p_pending.add_subparsers(dest="pending_action", required=True)
+
+    pending_scan = pending_sub.add_parser(
+        "scan",
+        help="Scan email_messages for new sender candidates and create pending suggestions",
+    )
+    pending_scan.add_argument(
+        "--account",
+        default=None,
+        help="Scan only this Gmail account (default: all)",
+    )
+    pending_scan.add_argument(
+        "--days",
+        type=int,
+        default=None,
+        metavar="D",
+        help="Look back D days in email_messages (default: env NINA_EMAIL_LABEL_WINDOW_DAYS or 120)",
+    )
+    pending_scan.add_argument(
+        "--min-messages",
+        type=int,
+        default=None,
+        metavar="M",
+        help="Minimum untagged messages to consider a candidate (default: env NINA_EMAIL_LABEL_MIN_HITS or 3)",
+    )
+    pending_scan.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print each candidate created on stderr",
+    )
+    pending_scan.set_defaults(func=cmd_pending_scan)
 
     p_ignore = g.add_parser(
         "ignore",

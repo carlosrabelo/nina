@@ -324,3 +324,63 @@ def check_rules(data_dir: Path, tokens_dir: Path) -> str:
         return header + "\n" + "\n".join(f"  {i}" for i in issues)
     finally:
         conn.close()
+
+
+def scan_pending_suggestions(
+    data_dir: Path,
+    *,
+    min_hits: int | None = None,
+    window_days: int | None = None,
+    account: str | None = None,
+    verbose: bool = False,
+) -> str:
+    import os
+    import sys
+    import uuid
+
+    from nina.core.i18n import t
+    from nina.core.locale.store import load as load_locale
+    from nina.core.store.db import open_db
+    from nina.core.store.repos import email_label as el
+
+    lang = load_locale(data_dir).lang
+    if min_hits is None:
+        min_hits = max(1, int(os.environ.get("NINA_EMAIL_LABEL_MIN_HITS", "3")))
+    if window_days is None:
+        window_days = max(1, int(os.environ.get("NINA_EMAIL_LABEL_WINDOW_DAYS", "120")))
+
+    conn = open_db(data_dir)
+    try:
+        candidates = el.find_candidate_senders(
+            conn,
+            min_hits=min_hits,
+            window_days=window_days,
+            account=account,
+        )
+        if not candidates:
+            return t("gmail_label.scan_none", lang)
+
+        created = 0
+        for c in candidates:
+            pid = uuid.uuid4().hex
+            el.insert_pending(
+                conn,
+                pid,
+                c["account"],
+                c["sender_norm"],
+                c["sender_raw"],
+                c["sample_subject"],
+                c["hit_count"],
+            )
+            created += 1
+            if verbose:
+                print(
+                    f"  [{c['account']}] {c['sender_norm']} "
+                    f"({c['hit_count']} msgs) -> {pid[:12]}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        return t("gmail_label.scan_done", lang, count=created)
+    finally:
+        conn.close()

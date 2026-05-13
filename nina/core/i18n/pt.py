@@ -97,6 +97,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
         "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
         "/gmail_label rules check — validar todas as regras\n"
+        "/gmail_label pending scan — procurar novos candidatos a remetente\n"
         "/gmail_label dismiss <id> — ignora a sugestao (adiciona remetente a lista de ignorados)\n"
         "/gmail_label dismiss-all — ignora todas as sugestoes abertas\n"
         "/gmail_label ignore list — listar remetentes ignorados\n"
@@ -148,6 +149,12 @@ STRINGS: dict[str, str] = {
     ),
     "gmail_label.check_missing_label": (
         "[{account}] {sender} → [{label}] — etiqueta nao existe no Gmail"
+    ),
+    "gmail_label.scan_none": (
+        "Nenhum candidato a remetente novo encontrado."
+    ),
+    "gmail_label.scan_done": (
+        "{count} sugestao(oes) pendente(s) criada(s)."
     ),
     "gmail_label.ignore_added": (
         "Remetente ignorado adicionado: [{account}] {sender}."
@@ -272,6 +279,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label <id> <etiqueta> — gravar etiqueta para o remetente nessa conta\n"
         "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
         "/gmail_label rules check — validar regras (prefixo, Gmail, tokens, conflitos)\n"
+        "/gmail_label pending scan — procurar novos candidatos a remetente\n"
         "/gmail_label dismiss <id> — ignorar sugestao (adiciona remetente aos ignorados)\n"
         "/gmail_label dismiss-all — ignorar todas as sugestoes abertas\n"
         "/gmail_label ignore list — listar remetentes ignorados\n"

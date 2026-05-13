@@ -97,6 +97,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label <id> <label> — save label for sender on that account\n"
         "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
         "/gmail_label rules check — validate all rules\n"
+        "/gmail_label pending scan — scan for new sender candidates\n"
         "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
         "/gmail_label dismiss-all — ignore all open suggestions\n"
         "/gmail_label ignore list — list ignored senders\n"
@@ -148,6 +149,12 @@ STRINGS: dict[str, str] = {
     ),
     "gmail_label.check_missing_label": (
         "[{account}] {sender} → [{label}] — label does not exist in Gmail"
+    ),
+    "gmail_label.scan_none": (
+        "No new sender candidates found."
+    ),
+    "gmail_label.scan_done": (
+        "{count} pending suggestion(s) created."
     ),
     "gmail_label.ignore_added": (
         "Ignored sender added: [{account}] {sender}."
@@ -272,6 +279,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label <id> <label> — save label for sender on that account\n"
         "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
         "/gmail_label rules check — validate all rules (prefix, Gmail, tokens, conflicts)\n"
+        "/gmail_label pending scan — scan email_messages for new sender candidates\n"
         "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
         "/gmail_label dismiss-all — ignore all open suggestions\n"
         "/gmail_label ignore list — list ignored senders\n"

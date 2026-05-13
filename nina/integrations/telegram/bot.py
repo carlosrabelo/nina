@@ -521,6 +521,7 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
         format_ignored_list,
         format_pending_list,
         remove_ignored,
+        scan_pending_suggestions,
         teach_label_for_pending,
     )
 
@@ -556,6 +557,13 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text(t("gmail_label.usage", lang))
             return
         out = check_rules(data_dir, tokens_dir)
+        await update.message.reply_text(out[:MAX_MSG])
+        return
+    if args[0].lower() == "pending":
+        if len(args) < 2 or args[1].lower() != "scan":
+            await update.message.reply_text(t("gmail_label.usage", lang))
+            return
+        out = scan_pending_suggestions(data_dir)
         await update.message.reply_text(out[:MAX_MSG])
         return
     if args[0].lower() == "ignore":
