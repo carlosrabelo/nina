@@ -84,12 +84,16 @@ def register(sub: argparse._SubParsersAction) -> None:
     p_dialogs = g.add_parser(
         "dialogs", help="List recent Telegram chats/groups/channels"
     )
-    p_dialogs.add_argument("--limit", type=int, default=20)
+    p_dialogs.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p_dialogs.set_defaults(func=cmd_dialogs)
 
     p_messages = g.add_parser("messages", help="Show messages from a Telegram chat")
     p_messages.add_argument("chat", help="Chat id, username, or phone number")
-    p_messages.add_argument("--limit", type=int, default=20)
+    p_messages.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p_messages.set_defaults(func=cmd_messages)
 
     p_send = g.add_parser("send", help="Send a message to a Telegram chat")

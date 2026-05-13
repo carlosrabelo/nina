@@ -94,18 +94,24 @@ def register(sub: argparse._SubParsersAction) -> None:
 
     p_latest = g.add_parser("latest", help="Show headers of the most recent emails")
     p_latest.add_argument("--account", help="Filter to a specific account")
-    p_latest.add_argument("--limit", type=int, default=10)
+    p_latest.add_argument(
+        "--limit", type=int, default=10, help="Maximum number of items to return"
+    )
     p_latest.set_defaults(func=cmd_latest)
 
     p_unread = g.add_parser("unread", help="List unread messages")
     p_unread.add_argument("--account", help="Filter to a specific account")
-    p_unread.add_argument("--limit", type=int, default=20)
+    p_unread.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p_unread.set_defaults(func=cmd_unread)
 
     p_search = g.add_parser("search", help="Search messages (Gmail query syntax)")
-    p_search.add_argument("query")
+    p_search.add_argument("query", help="Gmail search query")
     p_search.add_argument("--account", help="Filter to a specific account")
-    p_search.add_argument("--limit", type=int, default=20)
+    p_search.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p_search.set_defaults(func=cmd_search)
 
     p_labels = g.add_parser(

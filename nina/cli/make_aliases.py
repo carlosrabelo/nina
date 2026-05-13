@@ -79,7 +79,9 @@ def register(sub: argparse._SubParsersAction) -> None:
     )
     p.add_argument("--account", help="Filter to a specific account")
     p.add_argument("--calendar", default="primary", help="Calendar ID")
-    p.add_argument("--limit", type=int, default=10)
+    p.add_argument(
+        "--limit", type=int, default=10, help="Maximum number of items to return"
+    )
     p.set_defaults(func=cal_mod.cmd_events)
 
     p = sub.add_parser(
@@ -87,7 +89,9 @@ def register(sub: argparse._SubParsersAction) -> None:
         help="Recent email headers (alias: nina gmail latest)",
     )
     p.add_argument("--account", help="Filter to a specific account")
-    p.add_argument("--limit", type=int, default=10)
+    p.add_argument(
+        "--limit", type=int, default=10, help="Maximum number of items to return"
+    )
     p.set_defaults(func=gmail_mod.cmd_latest)
 
     p = sub.add_parser(
@@ -95,7 +99,9 @@ def register(sub: argparse._SubParsersAction) -> None:
         help="Unread messages (alias: nina gmail unread)",
     )
     p.add_argument("--account", help="Filter to a specific account")
-    p.add_argument("--limit", type=int, default=20)
+    p.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p.set_defaults(func=gmail_mod.cmd_unread)
 
     p = sub.add_parser(
@@ -104,7 +110,9 @@ def register(sub: argparse._SubParsersAction) -> None:
     )
     p.add_argument("query", help="Gmail search query")
     p.add_argument("--account", help="Filter to a specific account")
-    p.add_argument("--limit", type=int, default=20)
+    p.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p.set_defaults(func=gmail_mod.cmd_search)
 
     p = sub.add_parser(
@@ -115,7 +123,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     p.add_argument(
         "--user-only",
         action="store_true",
-        help="Only user-created labels",
+        help="Show only user-created labels (typical “tags” for learning rules)",
     )
     p.set_defaults(func=gmail_mod.cmd_labels)
 
@@ -123,8 +131,8 @@ def register(sub: argparse._SubParsersAction) -> None:
         "gmail-label-process",
         help="Process inbox + rules once (alias: nina gmail_label process)",
     )
-    p.add_argument("--days", type=int, default=None, metavar="D")
-    p.add_argument("--max-per-account", type=int, default=None, metavar="N")
+    p.add_argument("--days", type=int, default=None, metavar="DAYS")
+    p.add_argument("--max-per-account", type=int, default=None, metavar="NUM")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=email_mod.cmd_process)
 
@@ -132,9 +140,9 @@ def register(sub: argparse._SubParsersAction) -> None:
         "gmail-label-infer",
         help="Infer sender rules from Gmail labels (alias: nina gmail_label infer-rules)",
     )
-    p.add_argument("--max-per-account", type=int, default=500, metavar="N")
-    p.add_argument("--days", type=int, default=120, metavar="D")
-    p.add_argument("--min-messages", type=int, default=2, metavar="M")
+    p.add_argument("--max-per-account", type=int, default=500, metavar="NUM")
+    p.add_argument("--days", type=int, default=120, metavar="DAYS")
+    p.add_argument("--min-messages", type=int, default=2, metavar="NUM")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=email_mod.cmd_infer_rules)
 
@@ -142,7 +150,7 @@ def register(sub: argparse._SubParsersAction) -> None:
         "gmail-label-rules",
         help="List learned sender rules (alias: nina gmail_label rules)",
     )
-    p.add_argument("--account", help="Filter to one Gmail account email")
+    p.add_argument("--account", help="Filter to a specific account")
     p.set_defaults(func=email_mod.cmd_list_rules)
 
     p = sub.add_parser(
@@ -167,22 +175,26 @@ def register(sub: argparse._SubParsersAction) -> None:
         "tg-dialogs",
         help="List Telegram dialogs (alias: nina tg dialogs)",
     )
-    p.add_argument("--limit", type=int, default=20)
+    p.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p.set_defaults(func=tg_mod.cmd_dialogs)
 
     p = sub.add_parser(
         "tg-messages",
         help="Messages from a chat (alias: nina tg messages CHAT)",
     )
-    p.add_argument("chat", help="Chat id, username, or phone")
-    p.add_argument("--limit", type=int, default=20)
+    p.add_argument("chat", help="Chat id, username, or phone number")
+    p.add_argument(
+        "--limit", type=int, default=20, help="Maximum number of items to return"
+    )
     p.set_defaults(func=tg_mod.cmd_messages)
 
     p = sub.add_parser(
         "tg-send",
         help="Send Telegram message (alias: nina tg send CHAT TEXT)",
     )
-    p.add_argument("chat", help="Chat id, username, or phone")
+    p.add_argument("chat", help="Chat id, username, or phone number")
     p.add_argument("text", help="Message text")
     p.set_defaults(func=tg_mod.cmd_send)
 

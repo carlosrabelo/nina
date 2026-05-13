@@ -148,7 +148,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     p_process.add_argument(
         "--account",
         default=None,
-        help="Process only this Gmail account (default: all)",
+        help="Filter to a specific account",
     )
     p_process.add_argument(
         "-v",
@@ -162,16 +162,14 @@ def register(sub: argparse._SubParsersAction) -> None:
         "--days",
         type=int,
         default=None,
-        metavar="D",
-        help=(
-            "Set or replace newer_than:Dd in NINA_EMAIL_SYNC_QUERY (backfill window)"
-        ),
+        metavar="DAYS",
+        help="Look back DAYS days in email_messages (backfill window)",
     )
     p_process.add_argument(
         "--max-per-account",
         type=int,
         default=None,
-        metavar="N",
+        metavar="NUM",
         help=(
             "Max Gmail list results per account (default: env cap 500; CLI allows "
             "up to 5000)"
@@ -191,7 +189,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     )
     rules_list.add_argument(
         "--account",
-        help="Filter to one Gmail account email",
+        help="Filter to a specific account",
     )
     rules_list.set_defaults(func=cmd_list_rules)
 
@@ -212,21 +210,21 @@ def register(sub: argparse._SubParsersAction) -> None:
         "--max-per-account",
         type=int,
         default=500,
-        metavar="N",
+        metavar="NUM",
         help="Max messages to fetch per Gmail account (default: 500)",
     )
     p_infer.add_argument(
         "--days",
         type=int,
         default=int(os.environ.get("NINA_EMAIL_LABEL_WINDOW_DAYS", "120")),
-        metavar="D",
-        help="Gmail newer_than:Dd window (default: 120)",
+        metavar="DAYS",
+        help="Look back DAYS days in email_messages (default: 120)",
     )
     p_infer.add_argument(
         "--min-messages",
         type=int,
         default=int(os.environ.get("NINA_EMAIL_LABEL_MIN_HITS", "3")),
-        metavar="M",
+        metavar="NUM",
         help="Minimum messages with the same single user label (default: 3)",
     )
     p_infer.add_argument(
@@ -250,20 +248,20 @@ def register(sub: argparse._SubParsersAction) -> None:
     pending_scan.add_argument(
         "--account",
         default=None,
-        help="Scan only this Gmail account (default: all)",
+        help="Filter to a specific account",
     )
     pending_scan.add_argument(
         "--days",
         type=int,
         default=None,
-        metavar="D",
-        help="Look back D days in email_messages (default: env NINA_EMAIL_LABEL_WINDOW_DAYS or 120)",
+        metavar="DAYS",
+        help="Look back DAYS days in email_messages (default: env NINA_EMAIL_LABEL_WINDOW_DAYS or 120)",
     )
     pending_scan.add_argument(
         "--min-messages",
         type=int,
         default=None,
-        metavar="M",
+        metavar="NUM",
         help="Minimum untagged messages to consider a candidate (default: env NINA_EMAIL_LABEL_MIN_HITS or 3)",
     )
     pending_scan.add_argument(
@@ -286,7 +284,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     )
     ig_list.add_argument(
         "--account",
-        help="Filter to one Gmail account email",
+        help="Filter to a specific account",
     )
     ig_list.set_defaults(func=cmd_list_ignored)
 

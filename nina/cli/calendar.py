@@ -73,5 +73,7 @@ def register(sub: argparse._SubParsersAction) -> None:
     p_events.add_argument(
         "--calendar", default="primary", help="Calendar ID (default: primary)"
     )
-    p_events.add_argument("--limit", type=int, default=10)
+    p_events.add_argument(
+        "--limit", type=int, default=10, help="Maximum number of items to return"
+    )
     p_events.set_defaults(func=cmd_events)
