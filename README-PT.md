@@ -52,8 +52,8 @@ cp .env.example .env
 ### 1. Autenticar contas Google
 
 ```bash
-.venv/bin/python -m nina auth-google   # abre o navegador — repita para cada conta
-.venv/bin/python -m nina status-google # ✓ voce@gmail.com  ✓ trabalho@gmail.com
+.venv/bin/python -m nina google auth    # abre o navegador — repita para cada conta
+.venv/bin/python -m nina google status  # ✓ voce@gmail.com  ✓ trabalho@gmail.com
 ```
 
 O escopo OAuth inclui leitura e escrita na Agenda — necessário para bloqueio e notificações.
@@ -70,7 +70,7 @@ GROQ_API_KEY=gsk_...
 Outros provedores: `openai/gpt-4o-mini`, `anthropic/claude-haiku-4-5-20251001`, `ollama/llama3.2`.
 
 ```bash
-.venv/bin/python -m nina llm-ping   # verificar conectividade
+.venv/bin/python -m nina llm ping   # verificar conectividade
 ```
 
 ### 3. Configurar o bot do Telegram
@@ -120,8 +120,8 @@ Ao correr **`nina`** ou **`make run` / `make console`**, o Python carrega o `.en
 nina/
     __main__.py              # ponto de entrada do `python -m nina`
     errors.py                # exceções compartilhadas
-    cli/                     # parser + handlers da CLI (auth, status, daemon,
-                             # console, gmail, calendar, tg, llm)
+    cli/                     # parser + handlers da CLI (google, telegram, daemon,
+                             # console, gmail, calendar, llm)
     tasks/
         email_process.py         # ingestão da inbox, aplicar regras, sugestões Telegram
         email_infer_rules.py     # varrer etiquetas Gmail → inserir regras de remetente
