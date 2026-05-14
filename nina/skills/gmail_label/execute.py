@@ -253,7 +253,7 @@ def remove_ignored(data_dir: Path, account: str, sender: str) -> str:
         conn.close()
 
 
-def check_rules(data_dir: Path, tokens_dir: Path) -> str:
+def check_rules(data_dir: Path, tokens_dir: Path, *, account: str | None = None) -> str:
     from nina.core.i18n import t
     from nina.core.locale.store import load as load_locale
     from nina.core.store.db import open_db
@@ -267,7 +267,7 @@ def check_rules(data_dir: Path, tokens_dir: Path) -> str:
     issues: list[str] = []
 
     try:
-        rules = el.list_rules(conn)
+        rules = el.list_rules(conn, account=account)
         if not rules:
             return t("gmail_label.check_no_rules", lang)
 

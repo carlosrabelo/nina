@@ -761,9 +761,9 @@ def run_batch_from_env(env_file: Path | None = None) -> int:
         raise TelegramError(
             "TELEGRAM_OWNER_ID not set in .env\n"
             "Steps:\n"
-            "  1. Start the bot: make tg-bot\n"
+            "  1. Start the bot: nina telegram bot\n"
             "  2. Send /start to your bot in Telegram\n"
-            "  3. Run make tg-bot again — it will print your chat ID\n"
+            "  3. Run nina telegram bot again — it will print your chat ID\n"
             "  4. Copy that number to TELEGRAM_OWNER_ID in .env"
         )
 

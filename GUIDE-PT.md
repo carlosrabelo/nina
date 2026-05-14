@@ -32,7 +32,7 @@ make run migrate to-postgres    # o Makefile chama scripts/migrate_to_postgres.p
 
 **`make console`** abre o console interativo (o daemon tem de estar a correr). Prefira `make console` a `make run console`.
 
-Quando existem duas formas, este guia indica o **alias plano** (ex.: `nina gmail-latest`) e a forma **hierárquica** (`nina gmail latest`); são equivalentes.
+Os comandos seguem a lica **serviço primeiro** (`nina <servico> <acao>`, ex.: `nina google auth`).
 
 ### Ajuda integrada
 
@@ -53,63 +53,65 @@ Quando existem duas formas, este guia indica o **alias plano** (ex.: `nina gmail
 
 ### Autenticação Google / Telegram (utilizador)
 
-| Alias plano | Forma hierárquica | Função |
-|-------------|-------------------|--------|
-| `nina auth-google` | `nina auth google` | OAuth no browser; grava uma conta Google em `TOKENS_DIR`. Repita por conta. |
-| `nina auth-telegram [--phone +…]` | `nina auth telegram [--phone +…]` | Login interativo da API **utilizador** Telegram (não o bot); sessão em `SESSIONS_DIR`. |
-| `nina status-google` | `nina status google` | Lista contas Google descobertas e se o token parece válido. |
-| `nina status-telegram` | `nina status telegram` | Indica se o cliente **utilizador** Telegram está autorizado. |
-| — | `nina revoke <email>` | Remove o token OAuth Google dessa conta (sem alias plano). |
+| Comando | Função |
+|---------|--------|
+| `nina google auth` | OAuth no browser; grava uma conta Google em `TOKENS_DIR`. Repita por conta. |
+| `nina google status` | Lista contas Google descobertas e se o token parece válido. |
+| `nina google revoke <email>` | Remove o token OAuth Google dessa conta. |
+| `nina telegram auth [--phone +…]` | Login interativo da API **utilizador** Telegram (não o bot); sessão em `SESSIONS_DIR`. |
+| `nina telegram status` | Indica se o cliente **utilizador** Telegram está autorizado. |
 
 ### Gmail (exploratório)
 
-| Alias plano | Hierárquico | Função |
-|-------------|-------------|--------|
-| `nina gmail-latest [--account …] [--limit NUM]` | `nina gmail latest …` | Cabeçalhos das mensagens recentes por conta (ou uma conta). |
-| `nina gmail-unread [--account …] [--limit NUM]` | `nina gmail unread …` | Mensagens não lidas (todas as contas se omitir `--account`). |
-| `nina gmail-search "QUERY" [--account …] [--limit NUM]` | `nina gmail search "QUERY" …` | Pesquisa Gmail com [operadores de pesquisa](https://support.google.com/mail/answer/7190). |
-| `nina gmail-labels [--account …] [--user-only]` | `nina gmail labels …` | **Só Gmail:** lista as etiquetas que **existem na conta Gmail** neste momento (API `users.labels.list`): id, tipo (`system` / `user`) e nome. **Não** são as regras remetente→etiqueta aprendidas pela Nina na PostgreSQL. **`--user-only`** limita às etiquetas criadas por si. |
+| Comando | Função |
+|---------|--------|
+| `nina gmail latest [--account …] [--limit NUM]` | Cabeçalhos das mensagens recentes por conta (ou uma conta). |
+| `nina gmail unread [--account …] [--limit NUM]` | Mensagens não lidas (todas as contas se omitir `--account`). |
+| `nina gmail search "QUERY" [--account …] [--limit NUM]` | Pesquisa Gmail com [operadores de pesquisa](https://support.google.com/mail/answer/7190). |
+| `nina gmail labels [--account …] [--user-only]` | **Só Gmail:** lista as etiquetas que **existem na conta Gmail** neste momento (API `users.labels.list`): id, tipo (`system` / `user`) e nome. **Não** são as regras remetente→etiqueta aprendidas pela Nina na PostgreSQL. **`--user-only`** limita às etiquetas criadas por si. |
 
 ### Etiquetas Gmail aprendidas (CLI)
 
-| Alias plano | Hierárquico | Função |
-|-------------|-------------|--------|
-| `nina gmail-label-process [--verbose] [--days DAYS] [--max-per-account NUM] [--account …]` | `nina gmail_label process [--verbose] [--days DAYS] [--max-per-account NUM] [--account …]` | **Correr processamento:** ir buscar com **`NINA_EMAIL_SYNC_QUERY`**, upsert em **`email_messages`**, aplicar **`email_sender_rules`** no Gmail. Mensagens que ja teem **`tagged_at`** em **`email_messages`** sao ignoradas cedo (sem upsert de cabecalho, sem regra). **`--days`** define ou substitui o primeiro `newer_than:Dd` na consulta (backfill largo). **`--max-per-account`** limita quantas mensagens listar por conta (env, max. 500; CLI ate **5000**). **`--account`** filtra a uma conta Gmail. **`--verbose`** (`-v`) imprime progresso no stderr. |
-| `nina gmail-label-rules` | `nina gmail_label rules list [--account …]` | **PostgreSQL:** lista as regras **aprendidas** remetente→etiqueta que a Nina aplica (`email_sender_rules`: conta, remetente normalizado, nome da etiqueta de utilizador no Gmail, arquivo na inbox, `created_at`). Nao chama a API Gmail. |
-| | `nina gmail_label rules check` | **Validar regras:** verifica todas as regras para prefixo invalido, etiqueta ausente no Gmail, sem token OAuth, ou remetente tambem na lista de ignorados. |
-| `nina gmail-label-infer` | `nina gmail_label infer-rules [--days DAYS] [--max-per-account NUM] [--min-messages NUM] [--verbose]` | **So regras:** varre o Gmail com `newer_than:Dd` e **insere** novas linhas em **`email_sender_rules`** quando uma etiqueta de utilizador aparece sozinha em mensagens suficientes de um remetente (nao substitui regra existente). **Nao** grava `email_messages` nem altera a inbox — depois corra **`nina gmail_label process`** para ingerir e aplicar. **`--verbose`** (`-v`) imprime progresso no stderr. |
-| | `nina gmail_label pending scan [--days DAYS] [--min-messages NUM] [--account …] [-v]` | **Sugestoes pendentes:** varre `email_messages` a procura de remetentes sem regra, nao ignorados, com mensagens nao etiquetadas suficientes. Cria sugestoes pendentes visiveis via `/gmail_label`. |
-| `nina gmail_label rule add <conta> <remetente> <@etiqueta>` | (mesmo) | **Adicionar regra manualmente:** cria uma regra de remetente diretamente sem sugestao pendente. A etiqueta deve comecar com **`@`** ou **`!`**. Se ja existe uma regra para essa conta+remetente, a etiqueta e atualizada. |
-| `nina gmail_label ignore list [--account …]` | (mesmo) | Lista remetentes ignorados que nunca vão gerar sugestões de etiquetas. |
-| `nina gmail_label ignore add <conta> <remetente>` | (mesmo) | Adiciona um remetente à lista de ignorados. Também acontece automaticamente ao **descartar** uma sugestão pendente. |
-| `nina gmail_label ignore remove <conta> <remetente>` | (mesmo) | Remove um remetente da lista de ignorados para que as sugestões possam aparecer novamente. |
+| Comando | Função |
+|---------|--------|
+| `nina gmail_label process [--verbose] [--days DAYS] [--max-per-account NUM] [--account …]` | **Correr processamento:** ir buscar com **`NINA_EMAIL_SYNC_QUERY`**, upsert em **`email_messages`**, aplicar **`email_sender_rules`** no Gmail. Mensagens que ja teem **`tagged_at`** em **`email_messages`** sao ignoradas cedo (sem upsert de cabecalho, sem regra). **`--days`** define ou substitui o primeiro `newer_than:Dd` na consulta (backfill largo). **`--max-per-account`** limita quantas mensagens listar por conta (env, max. 500; CLI ate **5000**). **`--account`** filtra a uma conta Gmail. **`--verbose`** (`-v`) imprime progresso no stderr. |
+| `nina gmail_label rules list [--account …]` | **PostgreSQL:** lista as regras **aprendidas** remetente→etiqueta que a Nina aplica (`email_sender_rules`: conta, remetente normalizado, nome da etiqueta de utilizador no Gmail, arquivo na inbox, `created_at`). Nao chama a API Gmail. |
+| `nina gmail_label rules check` | **Validar regras:** verifica todas as regras para prefixo invalido, etiqueta ausente no Gmail, sem token OAuth, ou remetente tambem na lista de ignorados. |
+| `nina gmail_label infer-rules [--days DAYS] [--max-per-account NUM] [--min-messages NUM] [--verbose]` | **So regras:** varre o Gmail com `newer_than:Dd` e **insere** novas linhas em **`email_sender_rules`** quando uma etiqueta de utilizador aparece sozinha em mensagens suficientes de um remetente (nao substitui regra existente). **Nao** grava `email_messages` nem altera a inbox — depois corra **`nina gmail_label process`** para ingerir e aplicar. **`--verbose`** (`-v`) imprime progresso no stderr. |
+| `nina gmail_label pending scan [--days DAYS] [--min-messages NUM] [--account …] [-v]` | **Sugestoes pendentes:** varre `email_messages` a procura de remetentes sem regra, nao ignorados, com mensagens nao etiquetadas suficientes. Cria sugestoes pendentes visiveis via `/gmail_label`. |
+| `nina gmail_label rule add <conta> <remetente> <@etiqueta>` | **Adicionar regra manualmente:** cria uma regra de remetente diretamente sem sugestao pendente. A etiqueta deve comecar com **`@`** ou **`!`**. Se ja existe uma regra para essa conta+remetente, a etiqueta e atualizada. |
+| `nina gmail_label ignore list [--account …]` | Lista remetentes ignorados que nunca vão gerar sugestões de etiquetas. |
+| `nina gmail_label ignore add <conta> <remetente>` | Adiciona um remetente à lista de ignorados. Também acontece automaticamente ao **descartar** uma sugestão pendente. |
+| `nina gmail_label ignore remove <conta> <remetente>` | Remove um remetente da lista de ignorados para que as sugestões possam aparecer novamente. |
 
 Ensinar ou listar etiquetas pendentes no **Telegram** (`/gmail_label`) ou no **`nina console`** (`gmail_label`; ver `help` / `help gmail_label` no console). Use **`nina gmail_label pending scan`** para encontrar novos candidatos a remetente em `email_messages`. Descartar uma sugestao adiciona automaticamente o remetente a **lista de ignorados** (`email_ignored_senders`), impedindo sugestoes futuras. **`/gmail_label dismiss-all`** limpa todas as sugestoes abertas de uma vez. Etiquetas devem comecar com **`@`** ou **`!`** (ex.: `@Financeiro`, `!Importante`). **`/gmail_label rules check`** valida todas as regras para problemas comuns. Gerir os ignorados com **`/gmail_label ignore list|add|remove`** ou **`nina gmail_label ignore ...`**. Requer o scope OAuth `gmail.modify`.
 
 ### Google Agenda (CLI exploratório)
 
-| Alias plano | Hierárquico | Função |
-|-------------|-------------|--------|
-| `nina cal-list [--account …]` | `nina calendar list …` | Lista nomes e IDs dos calendários. |
-| `nina cal-events [--account …] [--calendar ID] [--limit NUM]` | `nina calendar events …` | Próximos eventos; `--calendar` por omissão é `primary`. |
+| Comando | Função |
+|---------|--------|
+| `nina calendar list [--account …]` | Lista nomes e IDs dos calendários. |
+| `nina calendar events [--account …] [--calendar ID] [--limit NUM]` | Próximos eventos; `--calendar` por omissão é `primary`. |
 
-**Linguagem natural (Telegram / console):** perguntas de agenda (janelas, palavra-chave, livre/ocupado) passam pelo bot ou `nina console` com o daemon — **só leitura**, usando a conta de calendário do perfil / presença (ou a melhor correspondência a palavras como “trabalho” vs “pessoal”). **Criar** tempo na agenda (bloqueios, “dentista às 9h”) usa o intent **`blocking`** / `POST /schedule`, não estes comandos exploratórios.
+**Linguagem natural (Telegram / console):** perguntas de agenda (janelas, palavra-chave, livre/ocupado) passam pelo bot ou `nina console` com o daemon — **só leitura**, usando a conta de calendário do perfil / presença (ou a melhor correspondência a palavras como "trabalho" vs "pessoal"). **Criar** tempo na agenda (bloqueios, "dentista às 9h") usa o intent **`blocking`** / `POST /schedule`, não estes comandos exploratórios.
 
-### Cliente Telegram utilizador (exploratório)
+### Telegram (autenticação e exploratório)
 
-| Alias plano | Hierárquico | Função |
-|-------------|-------------|--------|
-| `nina tg-bot` | `nina tg bot` | Modo batch de comandos ligados ao bot a partir do ambiente (scripts / avançado). |
-| `nina tg-setup` | `nina tg setup` | Ajuda a descobrir o `TELEGRAM_OWNER_ID` do bot. |
-| `nina tg-dialogs [--limit NUM]` | `nina tg dialogs …` | Lista diálogos recentes da sessão **utilizador**. |
-| `nina tg-messages CHAT [--limit NUM]` | `nina tg messages CHAT …` | Mensagens recentes; `CHAT` = id numérico, `@utilizador` ou telefone. |
-| `nina tg-send CHAT TEXTO` | `nina tg send CHAT TEXTO` | Envia mensagem como cliente **utilizador**. |
+| Comando | Função |
+|---------|--------|
+| `nina telegram auth [--phone +…]` | Login interativo da API **utilizador** Telegram (não o bot); sessão em `SESSIONS_DIR`. |
+| `nina telegram status` | Indica se o cliente **utilizador** Telegram está autorizado. |
+| `nina telegram bot` | Modo batch de comandos ligados ao bot a partir do ambiente (scripts / avançado). |
+| `nina telegram setup` | Ajuda a descobrir o `TELEGRAM_OWNER_ID` do bot. |
+| `nina telegram dialogs [--limit NUM]` | Lista diálogos recentes da sessão **utilizador**. |
+| `nina telegram messages CHAT [--limit NUM]` | Mensagens recentes; `CHAT` = id numérico, `@utilizador` ou telefone. |
+| `nina telegram send CHAT TEXTO` | Envia mensagem como cliente **utilizador**. |
 
 ### LLM
 
-| Alias plano | Hierárquico | Função |
-|-------------|-------------|--------|
-| `nina llm-ping` | `nina llm ping` | Uma chamada a `LLM_MODEL` para validar chaves e conectividade. |
+| Comando | Função |
+|---------|--------|
+| `nina llm ping` | Uma chamada a `LLM_MODEL` para validar chaves e conectividade. |
 
 ### Qualidade de código
 
@@ -131,17 +133,17 @@ O Compose sobe **nina** e **PostgreSQL** (`docker-compose.yml`). Copie `.env.exa
 ### Exemplos rápidos
 
 ```bash
-nina auth-google && nina status-google
+nina google auth && nina google status
 nina daemon --dev          # terminal A
 make console               # terminal B — o `.env` no host deve apontar ao DB e ao daemon
-nina gmail-unread --limit 5
+nina gmail unread --limit 5
 nina gmail labels --user-only
 nina gmail_label process
 # opcional: janela larga, mais mensagens; linhas já etiquetadas são ignoradas cedo
 nina gmail_label process --days 365 --max-per-account 2000 -v
 nina gmail_label rules
-nina cal-events --limit 3
-nina llm-ping
+nina calendar events --limit 3
+nina llm ping
 ```
 
 `make dev-start` abre `daemon --dev` e `console` na mesma sessão tmux.

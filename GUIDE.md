@@ -32,7 +32,7 @@ make run migrate to-postgres    # Makefile dispatches to scripts/migrate_to_post
 
 **`make console`** opens the interactive console (the daemon must be running). Prefer `make console` rather than `make run console`.
 
-Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina gmail-latest`) and the **hierarchical** form (`nina gmail latest`); they are equivalent.
+Where a feature offers both forms, this guide lists the command in its **service-first** form (`nina <service> <action>`, e.g. `nina google auth`).
 
 ### Built-in help
 
@@ -53,63 +53,63 @@ Where a feature offers both forms, this guide lists a **flat alias** (e.g. `nina
 
 ### Google authentication
 
-| Flat alias | Hierarchical | What it does |
-|------------|--------------|----------------|
-| `nina auth-google` | `nina auth google` | Browser OAuth; stores one Google account under `TOKENS_DIR`. Run again for more accounts. |
-| `nina auth-telegram [--phone +…]` | `nina auth telegram [--phone +…]` | Interactive login for the **Telegram user** API (not the bot); session under `SESSIONS_DIR`. |
-| `nina status-google` | `nina status google` | Lists discovered Google accounts and whether each token looks valid. |
-| `nina status-telegram` | `nina status telegram` | Shows if the Telegram **user** client is authorized. |
-| — | `nina revoke <email>` | Removes the stored Google OAuth token for that account (no flat alias). |
+| Command | What it does |
+|---------|----------------|
+| `nina google auth` | Browser OAuth; stores one Google account under `TOKENS_DIR`. Run again for more accounts. |
+| `nina google status` | Lists discovered Google accounts and whether each token looks valid. |
+| `nina google revoke <email>` | Removes the stored Google OAuth token for that account. |
 
 ### Gmail (exploratory)
 
-| Flat alias | Hierarchical | What it does |
-|------------|--------------|----------------|
-| `nina gmail-latest [--account …] [--limit NUM]` | `nina gmail latest …` | Recent message headers per account (or one account). |
-| `nina gmail-unread [--account …] [--limit NUM]` | `nina gmail unread …` | Unread messages (all accounts if `--account` omitted). |
-| `nina gmail-search "QUERY" [--account …] [--limit NUM]` | `nina gmail search "QUERY" …` | Gmail search using [Gmail search operators](https://support.google.com/mail/answer/7190). |
-| `nina gmail-labels [--account …] [--user-only]` | `nina gmail labels …` | **Gmail only:** lists labels that exist **in your Gmail account** right now (API `users.labels.list`): id, type (`system` / `user`), and name. This is **not** Nina’s learned sender→label rules in PostgreSQL. **`--user-only`** limits output to user-created labels. |
+| Command | What it does |
+|---------|----------------|
+| `nina gmail latest [--account …] [--limit NUM]` | Recent message headers per account (or one account). |
+| `nina gmail unread [--account …] [--limit NUM]` | Unread messages (all accounts if `--account` omitted). |
+| `nina gmail search "QUERY" [--account …] [--limit NUM]` | Gmail search using [Gmail search operators](https://support.google.com/mail/answer/7190). |
+| `nina gmail labels [--account …] [--user-only]` | **Gmail only:** lists labels that exist **in your Gmail account** right now (API `users.labels.list`): id, type (`system` / `user`), and name. This is **not** Nina's learned sender→label rules in PostgreSQL. **`--user-only`** limits output to user-created labels. |
 
 ### Gmail label learning (CLI)
 
-| Flat alias | Hierarchical | What it does |
-|------------|--------------|--------------|
-| `nina gmail-label-process [--verbose] [--days DAYS] [--max-per-account NUM] [--account …]` | `nina gmail_label process [--verbose] [--days DAYS] [--max-per-account NUM] [--account …]` | **Processing run:** fetch via **`NINA_EMAIL_SYNC_QUERY`**, upsert **`email_messages`**, apply **`email_sender_rules`** in Gmail. Messages that already have **`tagged_at`** in **`email_messages`** are skipped early (no header upsert, no rule work). **`--days`** sets or replaces the first `newer_than:Dd` in the query (wide backfill). **`--max-per-account`** caps Gmail list size per account (env default max 500; CLI allows up to **5000**). **`--account`** filters to one Gmail account. **`--verbose`** (`-v`) prints progress on stderr. |
-| `nina gmail-label-rules` | `nina gmail_label rules list [--account …]` | **PostgreSQL:** lists **learned** sender rules Nina will apply (`email_sender_rules`: account, normalized sender, Gmail user label name, archive flag, `created_at`). No Gmail API calls. |
-| | `nina gmail_label rules check` | **Validate rules:** check all rules for invalid prefix, missing Gmail label, no OAuth token, or sender also in ignored list. |
-| `nina gmail-label-infer` | `nina gmail_label infer-rules [--days DAYS] [--max-per-account NUM] [--min-messages NUM] [--verbose]` | **Rules only:** scan Gmail over `newer_than:Dd` and **insert** new **`email_sender_rules`** when one user label appears alone on enough messages from a sender (does not overwrite an existing rule). Does **not** write `email_messages` or change the inbox — run **`nina gmail_label process`** afterward to ingest and apply. **`--verbose`** (`-v`) prints progress on stderr. |
-| | `nina gmail_label pending scan [--days DAYS] [--min-messages NUM] [--account …] [-v]` | **Pending suggestions:** scan `email_messages` for senders without a rule, not ignored, with enough untagged messages. Creates pending suggestions shown via `/gmail_label`. |
-| `nina gmail_label rule add <account> <sender> <@label>` | (same) | **Add rule manually:** create a sender rule directly without a pending suggestion. Label must start with **`@`** or **`!`**. If a rule already exists for that account+sender, the label is updated. |
-| `nina gmail_label ignore list [--account …]` | (same) | List ignored senders that will never generate label suggestions. |
-| `nina gmail_label ignore add <account> <sender>` | (same) | Add a sender to the ignore list. Also happens automatically when you **dismiss** a pending suggestion. |
-| `nina gmail_label ignore remove <account> <sender>` | (same) | Remove a sender from the ignore list so suggestions can appear again. |
+| Command | What it does |
+|---------|--------------|
+| `nina gmail_label process [--verbose] [--days DAYS] [--max-per-account NUM] [--account …]` | **Processing run:** fetch via **`NINA_EMAIL_SYNC_QUERY`**, upsert **`email_messages`**, apply **`email_sender_rules`** in Gmail. Messages that already have **`tagged_at`** in **`email_messages`** are skipped early (no header upsert, no rule work). **`--days`** sets or replaces the first `newer_than:Dd` in the query (wide backfill). **`--max-per-account`** caps Gmail list size per account (env default max 500; CLI allows up to **5000**). **`--account`** filters to one Gmail account. **`--verbose`** (`-v`) prints progress on stderr. |
+| `nina gmail_label rules list [--account …]` | **PostgreSQL:** lists **learned** sender rules Nina will apply (`email_sender_rules`: account, normalized sender, Gmail user label name, archive flag, `created_at`). No Gmail API calls. |
+| `nina gmail_label rules check` | **Validate rules:** check all rules for invalid prefix, missing Gmail label, no OAuth token, or sender also in ignored list. |
+| `nina gmail_label infer-rules [--days DAYS] [--max-per-account NUM] [--min-messages NUM] [--verbose]` | **Rules only:** scan Gmail over `newer_than:Dd` and **insert** new **`email_sender_rules`** when one user label appears alone on enough messages from a sender (does not overwrite an existing rule). Does **not** write `email_messages` or change the inbox — run **`nina gmail_label process`** afterward to ingest and apply. **`--verbose`** (`-v`) prints progress on stderr. |
+| `nina gmail_label pending scan [--days DAYS] [--min-messages NUM] [--account …] [-v]` | **Pending suggestions:** scan `email_messages` for senders without a rule, not ignored, with enough untagged messages. Creates pending suggestions shown via `/gmail_label`. |
+| `nina gmail_label rule add <account> <sender> <@label>` | **Add rule manually:** create a sender rule directly without a pending suggestion. Label must start with **`@`** or **`!`**. If a rule already exists for that account+sender, the label is updated. |
+| `nina gmail_label ignore list [--account …]` | List ignored senders that will never generate label suggestions. |
+| `nina gmail_label ignore add <account> <sender>` | Add a sender to the ignore list. Also happens automatically when you **dismiss** a pending suggestion. |
+| `nina gmail_label ignore remove <account> <sender>` | Remove a sender from the ignore list so suggestions can appear again. |
 
 Teach or list pending labels from **Telegram** (`/gmail_label`) or **`nina console`** (`gmail_label`; see `help` / `help gmail_label` in the console). Use **`nina gmail_label pending scan`** to find new sender candidates in `email_messages`. Dismissing a suggestion automatically adds the sender to the **ignored list** (`email_ignored_senders`), preventing future suggestions. **`/gmail_label dismiss-all`** clears all open suggestions at once. Labels must start with **`@`** or **`!`** (e.g. `@Finance`, `!Important`). **`/gmail_label rules check`** validates all rules for common issues. Manage ignored senders with **`/gmail_label ignore list|add|remove`** or **`nina gmail_label ignore ...`**. Requires `gmail.modify` OAuth scope.
 
 ### Google Calendar (exploratory CLI)
 
-| Flat alias | Hierarchical | What it does |
-|------------|--------------|----------------|
-| `nina cal-list [--account …]` | `nina calendar list …` | Lists calendar names and IDs. |
-| `nina cal-events [--account …] [--calendar ID] [--limit NUM]` | `nina calendar events …` | Upcoming events; `--calendar` defaults to `primary`. |
+| Command | What it does |
+|---------|----------------|
+| `nina calendar list [--account …]` | Lists calendar names and IDs. |
+| `nina calendar events [--account …] [--calendar ID] [--limit NUM]` | Upcoming events; `--calendar` defaults to `primary`. |
 
-**Natural language (Telegram / console):** agenda questions (windows, keyword search, free/busy) go through the bot or `nina console` with the daemon — **read-only**, using the calendar account from your profile / presence (or best match from words like “work” vs “personal”). **Creating** calendar time (blocks, “dentist at 9am”) uses the **`blocking`** intent / `POST /schedule`, not these exploratory commands.
+**Natural language (Telegram / console):** agenda questions (windows, keyword search, free/busy) go through the bot or `nina console` with the daemon — **read-only**, using the calendar account from your profile / presence (or best match from words like "work" vs "personal"). **Creating** calendar time (blocks, "dentist at 9am") uses the **`blocking`** intent / `POST /schedule`, not these exploratory commands.
 
-### Telegram user client (exploratory)
+### Telegram (auth and exploratory)
 
-| Flat alias | Hierarchical | What it does |
-|------------|--------------|----------------|
-| `nina tg-bot` | `nina tg bot` | Batch processing of bot-related commands from the environment (scripting / advanced). |
-| `nina tg-setup` | `nina tg setup` | Helps discover `TELEGRAM_OWNER_ID` for the bot. |
-| `nina tg-dialogs [--limit NUM]` | `nina tg dialogs …` | Lists recent dialogs for the **user** session. |
-| `nina tg-messages CHAT [--limit NUM]` | `nina tg messages CHAT …` | Recent messages; `CHAT` = numeric id, `@username`, or phone. |
-| `nina tg-send CHAT TEXT` | `nina tg send CHAT TEXT` | Sends a message as the **user** client. |
+| Command | What it does |
+|---------|----------------|
+| `nina telegram auth [--phone +…]` | Interactive login for the **Telegram user** API (not the bot); session under `SESSIONS_DIR`. |
+| `nina telegram status` | Shows if the Telegram **user** client is authorized. |
+| `nina telegram bot` | Batch processing of bot-related commands from the environment (scripting / advanced). |
+| `nina telegram setup` | Helps discover `TELEGRAM_OWNER_ID` for the bot. |
+| `nina telegram dialogs [--limit NUM]` | Lists recent dialogs for the **user** session. |
+| `nina telegram messages CHAT [--limit NUM]` | Recent messages; `CHAT` = numeric id, `@username`, or phone. |
+| `nina telegram send CHAT TEXT` | Sends a message as the **user** client. |
 
 ### LLM
 
-| Flat alias | Hierarchical | What it does |
-|------------|--------------|----------------|
-| `nina llm-ping` | `nina llm ping` | Single call to `LLM_MODEL` to verify keys and connectivity. |
+| Command | What it does |
+|---------|----------------|
+| `nina llm ping` | Single call to `LLM_MODEL` to verify keys and connectivity. |
 
 ### Code quality
 
@@ -131,17 +131,17 @@ Plain `docker compose up -d` uses `NINA_IMAGE` from `.env`. Use `docker-compose.
 ### Quick examples
 
 ```bash
-nina auth-google && nina status-google
+nina google auth && nina google status
 nina daemon --dev          # terminal A
 make console               # terminal B — host `.env` must point at DB + daemon
-nina gmail-unread --limit 5
+nina gmail unread --limit 5
 nina gmail labels --user-only
 nina gmail_label process
 # optional: wide window, more messages; already-tagged rows are skipped early
 nina gmail_label process --days 365 --max-per-account 2000 -v
 nina gmail_label rules
-nina cal-events --limit 3
-nina llm-ping
+nina calendar events --limit 3
+nina llm ping
 ```
 
 `make dev-start` opens `daemon --dev` and `console` in one tmux session.

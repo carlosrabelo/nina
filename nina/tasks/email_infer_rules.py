@@ -42,6 +42,7 @@ def run_infer_from_gmail_labels(
     tokens_dir: Path,
     data_dir: Path,
     *,
+    account: str | None = None,
     max_per_account: int = 500,
     since_days: int = 120,
     min_agreeing_messages: int = 3,
@@ -82,17 +83,19 @@ def run_infer_from_gmail_labels(
         f"[infer-rules] Gmail accounts ({len(multi.accounts)}): {', '.join(multi.accounts)}",
     )
 
-    for account in multi.accounts:
-        gc = multi.client(account)
-        _verbose_print(verbose, f"[infer-rules] {account} — loading user label map…")
+    for acct in multi.accounts:
+        if account and acct != account:
+            continue
+        gc = multi.client(acct)
+        _verbose_print(verbose, f"[infer-rules] {acct} — loading user label map…")
         user_map = gc.list_user_label_map()
         _verbose_print(
             verbose,
-            f"[infer-rules] {account} — {len(user_map)} user labels; "
+            f"[infer-rules] {acct} — {len(user_map)} user labels; "
             "searching messages (metadata fetch per message, can take a while)…",
         )
 
-        def _on_batch(n: int, acc: str = account) -> None:
+        def _on_batch(n: int, acc: str = acct) -> None:
             _verbose_print(
                 verbose,
                 f"[infer-rules] {acc} — fetched {n}/{max_per_account} messages…",
@@ -106,12 +109,12 @@ def run_infer_from_gmail_labels(
                 on_batch=_on_batch if verbose else None,
             )
         except Exception as exc:
-            log.warning("infer-rules: search failed %s: %s", account, exc)
-            _verbose_print(verbose, f"[infer-rules] {account} — search failed: {exc}")
+            log.warning("infer-rules: search failed %s: %s", acct, exc)
+            _verbose_print(verbose, f"[infer-rules] {acct} — search failed: {exc}")
             continue
 
         _verbose_print(
-            verbose, f"[infer-rules] {account} — scan done, {len(msgs)} messages"
+            verbose, f"[infer-rules] {acct} — scan done, {len(msgs)} messages"
         )
 
         for msg in msgs:
@@ -125,7 +128,7 @@ def run_infer_from_gmail_labels(
             if len(names) > 1:
                 ambiguous += 1
                 continue
-            votes[(account, norm)][names[0]] += 1
+            votes[(acct, norm)][names[0]] += 1
 
     _verbose_print(
         verbose,

@@ -1,4 +1,4 @@
-"""`nina tg bot|setup|dialogs|messages|send` — exploratory Telegram commands."""
+"""`nina telegram auth|status|bot|setup|dialogs|messages|send` — Telegram commands."""
 
 import argparse
 import sys
@@ -7,8 +7,33 @@ from nina.errors import TelegramError
 from nina.integrations.telegram.client import TgClient
 
 
+def cmd_auth(args: argparse.Namespace) -> None:
+    with TgClient.from_env() as tg:
+        if tg.is_authorized():
+            print(f"Already authenticated as: {tg.me()}")
+            return
+        phone = args.phone or input(
+            "Phone number (with country code, e.g. +5511...): "
+        ).strip()
+        tg.authorize(phone)
+        print(f"\nAuthenticated as: {tg.me()}")
+        print("Session saved — no need to re-auth next time.")
+
+
+def cmd_status(args: argparse.Namespace) -> None:  # noqa: ARG001
+    try:
+        with TgClient.from_env() as tg:
+            if tg.is_authorized():
+                print(f"  \u2713  {tg.me()}")
+            else:
+                print("  \u2717  not authenticated — run: nina telegram auth")
+    except TelegramError as e:
+        print(f"  \u2717  {e}", file=sys.stderr)
+
+
 def cmd_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
     from nina.integrations.telegram.bot import run_batch_from_env
+
     try:
         count = run_batch_from_env()
         print(f"Processed {count} command(s).")
@@ -19,6 +44,7 @@ def cmd_bot(args: argparse.Namespace) -> None:  # noqa: ARG001
 
 def cmd_setup(args: argparse.Namespace) -> None:  # noqa: ARG001
     from nina.integrations.telegram.bot import setup_from_env
+
     try:
         setup_from_env()
     except TelegramError as e:
@@ -53,7 +79,7 @@ def cmd_messages(args: argparse.Namespace) -> None:
         return
 
     for msg in messages:
-        direction = "→" if msg.is_outgoing else "←"
+        direction = "\u2192" if msg.is_outgoing else "\u2190"
         print(f"  {direction}  [{msg.date}]  {msg.sender}")
         print(f"     {msg.text[:120]}")
         print()
@@ -70,8 +96,16 @@ def cmd_send(args: argparse.Namespace) -> None:
 
 
 def register(sub: argparse._SubParsersAction) -> None:
-    p = sub.add_parser("tg", help="Exploratory Telegram commands")
+    p = sub.add_parser("telegram", help="Telegram service commands")
     g = p.add_subparsers(dest="action", required=True)
+
+    p_auth = g.add_parser("auth", help="Authenticate with Telegram")
+    p_auth.add_argument("--phone", help="Phone number with country code")
+    p_auth.set_defaults(func=cmd_auth)
+
+    g.add_parser("status", help="Show Telegram authentication status").set_defaults(
+        func=cmd_status
+    )
 
     g.add_parser(
         "bot", help="Process pending Telegram bot commands (batch mode)"

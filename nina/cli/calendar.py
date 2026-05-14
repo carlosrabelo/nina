@@ -14,7 +14,7 @@ def cmd_list(args: argparse.Namespace) -> None:
     accounts = [args.account] if args.account else discover_accounts(td)
 
     if not accounts:
-        print("No authenticated accounts found. Run: nina auth google")
+        print("No authenticated accounts found. Run: nina google auth")
         sys.exit(1)
 
     for account in accounts:
@@ -37,7 +37,7 @@ def cmd_events(args: argparse.Namespace) -> None:
     accounts = [args.account] if args.account else discover_accounts(td)
 
     if not accounts:
-        print("No authenticated accounts found. Run: nina auth google")
+        print("No authenticated accounts found. Run: nina google auth")
         sys.exit(1)
 
     for account in accounts:

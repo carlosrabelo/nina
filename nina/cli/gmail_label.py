@@ -20,7 +20,7 @@ def cmd_rules_check(args: argparse.Namespace) -> None:
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
     from nina.skills.gmail_label.execute import check_rules
 
-    print(check_rules(data_dir, tokens_dir))
+    print(check_rules(data_dir, tokens_dir, account=args.account))
 
 
 def cmd_pending_scan(args: argparse.Namespace) -> None:
@@ -71,6 +71,7 @@ def cmd_infer_rules(args: argparse.Namespace) -> None:
         summary = run_infer_from_gmail_labels(
             tokens_dir,
             data_dir,
+            account=args.account,
             max_per_account=args.max_per_account,
             since_days=args.days,
             min_agreeing_messages=args.min_messages,
@@ -197,6 +198,10 @@ def register(sub: argparse._SubParsersAction) -> None:
         "check",
         help="Validate rules (prefix, Gmail label existence, tokens, ignored conflicts)",
     )
+    rules_check.add_argument(
+        "--account",
+        help="Filter to a specific account",
+    )
     rules_check.set_defaults(func=cmd_rules_check)
 
     p_infer = g.add_parser(
@@ -205,6 +210,10 @@ def register(sub: argparse._SubParsersAction) -> None:
             "Scan Gmail for user labels only to insert new sender→label rules "
             "(does not write email_messages or modify the inbox; use process for that)"
         ),
+    )
+    p_infer.add_argument(
+        "--account",
+        help="Filter to a specific Gmail account",
     )
     p_infer.add_argument(
         "--max-per-account",

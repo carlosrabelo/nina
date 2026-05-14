@@ -83,7 +83,7 @@ docker-migrate: ## Run migrate_to_postgres.py inside the container
 	docker compose run --rm -v ./scripts:/scripts nina python /scripts/migrate_to_postgres.py
 
 docker-auth-google: ## Run Google OAuth flow inside the container
-	docker compose run --rm -it nina python -m nina auth-google
+	docker compose run --rm -it nina python -m nina google auth
 
 # ── Run local CLI ─────────────────────────────────────────────────────────────
 
