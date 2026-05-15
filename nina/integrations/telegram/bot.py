@@ -530,6 +530,7 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
         dismiss_pending_by_prefix,
         format_ignored_list,
         format_pending_list,
+        move_label,
         remove_ignored,
         scan_pending_suggestions,
         teach_label_for_pending,
@@ -556,12 +557,24 @@ async def handle_gmail_label(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(out[:MAX_MSG])
         return
     if args[0].lower() == "rule":
-        if len(args) < 4 or args[1].lower() != "add":
+        if len(args) < 3 or args[1].lower() not in ("add", "move"):
             await update.message.reply_text(t("gmail_label.usage", lang))
             return
-        out = add_rule_direct(data_dir, args[2], args[3], " ".join(args[4:]))
-        await update.message.reply_text(out[:MAX_MSG])
-        return
+        sub = args[1].lower()
+        if sub == "add":
+            if len(args) < 5:
+                await update.message.reply_text(t("gmail_label.usage", lang))
+                return
+            out = add_rule_direct(data_dir, args[2], args[3], " ".join(args[4:]))
+            await update.message.reply_text(out[:MAX_MSG])
+            return
+        if sub == "move":
+            if len(args) < 5:
+                await update.message.reply_text(t("gmail_label.usage", lang))
+                return
+            out = move_label(data_dir, tokens_dir, args[3], args[4], account=args[2])
+            await update.message.reply_text(out[:MAX_MSG])
+            return
     if args[0].lower() == "rules":
         if len(args) < 2 or args[1].lower() != "check":
             await update.message.reply_text(t("gmail_label.usage", lang))

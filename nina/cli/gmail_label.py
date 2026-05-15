@@ -15,6 +15,14 @@ def cmd_rule_add(args: argparse.Namespace) -> None:
     print(add_rule_direct(data_dir, args.account, args.sender, args.label))
 
 
+def cmd_rule_move(args: argparse.Namespace) -> None:
+    data_dir = Path(os.environ.get("DATA_DIR", "data"))
+    tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
+    from nina.skills.gmail_label.execute import move_label
+
+    print(move_label(data_dir, tokens_dir, args.old_label, args.new_label, account=args.account))
+
+
 def cmd_rules_check(args: argparse.Namespace) -> None:
     data_dir = Path(os.environ.get("DATA_DIR", "data"))
     tokens_dir = Path(os.environ.get("TOKENS_DIR", "tokens"))
@@ -327,3 +335,12 @@ def register(sub: argparse._SubParsersAction) -> None:
     rule_add.add_argument("sender", help="Sender email address")
     rule_add.add_argument("label", help="Gmail label (must start with @ or !)")
     rule_add.set_defaults(func=cmd_rule_add)
+
+    rule_move = rule_sub.add_parser(
+        "move",
+        help="Move all rules from one label to another for a specific account",
+    )
+    rule_move.add_argument("account", help="Gmail account email")
+    rule_move.add_argument("old_label", help="Source label (must start with @ or !)")
+    rule_move.add_argument("new_label", help="Destination label (must start with @ or !)")
+    rule_move.set_defaults(func=cmd_rule_move)

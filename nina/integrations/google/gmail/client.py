@@ -206,6 +206,31 @@ class GmailClient:
         except HttpError as e:
             raise GmailError(self.account, str(e)) from e
 
+    def remove_label(
+        self,
+        message_id: str,
+        label_id: str,
+    ) -> None:
+        """Remove a label from a message (does not affect INBOX)."""
+        body: dict[str, list[str]] = {"removeLabelIds": [label_id]}
+        try:
+            self._svc.users().messages().modify(
+                userId="me", id=message_id, body=body
+            ).execute()
+        except HttpError as e:
+            raise GmailError(self.account, str(e)) from e
+
+    def get_label_id_by_name(self, display_name: str) -> str | None:
+        """Return Gmail label id for *display_name*, or None if not found."""
+        try:
+            lst = self._svc.users().labels().list(userId="me").execute()
+        except HttpError as e:
+            raise GmailError(self.account, str(e)) from e
+        for lb in lst.get("labels", []):
+            if lb.get("type") == "user" and lb.get("name") == display_name:
+                return str(lb["id"])
+        return None
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------

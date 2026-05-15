@@ -96,6 +96,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label — lista sugestoes abertas\n"
         "/gmail_label <id> <etiqueta> — grava etiqueta para o remetente nessa conta\n"
         "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
+        "/gmail_label rule move <conta> <etiqueta_antiga> <etiqueta_nova> — mover todas as regras de uma etiqueta para outra\n"
         "/gmail_label rules check — validar todas as regras\n"
         "/gmail_label pending scan — procurar novos candidatos a remetente\n"
         "/gmail_label dismiss <id> — ignora a sugestao (adiciona remetente a lista de ignorados)\n"
@@ -176,6 +177,15 @@ STRINGS: dict[str, str] = {
     "gmail_label.taught_ok": (
         "✓ Regra gravada: {sender} → [{label}] em {account}.\n"
         "Aplicada em {applied} mensagem(ns) que a Nina já tinha registado."
+    ),
+    "gmail_label.move_ok": (
+        "Movido [{old_label}] → [{new_label}]:\n"
+        "  regras atualizadas: {rules}\n"
+        "  mensagens DB atualizadas: {msgs}\n"
+        "  mensagens Gmail migradas: {gmail}"
+    ),
+    "gmail_label.move_no_rules": (
+        "Nenhuma regra encontrada com a etiqueta [{old_label}]."
     ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
@@ -279,6 +289,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label — listar sugestoes abertas\n"
         "/gmail_label <id> <etiqueta> — gravar etiqueta para o remetente nessa conta\n"
         "/gmail_label rule add <conta> <remetente> <etiqueta> — adicionar regra manual\n"
+        "/gmail_label rule move <conta> <etiqueta_antiga> <etiqueta_nova> — mover todas as regras de uma etiqueta para outra\n"
         "/gmail_label rules check — validar regras (prefixo, Gmail, tokens, conflitos)\n"
         "/gmail_label pending scan — procurar novos candidatos a remetente\n"
         "/gmail_label dismiss <id> — ignorar sugestao (adiciona remetente aos ignorados)\n"

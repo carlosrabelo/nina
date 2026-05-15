@@ -372,6 +372,7 @@ class NinaConsole(cmd.Cmd):
             dismiss_pending_by_prefix,
             format_ignored_list,
             format_pending_list,
+            move_label,
             remove_ignored,
             scan_pending_suggestions,
             teach_label_for_pending,
@@ -399,12 +400,24 @@ class NinaConsole(cmd.Cmd):
             print(f"  {out}")
             return
         if parts[0].lower() == "rule":
-            if len(parts) < 4 or parts[1].lower() != "add":
+            if len(parts) < 3 or parts[1].lower() not in ("add", "move"):
                 print(f"  {t('gmail_label.usage', lang)}")
                 return
-            out = add_rule_direct(dd, parts[2], parts[3], " ".join(parts[4:]))
-            print(f"  {out}")
-            return
+            sub = parts[1].lower()
+            if sub == "add":
+                if len(parts) < 5:
+                    print(f"  {t('gmail_label.usage', lang)}")
+                    return
+                out = add_rule_direct(dd, parts[2], parts[3], " ".join(parts[4:]))
+                print(f"  {out}")
+                return
+            if sub == "move":
+                if len(parts) < 5:
+                    print(f"  {t('gmail_label.usage', lang)}")
+                    return
+                out = move_label(dd, td, parts[3], parts[4], account=parts[2])
+                print(f"  {out}")
+                return
         if parts[0].lower() == "rules":
             if len(parts) < 2 or parts[1].lower() != "check":
                 print(f"  {t('gmail_label.usage', lang)}")

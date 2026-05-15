@@ -253,6 +253,70 @@ def remove_ignored(data_dir: Path, account: str, sender: str) -> str:
         conn.close()
 
 
+def move_label(
+    data_dir: Path,
+    tokens_dir: Path,
+    old_label: str,
+    new_label: str,
+    *,
+    account: str,
+) -> str:
+    from nina.core.i18n import t
+    from nina.core.locale.store import load as load_locale
+    from nina.core.store.db import open_db
+    from nina.core.store.repos import email_label as el
+    from nina.integrations.google.gmail.client import GmailMultiClient
+
+    lang = load_locale(data_dir).lang
+    old_label = old_label.strip()
+    new_label = new_label.strip()
+    if not old_label or not new_label:
+        return t("gmail_label.label_empty", lang)
+    if not old_label.startswith(("@", "!")) or not new_label.startswith(("@", "!")):
+        return t("gmail_label.label_must_at", lang)
+
+    conn = open_db(data_dir)
+    try:
+        rules_moved = el.move_rules_by_label(
+            conn, old_label=old_label, new_label=new_label, account=account,
+        )
+        msg_ids = el.list_message_ids_by_label(
+            conn, label=old_label, account=account, limit=500,
+        )
+        msgs_moved = el.move_messages_label(
+            conn, old_label=old_label, new_label=new_label, account=account,
+        )
+
+        gmail_migrated = 0
+        try:
+            multi = GmailMultiClient.from_env()
+            gc = multi.client(account)
+            new_lid = gc.ensure_user_label(new_label)
+            old_lid = gc.get_label_id_by_name(old_label)
+            for mid in msg_ids:
+                try:
+                    gc.apply_label(mid, new_lid, archive_inbox=False)
+                    if old_lid:
+                        gc.remove_label(mid, old_lid)
+                    gmail_migrated += 1
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        return t(
+            "gmail_label.move_ok",
+            lang,
+            old_label=old_label,
+            new_label=new_label,
+            rules=rules_moved,
+            msgs=msgs_moved,
+            gmail=gmail_migrated,
+        )
+    finally:
+        conn.close()
+
+
 def check_rules(data_dir: Path, tokens_dir: Path, *, account: str | None = None) -> str:
     from nina.core.i18n import t
     from nina.core.locale.store import load as load_locale

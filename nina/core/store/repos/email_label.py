@@ -447,6 +447,105 @@ def list_ignored_senders(
     ]
 
 
+def move_rules_by_label(
+    conn: psycopg.Connection[dict],
+    *,
+    old_label: str,
+    new_label: str,
+    account: str | None = None,
+) -> int:
+    """Update all sender rules using *old_label* to *new_label*.
+
+    Returns the number of rules updated.
+    """
+    if account is not None:
+        cur = conn.execute(
+            """
+            UPDATE email_sender_rules
+            SET label_name = %s
+            WHERE label_name = %s AND account = %s
+            """,
+            (new_label, old_label, account),
+        )
+    else:
+        cur = conn.execute(
+            """
+            UPDATE email_sender_rules
+            SET label_name = %s
+            WHERE label_name = %s
+            """,
+            (new_label, old_label),
+        )
+    conn.commit()
+    return cur.rowcount
+
+
+def move_messages_label(
+    conn: psycopg.Connection[dict],
+    *,
+    old_label: str,
+    new_label: str,
+    account: str | None = None,
+) -> int:
+    """Update ``label_applied`` on tagged messages from *old_label* to *new_label*.
+
+    Returns the number of rows updated.
+    """
+    if account is not None:
+        cur = conn.execute(
+            """
+            UPDATE email_messages
+            SET label_applied = %s
+            WHERE label_applied = %s AND account = %s
+            """,
+            (new_label, old_label, account),
+        )
+    else:
+        cur = conn.execute(
+            """
+            UPDATE email_messages
+            SET label_applied = %s
+            WHERE label_applied = %s
+            """,
+            (new_label, old_label),
+        )
+    conn.commit()
+    return cur.rowcount
+
+
+def list_message_ids_by_label(
+    conn: psycopg.Connection[dict],
+    *,
+    label: str,
+    account: str | None = None,
+    limit: int = 500,
+) -> list[str]:
+    """Return message ids tagged with *label* (for Gmail label migration)."""
+    if account is not None:
+        rows = conn.execute(
+            """
+            SELECT message_id
+            FROM email_messages
+            WHERE label_applied = %s AND account = %s
+            ORDER BY first_seen_at DESC
+            LIMIT %s
+            """,
+            (label, account, limit),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT message_id
+            FROM email_messages
+            WHERE label_applied = %s
+            ORDER BY first_seen_at DESC
+            LIMIT %s
+            """,
+            (label, limit),
+        ).fetchall()
+    return [r["message_id"] for r in rows]
+
+
 def find_candidate_senders(
     conn: psycopg.Connection[dict],
     *,

@@ -96,6 +96,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label — list open suggestions\n"
         "/gmail_label <id> <label> — save label for sender on that account\n"
         "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
+        "/gmail_label rule move <account> <old_label> <new_label> — move all rules from one label to another\n"
         "/gmail_label rules check — validate all rules\n"
         "/gmail_label pending scan — scan for new sender candidates\n"
         "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
@@ -176,6 +177,15 @@ STRINGS: dict[str, str] = {
     "gmail_label.taught_ok": (
         "✓ Saved rule for {sender} → [{label}] on {account}.\n"
         "Applied to {applied} message(s) Nina had recorded."
+    ),
+    "gmail_label.move_ok": (
+        "Moved [{old_label}] → [{new_label}]:\n"
+        "  rules updated: {rules}\n"
+        "  DB messages updated: {msgs}\n"
+        "  Gmail messages migrated: {gmail}"
+    ),
+    "gmail_label.move_no_rules": (
+        "No rules found with label [{old_label}]."
     ),
 
     # ── calendar ──────────────────────────────────────────────────────────────
@@ -279,6 +289,7 @@ STRINGS: dict[str, str] = {
         "/gmail_label — list open suggestions\n"
         "/gmail_label <id> <label> — save label for sender on that account\n"
         "/gmail_label rule add <account> <sender> <label> — add rule manually\n"
+        "/gmail_label rule move <account> <old_label> <new_label> — move all rules from one label to another\n"
         "/gmail_label rules check — validate all rules (prefix, Gmail, tokens, conflicts)\n"
         "/gmail_label pending scan — scan email_messages for new sender candidates\n"
         "/gmail_label dismiss <id> — ignore a suggestion (adds sender to ignore list)\n"
